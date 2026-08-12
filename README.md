@@ -1,6 +1,16 @@
 # 音乐搜 · 在线音乐搜索网站
 
-一个纯前端的在线音乐搜索网站,可以搜索全球的歌曲、专辑、歌手和 MV,并支持约 30 秒的在线试听。
+一个**单文件**的在线音乐搜索网站,可以搜索全球的歌曲、专辑、歌手和 MV,并支持约 30 秒的在线试听。
+
+## 使用方法
+
+**双击打开 `index.html` 即可**,不需要安装任何软件、不需要启动服务器。
+
+1. 下载本仓库的 `index.html`(或点击 GitHub 上的 Code → Download ZIP 解压)
+2. 双击 `index.html`,浏览器会自动打开
+3. 输入歌名、歌手或专辑,开始搜索和试听
+
+> 需要联网使用,搜索数据实时来自 iTunes Search API。
 
 ## 功能特性
 
@@ -13,33 +23,9 @@
 
 ## 技术说明
 
-- 纯静态页面:HTML + CSS + 原生 JavaScript,无需构建工具和后端
+- 单个 HTML 文件:样式与脚本全部内联,无任何依赖,可直接通过 `file://` 打开
 - 数据来源:[iTunes Search API](https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/iTuneSearchAPI/)(免费、无需 API Key、支持跨域)
-
-## 本地运行
-
-由于是纯静态站点,任选一种方式启动即可:
-
-```bash
-# 方式一:Python
-python3 -m http.server 8000
-
-# 方式二:Node.js
-npx serve .
-```
-
-然后浏览器访问 `http://localhost:8000`。
-
-也可以直接部署到 GitHub Pages、Vercel、Netlify 等任意静态托管平台。
-
-## 目录结构
-
-```
-.
-├── index.html      # 页面结构
-├── css/style.css   # 样式
-└── js/app.js       # 搜索、渲染与播放逻辑
-```
+- 也可以直接部署到 GitHub Pages、Vercel、Netlify 等任意静态托管平台变成公开网站
 
 ## 免责声明
 
