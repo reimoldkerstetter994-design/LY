@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>音乐搜 · 在线音乐搜索</title>
+  <meta name="description" content="在线搜索全球音乐:歌曲、歌手、专辑、MV,支持 30 秒在线试听。" />
+  <link rel="preconnect" href="https://itunes.apple.com" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="bg-glow" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="./">
+        <span class="logo-icon">🎵</span>
+        <span class="logo-text">音乐搜</span>
+      </a>
+      <p class="tagline">一站式在线查找全球音乐</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>想听什么,搜就对了</h1>
+      <p class="hero-sub">搜索歌曲、歌手、专辑和 MV,即刻在线试听</p>
+
+      <form id="search-form" class="search-box" role="search">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input
+          id="search-input"
+          type="search"
+          placeholder="输入歌名、歌手或专辑,例如:周杰伦、Taylor Swift…"
+          autocomplete="off"
+          autofocus
+        />
+        <button type="submit" class="search-btn">搜索</button>
+      </form>
+
+      <div class="filters">
+        <div class="filter-group" id="type-tabs" role="tablist" aria-label="搜索类型">
+          <button class="tab active" data-entity="song" role="tab" aria-selected="true">歌曲</button>
+          <button class="tab" data-entity="album" role="tab" aria-selected="false">专辑</button>
+          <button class="tab" data-entity="musicArtist" role="tab" aria-selected="false">歌手</button>
+          <button class="tab" data-entity="musicVideo" role="tab" aria-selected="false">MV</button>
+        </div>
+        <label class="region-select">
+          <span>地区</span>
+          <select id="country-select">
+            <option value="CN" selected>中国大陆</option>
+            <option value="HK">中国香港</option>
+            <option value="TW">中国台湾</option>
+            <option value="US">美国</option>
+            <option value="JP">日本</option>
+            <option value="KR">韩国</option>
+            <option value="GB">英国</option>
+            <option value="DE">德国</option>
+            <option value="FR">法国</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="hot-keywords" id="hot-keywords">
+        <span class="hot-label">热门:</span>
+      </div>
+    </section>
+
+    <section id="status" class="status" aria-live="polite"></section>
+
+    <section id="results" class="results-grid" aria-label="搜索结果"></section>
+
+    <div class="load-more-wrap">
+      <button id="load-more" class="load-more hidden">加载更多</button>
+    </div>
+  </main>
+
+  <div id="player-bar" class="player-bar hidden">
+    <img id="player-art" class="player-art" src="" alt="" />
+    <div class="player-info">
+      <div id="player-title" class="player-title"></div>
+      <div id="player-artist" class="player-artist"></div>
+    </div>
+    <button id="player-toggle" class="player-toggle" aria-label="播放/暂停">▶</button>
+    <div class="player-progress" id="player-progress">
+      <div class="player-progress-inner" id="player-progress-inner"></div>
+    </div>
+    <span id="player-time" class="player-time">0:00 / 0:30</span>
+    <button id="player-close" class="player-close" aria-label="关闭播放器">✕</button>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>数据来源:iTunes Search API · 试听片段约 30 秒 · 仅供学习交流</p>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
