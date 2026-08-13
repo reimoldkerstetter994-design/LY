@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>第十三病房 · WARD 13</title>
+    <meta name="description" content="一款可在浏览器中游玩的第一人称心理恐怖游戏。关掉手电。别跟着光走。" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕯️</text></svg>" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="c"></canvas>
+      <div id="vignette" class="overlay"></div>
+      <canvas id="grain" class="overlay"></canvas>
+      <div id="hurt" class="overlay"></div>
+      <div id="flash" class="overlay"></div>
+      <div id="static-fx" class="overlay"></div>
+      <div id="letterbox" class="overlay"></div>
+
+      <div id="hud" class="hidden">
+        <div id="obj">目标：收集四张权限卡，从大门离开</div>
+        <div id="crosshair"></div>
+        <div id="prompt"></div>
+        <div id="sub"></div>
+        <div id="meters">
+          <div class="meter">体力 <div class="bar"><span id="stamina-bar"></span></div></div>
+          <div class="meter">手电 <div class="bar"><span id="battery-bar"></span></div></div>
+          <div class="meter">神智 <div class="bar"><span id="sanity-bar"></span></div></div>
+        </div>
+        <div id="keys">
+          <div class="key-slot" id="slot1"></div>
+          <div class="key-slot" id="slot2"></div>
+          <div class="key-slot" id="slot3"></div>
+          <div class="key-slot" id="slot4"></div>
+        </div>
+      </div>
+
+      <div id="title" class="screen">
+        <h1>第十三病房</h1>
+        <div class="en">W A R D &nbsp; 1 3</div>
+        <p class="tag">今晚灯不该亮着。<br />你在值班室醒来。表停在 2:17。<br />走廊里，有人拖着步子。</p>
+        <div class="btn-row">
+          <button id="btn-start">进入病房</button>
+          <button id="btn-howto">操作说明</button>
+        </div>
+        <div class="sliders">
+          <label>鼠标灵敏度 <span id="sens-val">1.0</span></label>
+          <input id="sens" type="range" min="0.4" max="2.2" step="0.1" value="1" />
+          <label>音量 <span id="vol-val">70%</span></label>
+          <input id="vol" type="range" min="0" max="100" step="1" value="70" />
+        </div>
+        <p class="warn">建议佩戴耳机 · 包含突然的惊吓与闪烁灯光 · 桌面端键鼠操作</p>
+      </div>
+
+      <div id="howto" class="screen hidden">
+        <div class="panel">
+          <h2>操作说明</h2>
+          <p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移动　　<kbd>Shift</kbd> 奔跑　　<kbd>Ctrl</kbd> 蹲下</p>
+          <p><kbd>鼠标</kbd> 视角　　<kbd>F</kbd> 手电　　<kbd>E</kbd> 交互　　<kbd>Esc</kbd> 暂停</p>
+          <p>收集四张红色权限卡，回到一楼大门离开。手电会吸引它。没电时，黑暗会侵蚀神智。</p>
+          <p>储物柜可以躲藏。跑动会发出脚步声。不要长时间直视它。</p>
+          <div class="btn-row"><button id="btn-howto-back">返回</button></div>
+        </div>
+      </div>
+
+      <div id="intro" class="screen hidden">
+        <p id="intro-line"></p>
+      </div>
+
+      <div id="loading" class="screen hidden">
+        <div id="loading-label">灯正在熄灭……</div>
+      </div>
+
+      <div id="click-start" class="screen hidden">
+        <p class="tag">不要开灯太久。<br />它会跟着光走。</p>
+        <div class="btn-row"><button id="btn-enter">点击进入</button></div>
+      </div>
+
+      <div id="pause" class="screen hidden">
+        <div class="panel">
+          <h2>暂停</h2>
+          <p>它还在走廊里走。</p>
+          <div class="btn-row">
+            <button id="btn-resume">继续</button>
+            <button id="btn-restart-p">重新开始</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="note" class="screen hidden">
+        <div class="note-paper">
+          <h3 id="note-title"></h3>
+          <p id="note-body"></p>
+          <div class="hint">按 E 或 ESC 放下字条</div>
+        </div>
+      </div>
+
+      <div id="dead" class="screen hidden">
+        <h2>你没能离开</h2>
+        <p class="tag">它学会了你的脚步声。</p>
+        <div class="btn-row"><button id="btn-retry">再试一次</button></div>
+      </div>
+
+      <div id="win" class="screen hidden">
+        <h2>大门在身后关上</h2>
+        <p class="tag">外面的空气很冷。你没有回头。<br />第十三病房的灯，仍在闪。</p>
+        <div class="btn-row"><button id="btn-again">再走一遍</button></div>
+      </div>
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"
+      onerror="this.onerror=null;this.src='https://unpkg.com/three@0.160.1/build/three.min.js'"
+    ></script>
+    <script src="js/textures.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/level.js"></script>
+    <script src="js/monster.js"></script>
+    <script src="js/game.js"></script>
+  </body>
+</html>

@@ -1,0 +1,437 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@500;700&display=swap");
+
+:root {
+  --blood: #7a1414;
+  --ash: #cfc6b8;
+  --dim: #8a8178;
+  --void: #070605;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  color: var(--ash);
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  user-select: none;
+  cursor: default;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#c {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#vignette {
+  background:
+    radial-gradient(ellipse at center, transparent 38%, rgba(0, 0, 0, 0.72) 100%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.35), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.5));
+  z-index: 4;
+}
+
+#grain {
+  z-index: 5;
+  opacity: 0.11;
+  mix-blend-mode: overlay;
+}
+
+#hurt {
+  z-index: 6;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(90, 0, 0, 0.75) 100%);
+  transition: opacity 0.08s linear;
+}
+
+#flash {
+  z-index: 7;
+  opacity: 0;
+  background: #f3eee6;
+}
+
+#static-fx {
+  z-index: 8;
+  opacity: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.04) 0px,
+    rgba(0, 0, 0, 0.08) 2px,
+    transparent 3px
+  );
+}
+
+#letterbox::before,
+#letterbox::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 7vh;
+  background: #000;
+  z-index: 9;
+}
+
+#letterbox::before {
+  top: 0;
+}
+
+#letterbox::after {
+  bottom: 0;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #050303;
+  pointer-events: auto;
+  text-align: center;
+  padding: 8vh 6vw;
+}
+
+.screen.hidden {
+  display: none;
+}
+
+.screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(90, 12, 12, 0.22), transparent 55%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.015) 0, transparent 1px, transparent 3px);
+  pointer-events: none;
+}
+
+#title h1 {
+  font-family: "Noto Serif SC", serif;
+  font-weight: 700;
+  font-size: clamp(2.4rem, 6vw, 4.8rem);
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  color: #e8dcc8;
+  text-shadow: 0 0 40px rgba(120, 20, 20, 0.35);
+}
+
+#title .en {
+  margin-top: 0.6rem;
+  letter-spacing: 0.62em;
+  text-indent: 0.62em;
+  font-size: 0.78rem;
+  color: #8a3a3a;
+}
+
+#title .tag {
+  margin-top: 2.2rem;
+  max-width: 28rem;
+  font-weight: 300;
+  font-size: 0.95rem;
+  line-height: 2;
+  color: #b7aa9a;
+}
+
+.btn-row {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2.8rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+button,
+.btn {
+  font-family: inherit;
+  background: transparent;
+  color: #e6d9c8;
+  border: 1px solid rgba(230, 217, 200, 0.35);
+  padding: 0.75rem 1.6rem;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+button:hover,
+.btn:hover {
+  background: rgba(140, 18, 18, 0.35);
+  border-color: #c45a5a;
+}
+
+.warn {
+  margin-top: 3.5rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: #6d6660;
+  line-height: 1.8;
+}
+
+.panel {
+  max-width: 36rem;
+  line-height: 2;
+  font-weight: 300;
+  color: #d2c6b6;
+}
+
+.panel h2 {
+  font-family: "Noto Serif SC", serif;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  margin-bottom: 1.4rem;
+  font-size: 1.4rem;
+}
+
+.panel kbd {
+  display: inline-block;
+  min-width: 1.8rem;
+  padding: 0 0.35rem;
+  border: 1px solid #6a6258;
+  font-size: 0.78rem;
+  margin: 0 0.15rem;
+}
+
+.note-paper {
+  background: #cbb994;
+  color: #2a241c;
+  width: min(32rem, 92vw);
+  padding: 2.4rem 2.2rem 2rem;
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.65);
+  text-align: left;
+  font-family: "Noto Serif SC", serif;
+  transform: rotate(-0.4deg);
+}
+
+.note-paper h3 {
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  margin-bottom: 1rem;
+  color: #6a2a2a;
+}
+
+.note-paper p {
+  line-height: 1.95;
+  font-size: 1.02rem;
+}
+
+.note-paper .hint {
+  margin-top: 1.6rem;
+  font-size: 0.75rem;
+  color: #5c5348;
+  letter-spacing: 0.12em;
+}
+
+#hud {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+}
+
+#hud.hidden {
+  display: none;
+}
+
+#crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: rgba(255, 244, 220, 0.35);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+}
+
+#crosshair.hot {
+  background: #f2e6c9;
+  transform: scale(1.35);
+}
+
+#prompt {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  transform: translateX(-50%);
+  font-size: 0.86rem;
+  letter-spacing: 0.18em;
+  color: #f0e6d4;
+  text-shadow: 0 2px 12px #000;
+  opacity: 0;
+}
+
+#sub {
+  position: absolute;
+  left: 50%;
+  bottom: 14vh;
+  transform: translateX(-50%);
+  max-width: 40rem;
+  text-align: center;
+  font-weight: 300;
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: #ddd1c2;
+  text-shadow: 0 2px 16px #000;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+
+#obj {
+  position: absolute;
+  top: 9vh;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  letter-spacing: 0.22em;
+  color: rgba(210, 196, 176, 0.7);
+}
+
+#meters {
+  position: absolute;
+  left: 4vw;
+  bottom: 9vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: min(16rem, 42vw);
+}
+
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  color: #9d9488;
+}
+
+.meter .bar {
+  flex: 1;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.meter .bar > span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: #cfc3b0;
+  transform-origin: left center;
+}
+
+#keys {
+  position: absolute;
+  right: 4vw;
+  bottom: 9vh;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.key-slot {
+  width: 2.1rem;
+  height: 1.35rem;
+  border: 1px solid rgba(210, 196, 176, 0.25);
+  opacity: 0.28;
+  position: relative;
+}
+
+.key-slot.on {
+  opacity: 1;
+  background: linear-gradient(180deg, #8a1f1f, #3a0d0d);
+  border-color: #c45a5a;
+}
+
+#intro {
+  background: #000;
+  z-index: 30;
+}
+
+#intro p {
+  font-family: "Noto Serif SC", serif;
+  font-size: clamp(1.05rem, 2.4vw, 1.45rem);
+  line-height: 2.4;
+  color: #d8ccbc;
+  opacity: 0;
+  max-width: 28rem;
+}
+
+#loading-label {
+  letter-spacing: 0.4em;
+  text-indent: 0.4em;
+  font-size: 0.8rem;
+  color: #8a8074;
+}
+
+.sliders {
+  margin-top: 1.6rem;
+  width: min(22rem, 80vw);
+  text-align: left;
+  font-size: 0.78rem;
+  color: #9a9186;
+}
+
+.sliders label {
+  display: flex;
+  justify-content: space-between;
+  margin: 0.65rem 0 0.2rem;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: #8a2a2a;
+}
+
+#dead h2,
+#win h2 {
+  font-family: "Noto Serif SC", serif;
+  font-size: 2rem;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  margin-bottom: 1.2rem;
+}
+
+#dead h2 {
+  color: #a33;
+}
+
+#win h2 {
+  color: #d9d1c4;
+}
+
+.fade-in {
+  animation: fadeIn 1.4s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
