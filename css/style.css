@@ -1,0 +1,385 @@
+:root {
+  --bg: #04070f;
+  --panel: rgba(8, 14, 28, 0.72);
+  --line: rgba(168, 210, 255, 0.16);
+  --text: #e8f1ff;
+  --muted: #8ea3c4;
+  --gold: #f3c77a;
+  --cyan: #7ee0ff;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Noto Sans SC", "PingFang SC", sans-serif;
+}
+
+#scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#loader {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 18px;
+  background: radial-gradient(circle at 50% 40%, #1a2744 0%, #04070f 70%);
+  z-index: 20;
+  transition: opacity 0.6s ease, visibility 0.6s ease;
+}
+
+#loader.hide {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.loader-core {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff3c4 0%, #ff9a3c 42%, #7a2208 100%);
+  box-shadow: 0 0 40px #ff9a3c, 0 0 90px #ff6a00;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+#loader p {
+  margin: 0;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+@keyframes pulse {
+  50% { transform: scale(1.08); box-shadow: 0 0 55px #ffb347, 0 0 120px #ff6a00; }
+}
+
+.hud-top,
+.planet-nav,
+.info-panel,
+.dock,
+.hint {
+  position: absolute;
+  z-index: 5;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.hud-top {
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+  background: none;
+  backdrop-filter: none;
+}
+
+.brand,
+.clock {
+  pointer-events: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.brand {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 18px;
+  border-radius: 18px;
+}
+
+.brand-mark {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff1b8, #ff8a2b);
+  box-shadow: 0 0 16px #ff9a3c;
+}
+
+.brand h1 {
+  margin: 0;
+  font-family: "Noto Serif SC", serif;
+  font-size: 22px;
+  letter-spacing: 0.08em;
+}
+
+.brand p,
+.clock-label {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+}
+
+.clock {
+  min-width: 230px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  text-align: right;
+}
+
+#sim-date {
+  margin-top: 4px;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 16px;
+  color: var(--gold);
+}
+
+#sim-meta {
+  margin-top: 4px;
+  color: var(--cyan);
+  font-size: 12px;
+}
+
+.planet-nav {
+  top: 112px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  width: 168px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.planet-nav button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.planet-nav button:hover,
+.planet-nav button.active {
+  background: rgba(126, 224, 255, 0.12);
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.info-panel {
+  top: 112px;
+  right: 20px;
+  width: min(340px, calc(100vw - 40px));
+  padding: 18px 18px 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.info-panel[hidden] {
+  display: none;
+}
+
+.info-kicker {
+  color: var(--cyan);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+}
+
+.info-panel h2 {
+  margin: 6px 0 4px;
+  font-family: "Noto Serif SC", serif;
+  font-size: 28px;
+}
+
+.info-en {
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+
+.info-lead {
+  margin: 0 0 14px;
+  line-height: 1.7;
+  color: #d5e4ff;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.facts div {
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.facts span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.facts b {
+  display: block;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.dock {
+  left: 50%;
+  bottom: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 22px;
+  align-items: center;
+  justify-content: center;
+  max-width: calc(100vw - 32px);
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+}
+
+.dock-group {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn,
+.toggles label {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+
+.icon-btn {
+  padding: 8px 16px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  border-color: var(--cyan);
+}
+
+.slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.slider input {
+  width: 140px;
+  accent-color: var(--gold);
+}
+
+.slider b {
+  min-width: 42px;
+  color: var(--gold);
+}
+
+.toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.toggles label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.hint {
+  left: 20px;
+  bottom: 22px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.label-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.space-label {
+  position: absolute;
+  transform: translate(-50%, -140%);
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(6, 12, 24, 0.55);
+  color: #dce9ff;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  .hud-top {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .clock,
+  .planet-nav {
+    display: none;
+  }
+
+  .info-panel {
+    top: auto;
+    bottom: 92px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+  }
+
+  .hint {
+    display: none;
+  }
+
+  .dock {
+    border-radius: 22px;
+    bottom: 12px;
+  }
+}

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="在浏览器中运行的交互式三维太阳系行星模拟">
+  <title>太阳系行星模拟</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23ffb347'/><circle cx='50' cy='50' r='28' fill='%23ffd27a'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="scene"></canvas>
+
+    <div id="loader">
+      <div class="loader-core"></div>
+      <p>正在构建太阳系…</p>
+    </div>
+
+    <header class="hud-top">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <div>
+          <h1>太阳系行星模拟</h1>
+          <p>交互式三维轨道演示</p>
+        </div>
+      </div>
+      <div class="clock">
+        <div class="clock-label">模拟纪元</div>
+        <div id="sim-date">公元 2000 年 1 月 1 日</div>
+        <div id="sim-meta">1.00 地球年 / 秒</div>
+      </div>
+    </header>
+
+    <nav class="planet-nav" id="planet-nav" aria-label="行星导航"></nav>
+
+    <aside class="info-panel" id="info-panel" hidden></aside>
+
+    <footer class="dock">
+      <div class="dock-group">
+        <button id="btn-play" class="icon-btn" type="button" title="暂停 / 继续">暂停</button>
+        <button id="btn-reset" class="icon-btn" type="button" title="重置视角与时间">重置</button>
+      </div>
+
+      <label class="slider">
+        <span>时间流速</span>
+        <input id="speed" type="range" min="0" max="40" step="0.1" value="8">
+        <b id="speed-label">× 8</b>
+      </label>
+
+      <div class="toggles">
+        <label><input id="toggle-orbits" type="checkbox" checked> 轨道</label>
+        <label><input id="toggle-labels" type="checkbox" checked> 名称</label>
+        <label><input id="toggle-asteroids" type="checkbox" checked> 小行星带</label>
+        <label><input id="toggle-moons" type="checkbox" checked> 卫星</label>
+      </div>
+    </footer>
+
+    <p class="hint">拖拽旋转 · 滚轮缩放 · 点击天体查看资料 · 数字键 0–8 聚焦</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/textures.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
