@@ -23,7 +23,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.0;
 container.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -343,11 +343,11 @@ function placeProps() {
 
 // ---------------- 灯光 ----------------
 // 极暗的环境光,几乎伸手不见五指
-const ambient = new THREE.AmbientLight(0x23283a, 0.55);
+const ambient = new THREE.AmbientLight(0x23283a, 0.4);
 scene.add(ambient);
 
 // 手电(带惯性延迟的聚光灯)
-const flashlight = new THREE.SpotLight(0xfff2d8, 0, 26, 0.46, 0.55, 1.6);
+const flashlight = new THREE.SpotLight(0xfff2d8, 0, 26, 0.44, 0.72, 1.8);
 flashlight.castShadow = true;
 flashlight.shadow.mapSize.set(1024, 1024);
 flashlight.shadow.camera.near = 0.2;
@@ -813,7 +813,7 @@ function updateWorld(dt) {
 
     // 手电被"它"干扰而闪烁
     if (ghostInfo.dist < 7 && state.flashlightOn && Math.random() < 0.09) {
-      flashlight.intensity = Math.random() < 0.5 ? 4 : 60;
+      flashlight.intensity = Math.random() < 0.5 ? 3 : 40;
     }
 
     // 抓住玩家
@@ -824,7 +824,7 @@ function updateWorld(dt) {
   }
 
   // 手电强度(平滑开关)
-  const targetIntensity = state.flashlightOn ? (state.battery < 20 ? 34 + Math.random() * 14 : 62) : 0;
+  const targetIntensity = state.flashlightOn ? (state.battery < 20 ? 20 + Math.random() * 10 : 40) : 0;
   flashlight.intensity += (targetIntensity - flashlight.intensity) * Math.min(1, dt * 14);
 
   state._ghostInfo = ghostInfo;

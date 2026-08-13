@@ -25,19 +25,25 @@ function grain(ctx, size, amount, alpha) {
   }
 }
 
-// 通用:污渍斑块
+// 通用:污渍斑块(不规则多层叠加,避免"圆点"感)
 function stains(ctx, size, count, hueBase) {
   for (let i = 0; i < count; i++) {
     const x = Math.random() * size, y = Math.random() * size;
-    const r = 12 + Math.random() * 70;
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
     const dark = 10 + Math.random() * 30;
-    g.addColorStop(0, `rgba(${hueBase[0] - dark},${hueBase[1] - dark},${hueBase[2] - dark},${0.12 + Math.random() * 0.22})`);
-    g.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
+    const alpha = 0.05 + Math.random() * 0.1;
+    ctx.fillStyle = `rgba(${hueBase[0] - dark},${hueBase[1] - dark},${hueBase[2] - dark},${alpha})`;
+    // 每个污渍由多个重叠椭圆构成
+    let px = x, py = y;
+    const blobs = 4 + Math.floor(Math.random() * 6);
+    for (let b = 0; b < blobs; b++) {
+      const rx = 6 + Math.random() * 26;
+      const ry = rx * (0.4 + Math.random() * 0.8);
+      ctx.beginPath();
+      ctx.ellipse(px, py, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+      px += (Math.random() - 0.5) * 34;
+      py += (Math.random() - 0.5) * 34;
+    }
   }
 }
 
@@ -46,16 +52,16 @@ export function makeWallTexture() {
   const S = 512;
   const [c, ctx] = canvas(S);
 
-  // 底色:褪色的灰绿
-  ctx.fillStyle = '#6e7264';
+  // 底色:褪色的灰绿(压暗,更符合废弃感)
+  ctx.fillStyle = '#4e5246';
   ctx.fillRect(0, 0, S, S);
 
   // 大面积不均匀褪色
-  stains(ctx, S, 40, [110, 114, 100]);
+  stains(ctx, S, 46, [82, 86, 74]);
 
   // 下半部瓷砖带
   const tileTop = S * 0.55;
-  ctx.fillStyle = '#83857a';
+  ctx.fillStyle = '#5e6056';
   ctx.fillRect(0, tileTop, S, S - tileTop);
   const tw = S / 8, th = (S - tileTop) / 3.5;
   ctx.strokeStyle = 'rgba(30,32,28,0.65)';
@@ -98,15 +104,23 @@ export function makeWallTexture() {
     ctx.fillRect(x - w / 2, 0, w, h);
   }
 
-  // 霉斑(深绿黑)
-  for (let i = 0; i < 26; i++) {
-    const x = Math.random() * S, y = Math.random() * S;
-    const r = 3 + Math.random() * 16;
-    ctx.fillStyle = `rgba(${14 + Math.random() * 18},${22 + Math.random() * 18},${12},${0.18 + Math.random() * 0.3})`;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  // 霉斑(深绿黑,成簇的细小斑点)
+  for (let i = 0; i < 20; i++) {
+    const cx0 = Math.random() * S, cy0 = Math.random() * S;
+    const clusterR = 14 + Math.random() * 40;
+    const dots = 20 + Math.floor(Math.random() * 40);
+    for (let d = 0; d < dots; d++) {
+      const a = Math.random() * Math.PI * 2;
+      const rr = Math.random() * Math.random() * clusterR;
+      const r = 0.8 + Math.random() * 3.2;
+      ctx.fillStyle = `rgba(${12 + Math.random() * 14},${18 + Math.random() * 14},${10},${0.15 + Math.random() * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(cx0 + Math.cos(a) * rr, cy0 + Math.sin(a) * rr, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
-  grain(ctx, S, 2600, 0.05);
+  grain(ctx, S, 3400, 0.06);
   return tex(c, 1, 1);
 }
 
