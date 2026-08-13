@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>夜巡 · 废弃医院 — 浏览器恐怖游戏</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.min.js" } }
+  </script>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <!-- 画面特效层 -->
+  <canvas id="noise-overlay"></canvas>
+  <div id="vignette"></div>
+  <div id="damage-flash"></div>
+  <canvas id="jumpscare"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="crosshair"></div>
+    <div id="interact-hint" class="hidden"></div>
+    <div id="objective"></div>
+    <div id="bottom-left">
+      <div id="battery-wrap">
+        <span class="hud-label">手电电量</span>
+        <div id="battery-bar"><div id="battery-fill"></div></div>
+      </div>
+      <div id="stamina-wrap">
+        <span class="hud-label">体力</span>
+        <div id="stamina-bar"><div id="stamina-fill"></div></div>
+      </div>
+    </div>
+    <div id="fuse-count"></div>
+    <div id="subtitle" class="hidden"></div>
+  </div>
+
+  <!-- 开始菜单 -->
+  <div id="menu" class="screen">
+    <div class="menu-inner">
+      <h1 class="title">夜&nbsp;巡</h1>
+      <h2 class="subtitle-text">废弃医院 · 圣玛丽亚疗养院</h2>
+      <p class="lore">
+        1998 年,圣玛丽亚疗养院在一夜之间被废弃。<br/>
+        你是一名夜巡保安,接到报警后独自进入了这栋大楼。<br/>
+        大门在你身后锁上了。配电箱缺了 <b>6 根保险丝</b>——<br/>
+        找齐它们,给出口大门供电,离开这里。<br/>
+        <span class="warn">……你很快会发现,这栋楼里不止你一个"人"。</span>
+      </p>
+      <div class="controls-grid">
+        <div><kbd>W A S D</kbd> 移动</div>
+        <div><kbd>鼠标</kbd> 视角</div>
+        <div><kbd>Shift</kbd> 奔跑</div>
+        <div><kbd>F</kbd> 手电开关</div>
+        <div><kbd>E</kbd> 拾取 / 互动</div>
+        <div><kbd>Esc</kbd> 暂停</div>
+      </div>
+      <p class="tip">提示:手电照住"它"可以让它减速,但电量有限。奔跑的脚步声会引来它。</p>
+      <button id="start-btn">进 入 大 楼</button>
+      <p class="small">建议佩戴耳机 · 需要键盘鼠标 · 含惊吓内容,心脏不适者慎入</p>
+    </div>
+  </div>
+
+  <!-- 暂停 -->
+  <div id="pause" class="screen hidden">
+    <div class="menu-inner">
+      <h1 class="title small-title">已暂停</h1>
+      <button id="resume-btn">继 续</button>
+      <button id="restart-btn-pause" class="secondary">重新开始</button>
+    </div>
+  </div>
+
+  <!-- 死亡 -->
+  <div id="gameover" class="screen hidden">
+    <div class="menu-inner">
+      <h1 class="title dead-title">你被带走了</h1>
+      <p class="lore" id="death-stats"></p>
+      <button id="restart-btn">再 试 一 次</button>
+    </div>
+  </div>
+
+  <!-- 胜利 -->
+  <div id="win" class="screen hidden">
+    <div class="menu-inner">
+      <h1 class="title win-title">你逃出来了</h1>
+      <p class="lore" id="win-stats"></p>
+      <p class="lore warn">但第二天,警方并没有在名单上找到叫这个名字的保安……</p>
+      <button id="restart-btn-win">再 玩 一 次</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
