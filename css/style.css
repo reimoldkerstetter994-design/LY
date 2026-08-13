@@ -54,6 +54,24 @@ body {
   z-index: 5;
   opacity: 0.11;
   mix-blend-mode: overlay;
+  pointer-events: none;
+  background-repeat: repeat;
+  animation: grainShift 0.28s steps(4) infinite;
+}
+
+@keyframes grainShift {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-4%, 3%);
+  }
+  50% {
+    transform: translate(3%, -5%);
+  }
+  75% {
+    transform: translate(-6%, 2%);
+  }
 }
 
 #hurt {

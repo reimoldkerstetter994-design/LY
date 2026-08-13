@@ -79,6 +79,7 @@
     introI: 0,
     noiseRadius: 0,
     forward: new THREE.Vector3(),
+    looping: false,
   };
 
   function show(el) {
@@ -119,7 +120,11 @@
   $("btn-again").onclick = () => location.reload();
 
   document.addEventListener("keydown", (e) => {
+    if (e.repeat && (e.code === "KeyE" || e.code === "KeyF")) return;
     keysDown[e.code] = true;
+    if (game.mode === "play") {
+      if (e.code === "KeyF" || e.code === "KeyE" || e.code === "ControlLeft" || e.code === "Space") e.preventDefault();
+    }
     if (e.code === "Escape") {
       if (game.mode === "note") closeNote();
       else if (game.mode === "play") pauseGame();
@@ -156,27 +161,25 @@
   function resize() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    grain.width = 180;
-    grain.height = 120;
     if (!game.renderer) return;
     game.renderer.setSize(w, h, false);
     game.camera.aspect = w / h;
     game.camera.updateProjectionMatrix();
   }
   window.addEventListener("resize", resize);
-  resize();
 
-  function paintGrain() {
-    const w = grain.width;
-    const h = grain.height;
-    const img = gctx.createImageData(w, h);
+  function initGrain() {
+    grain.width = 256;
+    grain.height = 256;
+    const img = gctx.createImageData(256, 256);
     for (let i = 0; i < img.data.length; i += 4) {
       const v = Math.random() * 255;
       img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
-      img.data[i + 3] = 40;
+      img.data[i + 3] = 46;
     }
     gctx.putImageData(img, 0, 0);
   }
+  initGrain();
 
   const INTRO = ["你在值班室醒来。", "表停在 2:17。", "走廊里，有人拖着步子。", "灯，不该亮着。"];
 
@@ -216,7 +219,10 @@
     game.mode = "play";
     lockPointer();
     subtitle("找到四张权限卡。手电会暴露你。", 5);
-    loop();
+    if (!game.looping) {
+      game.looping = true;
+      loop();
+    }
   }
 
   function wait(ms) {
@@ -658,7 +664,6 @@
 
   function loop() {
     requestAnimationFrame(loop);
-    paintGrain();
     if (!game.renderer) return;
     const dt = Math.min(0.05, game.clock.getDelta());
     const t = game.clock.elapsedTime;
