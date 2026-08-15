@@ -32,8 +32,8 @@ canvas#view {
 
 #vignette {
   background:
-    radial-gradient(ellipse at 50% 45%, transparent 28%, rgba(0, 0, 0, 0.55) 72%, #000 100%);
-  opacity: 0.85;
+    radial-gradient(ellipse at 50% 45%, transparent 36%, rgba(0, 0, 0, 0.42) 78%, #000 100%);
+  opacity: 0.7;
 }
 
 #grain { opacity: 0.09; mix-blend-mode: overlay; }

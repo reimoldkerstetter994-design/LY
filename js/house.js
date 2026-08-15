@@ -423,7 +423,7 @@
     note(11.15, 0.82, 0.55, "foyer");
     box(9.6, 1.1, 1.6, 0.12, 2.2, 0.12, mats.woodDark, true, true);
     box(13.3, 1.55, 2.0, 0.7, 1.1, 0.04, mats.photoFrame, true, false);
-    lamp(11.5, 2.85, 2.0, 0xffcc88, 0.25, 6, true);
+    lamp(11.5, 2.85, 2.0, 0xffcc88, 0.7, 8, true);
 
     // Living
     box(3.4, 0.42, 3.6, 2.6, 0.84, 1.05, mats.fabric, true, true);
@@ -436,7 +436,7 @@
     tape(7.55, 1.14, 1.55, 0);
     note(3.6, 0.34, 5.15, "living");
     box(1.4, 1.5, 8.4, 0.62, 0.8, 0.04, mats.photoFrame, false, false);
-    lamp(4.2, 1.28, 7.4, 0xffd0a0, 0.55, 8, true);
+    lamp(4.2, 1.28, 7.4, 0xffd0a0, 1.1, 9, true);
     box(4.2, 0.55, 7.4, 0.18, 1.1, 0.18, mats.woodDark, true, true);
 
     // Dining
@@ -446,7 +446,7 @@
       box(x, 0.46, z, 0.38, 0.92, 0.38, mats.woodDark, true, true);
     }
     box(22.6, 1.0, 1.4, 1.1, 2.0, 0.4, mats.woodDark, true, true);
-    lamp(19, 2.7, 3.6, 0xffc070, 0.35, 7, true);
+    lamp(19, 2.7, 3.6, 0xffc070, 0.85, 8, true);
 
     // Kitchen
     box(15.55, 0.55, 12, 0.7, 1.1, 4.2, mats.tile, true, true);
@@ -455,7 +455,7 @@
     box(17.2, 0.55, 9.4, 1.4, 1.1, 0.7, mats.metal, true, true);
     note(16.4, 1.14, 11.2, "kitchen");
     battery(21.6, 1.14, 10.2);
-    lamp(19.2, 2.92, 12.2, 0xddeeff, 0.4, 8, true);
+    lamp(19.2, 2.92, 12.2, 0xddeeff, 0.9, 9, true);
 
     // Bath
     box(1.3, 0.32, 13.2, 1.6, 0.64, 0.72, mats.tile, true, true);
@@ -617,6 +617,11 @@
     furnishGround();
     furnishUpper();
     furnishCellar();
+
+    for (let i = 0; i < interactables.length; i++) {
+      const it = interactables[i];
+      if (it.type === "door" && !it.locked) setDoorOpen(it, true);
+    }
 
     // Exterior night box
     const night = new THREE.Mesh(

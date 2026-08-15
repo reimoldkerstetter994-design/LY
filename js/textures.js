@@ -13,7 +13,7 @@
   function canvas(size) {
     const c = document.createElement("canvas");
     c.width = c.height = size;
-    return { c, ctx: c.getContext("2d") };
+    return { c, ctx: c.getContext("2d", { willReadFrequently: true }) };
   }
 
   function noiseField(ctx, size, seed, alpha, scale) {

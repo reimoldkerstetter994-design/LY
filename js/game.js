@@ -164,15 +164,15 @@
     clock = new THREE.Clock();
     raycaster = new THREE.Raycaster();
 
-    ambient = new THREE.AmbientLight(0x1a1816, 0.12);
+    ambient = new THREE.AmbientLight(0x2a241c, 0.28);
     scene.add(ambient);
-    hemi = new THREE.HemisphereLight(0x1a2230, 0x080604, 0.18);
+    hemi = new THREE.HemisphereLight(0x2a3344, 0x120c08, 0.32);
     scene.add(hemi);
-    moon = new THREE.DirectionalLight(0x6a7a99, 0.12);
+    moon = new THREE.DirectionalLight(0x6a7a99, 0.2);
     moon.position.set(-8, 18, -6);
     scene.add(moon);
 
-    flashLight = new THREE.SpotLight(0xffe6bf, 0, 16, 0.42, 0.38, 1.4);
+    flashLight = new THREE.SpotLight(0xffe6bf, 0, 18, 0.55, 0.42, 1.15);
     flashLight.castShadow = true;
     flashLight.shadow.mapSize.set(1024, 1024);
     flashLight.shadow.camera.near = 0.2;
@@ -182,7 +182,7 @@
 
     dust = new THREE.Points(
       new THREE.BufferGeometry(),
-      new THREE.PointsMaterial({ color: 0xccb898, size: 0.018, transparent: true, opacity: 0.22, depthWrite: false })
+      new THREE.PointsMaterial({ color: 0xccb898, size: 0.01, transparent: true, opacity: 0.14, depthWrite: false, sizeAttenuation: true })
     );
     const dpos = new Float32Array(420 * 3);
     for (let i = 0; i < 420; i++) {
@@ -192,6 +192,9 @@
     }
     dust.geometry.setAttribute("position", new THREE.BufferAttribute(dpos, 3));
     camera.add(dust);
+    const fill = new THREE.PointLight(0x9aa6b8, 0.55, 4.5, 2);
+    fill.position.set(0, 0.05, 0.1);
+    camera.add(fill);
     scene.add(camera);
 
     grainTile = SHTex.filmGrainCanvas();
@@ -320,8 +323,8 @@
     world = SHHouse.build(scene);
     SHHunter.create(scene);
     player.pos.set(11.5, 0, 2.15);
-    yaw = 0;
-    pitch = 0.05;
+    yaw = Math.PI;
+    pitch = 0.04;
     show("loading", false);
     show("click-lock", true);
     state = "needlock";
@@ -335,6 +338,7 @@
     show("pause", false);
     show("hud", true);
     state = "play";
+    flashOn = true;
     updateObjective();
     if (!looping) {
       setSub("门在你身后合上了。屋里比雨声更安静。", 4.5);
@@ -716,7 +720,7 @@
     const dir = lookDir();
     flashLight.position.copy(camera.position).add(dir.clone().multiplyScalar(0.12));
     flashLight.target.position.copy(camera.position).add(dir.multiplyScalar(8));
-    flashLight.intensity = flashOn ? 3.4 + Math.sin(playTime * 27) * 0.08 : 0;
+    flashLight.intensity = flashOn ? 4.6 + Math.sin(playTime * 27) * 0.1 : 0;
     dust.material.opacity = flashOn ? 0.28 : 0.04;
 
     scene.fog.density = 0.055 + (1 - sanity) * 0.05 + info.near * 0.03;
