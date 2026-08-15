@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>寂宅 · STILLHOUSE</title>
+    <meta name="description" content="第一人称超真实心理恐怖。雨夜回家。别开灯太久。" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect fill='%23080605' width='64' height='64'/><path fill='%236b1d12' d='M8 32 L32 10 L56 32 V56 H8Z'/><rect fill='%231a0c08' x='26' y='36' width='12' height='20'/><circle fill='%23c9a227' cx='32' cy='24' r='2.2'/></svg>" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="view"></canvas>
+
+      <div id="vignette" class="fx"></div>
+      <canvas id="grain" class="fx"></canvas>
+      <div id="rain-glass" class="fx"></div>
+      <div id="hurt" class="fx"></div>
+      <div id="flash" class="fx"></div>
+      <div id="static-fx" class="fx"></div>
+      <div id="letterbox" class="fx"></div>
+      <div id="blood-edge" class="fx"></div>
+
+      <div id="hud" class="hidden">
+        <div id="objective">找到四盘录音带。弄清楚这座房子里还住着什么。</div>
+        <div id="crosshair"></div>
+        <div id="prompt"></div>
+        <div id="subtitle"></div>
+        <div id="meters">
+          <div class="meter"><span>体力</span><div class="bar"><i id="bar-stamina"></i></div></div>
+          <div class="meter"><span>手电</span><div class="bar"><i id="bar-battery"></i></div></div>
+          <div class="meter"><span>神智</span><div class="bar"><i id="bar-sanity"></i></div></div>
+        </div>
+        <div id="inventory">
+          <div class="slot" data-k="t0"></div>
+          <div class="slot" data-k="t1"></div>
+          <div class="slot" data-k="t2"></div>
+          <div class="slot" data-k="t3"></div>
+          <div class="slot key" data-k="nursery"></div>
+          <div class="slot key" data-k="cellar"></div>
+        </div>
+        <div id="hint">F 手电 · E 交互 · Shift 跑 · Ctrl 蹲 · Esc 暂停</div>
+      </div>
+
+      <div id="note-layer" class="screen hidden">
+        <article id="note-paper">
+          <h3 id="note-title"></h3>
+          <p id="note-body"></p>
+          <div class="btn-row"><button id="btn-note-close" type="button">放下</button></div>
+        </article>
+      </div>
+
+      <div id="tape-layer" class="screen hidden">
+        <div class="tape-box">
+          <div class="reel"></div>
+          <p id="tape-line"></p>
+          <div class="btn-row"><button id="btn-tape-skip" type="button">取出磁带</button></div>
+        </div>
+      </div>
+
+      <div id="title" class="screen">
+        <div class="title-rain"></div>
+        <p class="eyebrow">雨夜 · 林宅</p>
+        <h1>寂<span>宅</span></h1>
+        <p class="en">S T I L L H O U S E</p>
+        <p class="tag">
+          妹妹最后一条语音只剩半句：<br />
+          「别回家。它已经学会开门了。」<br />
+          你还是来了。钟全停在 3:07。
+        </p>
+        <div class="btn-row">
+          <button id="btn-start" type="button">推开门</button>
+          <button id="btn-howto" type="button" class="ghost">操作说明</button>
+        </div>
+        <div class="sliders">
+          <label>鼠标灵敏度 <b id="sens-val">1.0</b></label>
+          <input id="sens" type="range" min="0.35" max="2.4" step="0.05" value="1" />
+          <label>音量 <b id="vol-val">75%</b></label>
+          <input id="vol" type="range" min="0" max="100" step="1" value="75" />
+        </div>
+        <p class="warn">建议佩戴耳机 · 含突然惊吓、闪烁灯光与心理压迫 · 桌面键鼠</p>
+      </div>
+
+      <div id="howto" class="screen hidden">
+        <div class="panel">
+          <h2>操作说明</h2>
+          <ul>
+            <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移动　<kbd>鼠标</kbd> 视角</li>
+            <li><kbd>Shift</kbd> 奔跑　<kbd>Ctrl</kbd> / <kbd>C</kbd> 蹲下</li>
+            <li><kbd>F</kbd> 手电　<kbd>E</kbd> 交互　<kbd>Esc</kbd> 暂停</li>
+          </ul>
+          <p>收集四盘录音带，找到育儿室钥匙与地下室钥匙。在地下室烧掉那本相册，然后从正门逃出去。</p>
+          <p>手电会吸引它。奔跑会暴露脚步。衣柜可以躲藏。不要长时间直视走廊尽头的东西。</p>
+          <p>神智掉光、或被它抓住，都会结束。黑暗会吃掉神智；听完录音带能让你稍微清醒一点。</p>
+          <div class="btn-row"><button id="btn-howto-back" type="button">返回</button></div>
+        </div>
+      </div>
+
+      <div id="intro" class="screen hidden">
+        <p id="intro-line"></p>
+      </div>
+
+      <div id="loading" class="screen hidden">
+        <div class="load-mark"></div>
+        <p>房子正在记起你……</p>
+      </div>
+
+      <div id="click-lock" class="screen hidden">
+        <p class="tag">进门之后，尽量少开灯。</p>
+        <div class="btn-row"><button id="btn-lock" type="button">点击锁定鼠标</button></div>
+      </div>
+
+      <div id="pause" class="screen hidden">
+        <div class="panel">
+          <h2>门还开着</h2>
+          <div class="btn-row">
+            <button id="btn-resume" type="button">继续</button>
+            <button id="btn-quit" type="button" class="ghost">回标题</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="dead" class="screen hidden">
+        <h2 id="dead-title">它比你更熟悉这栋房子</h2>
+        <p id="dead-body" class="tag"></p>
+        <div class="btn-row"><button id="btn-retry" type="button">再推一次门</button></div>
+      </div>
+
+      <div id="ending" class="screen hidden">
+        <h2>雨还在下</h2>
+        <p id="ending-body" class="tag"></p>
+        <div class="btn-row"><button id="btn-again" type="button">回到门廊</button></div>
+      </div>
+    </div>
+
+    <script src="vendor/three.min.js"></script>
+    <script src="js/textures.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/house.js"></script>
+    <script src="js/hunter.js"></script>
+    <script src="js/game.js"></script>
+  </body>
+</html>
