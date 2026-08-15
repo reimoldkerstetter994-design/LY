@@ -118,6 +118,7 @@
     const r = 0.28;
     for (let i = 0; i < colliders.length; i++) {
       const b = colliders[i];
+      if (b.off) continue;
       if (y + 1.4 < b.miny || y + 0.2 > b.maxy) continue;
       const cx = Math.max(b.minx, Math.min(x, b.maxx));
       const cz = Math.max(b.minz, Math.min(z, b.maxz));

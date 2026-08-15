@@ -102,7 +102,7 @@
 
   const player = {
     pos: new THREE.Vector3(11.5, 0, 2.15),
-    radius: 0.28,
+    radius: 0.22,
     get flashOn() { return flashOn; },
     get running() { return keys.Shift && stamina > 0.05 && !crouch && !hiding; },
     get crouch() { return crouch; },
@@ -374,6 +374,7 @@
     const r = player.radius;
     for (let i = 0; i < world.colliders.length; i++) {
       const b = world.colliders[i];
+      if (b.off) continue;
       if (y + 1.5 < b.miny || y + 0.15 > b.maxy) continue;
       const cx = Math.max(b.minx, Math.min(x, b.maxx));
       const cz = Math.max(b.minz, Math.min(z, b.maxz));

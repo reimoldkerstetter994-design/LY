@@ -664,16 +664,19 @@
     item.mesh.rotation.y = (item.rot === 0 ? 0 : Math.PI / 2) + (open ? -1.65 : 0);
     if (item.collider) {
       if (open) {
-        item.collider.minx = item.wx - 0.12;
-        item.collider.maxx = item.wx - 0.02;
-        item.collider.minz = item.wz - 0.12;
-        item.collider.maxz = item.wz - 0.02;
+        item.collider.off = true;
+        item.collider.minx = 9999;
+        item.collider.maxx = 9999;
+        item.collider.minz = 9999;
+        item.collider.maxz = 9999;
       } else if (item.rot === 0) {
+        item.collider.off = false;
         item.collider.minx = item.wx - 0.52;
         item.collider.maxx = item.wx + 0.52;
         item.collider.minz = item.wz - 0.08;
         item.collider.maxz = item.wz + 0.08;
       } else {
+        item.collider.off = false;
         item.collider.minx = item.wx - 0.08;
         item.collider.maxx = item.wx + 0.08;
         item.collider.minz = item.wz - 0.52;
