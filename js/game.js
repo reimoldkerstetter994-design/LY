@@ -388,7 +388,7 @@
   function move(dt) {
     if (hiding) return;
     const running = player.running;
-    const spd = crouch ? 1.15 : running ? 4.55 : 2.45;
+    const spd = crouch ? 1.25 : running ? 5.1 : 3.15;
     if (running) stamina = Math.max(0, stamina - dt * 0.28);
     else stamina = Math.min(1, stamina + dt * 0.18);
 
