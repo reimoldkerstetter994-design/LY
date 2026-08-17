@@ -438,14 +438,23 @@ export class Game {
     const secs = (performance.now() - this.run.startedAt) / 1000;
     const mm = Math.floor(secs / 60);
     const ss = Math.floor(secs % 60);
-    return [
-      `存活时间   ${mm}:${String(ss).padStart(2, '0')}`,
-      `保险丝     ${this.run.fuses}/${this.run.fusesNeeded}`,
-      `被追猎     ${this.run.chases} 次`,
-      `惊险逃脱   ${this.run.nearMisses} 次`,
-      `行走距离   ${Math.round(this.player?.distance ?? 0)} m`,
-      `病院编号   #${this.run.seed.toString(16).toUpperCase().slice(0, 6)}`,
-    ].join('\n');
+    /* Rendered as a preformatted monospace block, so the columns are aligned with
+     * padding. CJK glyphs occupy two cells in a monospace font, hence the
+     * ideographic space for the labels and plain spaces for the ASCII values. */
+    const rows = [
+      ['存活时间', `${mm}:${String(ss).padStart(2, '0')}`, 'Survived'],
+      ['保险丝', `${this.run.fuses}/${this.run.fusesNeeded}`, 'Fuses found'],
+      ['被追猎', `${this.run.chases}`, 'Times chased'],
+      ['惊险逃脱', `${this.run.nearMisses}`, 'Near misses'],
+      ['行走距离', `${Math.round(this.player?.distance ?? 0)}m`, 'Distance walked'],
+      ['病院编号', `#${this.run.seed.toString(16).toUpperCase().slice(0, 6)}`, 'Hospital seed'],
+    ];
+    return rows
+      .map(
+        ([zh, value, en]) =>
+          `${zh}${'\u3000'.repeat(4 - zh.length)}  ${value.padEnd(9)}·  ${en}`,
+      )
+      .join('\n');
   }
 
   /* ----------------------------------------------------------------- loop */

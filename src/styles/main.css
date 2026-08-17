@@ -835,6 +835,11 @@ input[type='checkbox']:checked::after {
   font: 12px/2 'SFMono-Regular', Consolas, monospace;
   color: #635d54;
   letter-spacing: 0.08em;
+  /* The rows are newline-separated and column-aligned with spaces, so they have
+     to survive whitespace collapsing. */
+  white-space: pre;
+  display: inline-block;
+  text-align: left;
 }
 
 #click-to-play {
