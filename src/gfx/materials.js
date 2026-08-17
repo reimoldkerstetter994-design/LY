@@ -87,26 +87,48 @@ export function buildMaterials(tex) {
     tube: new MeshBasicMaterial({ color: 0xd8e4ea, toneMapped: false }),
     // Wet, waxy, and just translucent enough at the edges to look like meat.
     skin: new MeshPhysicalMaterial({
-      color: 0x574840,
-      map: tex.fabric.map,
-      normalMap: tex.fabric.normalMap,
-      normalScale: { x: 2.4, y: 2.4 },
-      roughness: 0.36,
-      metalness: 0.02,
-      clearcoat: 0.6,
+      // White: the colour lives in the baked albedo, like every other surface
+      // here, so the creature is not darkened twice over.
+      color: 0xffffff,
+      map: tex.skin.map,
+      normalMap: tex.skin.normalMap,
+      roughnessMap: tex.skin.roughnessMap,
+      // The body's creases and ingrained grime are baked into vertex colours by
+      // the sweep that builds it.
+      vertexColors: true,
+      normalScale: { x: 1.25, y: 1.25 },
+      roughness: 1,
+      metalness: 0,
+      // A thin wet film, but a *patchy* one. Driving clearcoat roughness from the
+      // same map as the surface roughness is what stops it reading as polished
+      // stone: at 0.55 flat it laid one broad highlight over the whole body and
+      // every bit of baked detail underneath disappeared into it.
+      clearcoat: 0.3,
       clearcoatRoughness: 0.34,
-      sheen: 0.7,
-      sheenColor: new Color(0x7a2a26),
-      sheenRoughness: 0.5,
+      clearcoatRoughnessMap: tex.skin.roughnessMap,
+      // Sheen stays neutral and weak. A red sheen tinted the entire creature
+      // terracotta and made it look like a painted figurine.
+      sheen: 0.16,
+      sheenColor: new Color(0x6d6660),
+      sheenRoughness: 0.7,
     }),
     // The inside of the mouth should swallow light, not reflect it.
     maw: new MeshStandardMaterial({ color: 0x08070a, roughness: 1, metalness: 0 }),
-    eye: new MeshBasicMaterial({ color: 0xbda878, toneMapped: false }),
+    // Sunk deep in an empty socket, this is a wet reflection catching the
+    // torch — not a lit-up robot eye, so it is kept dim and small.
+    eye: new MeshBasicMaterial({ color: 0x6a5c3e, toneMapped: false }),
     sign: new MeshBasicMaterial({ color: 0x1a9c4a, toneMapped: false }),
     signRed: new MeshBasicMaterial({ color: 0xb01c22, toneMapped: false }),
   };
 
-  // The "wet" look: the fabric and skin get a hint of sheen.
+  // The creature's parts are all lathes with their own normalised UVs, so a
+  // single repeat stretches the pores and blotching across an entire limb and
+  // the skin comes out as flat, unpainted plastic. Tiling brings the detail back
+  // to roughly life size on the torso.
+  for (const k of ['map', 'normalMap', 'roughnessMap']) {
+    m.skin[k].repeat.set(2.4, 2.4);
+    m.skin[k].needsUpdate = true;
+  }
   m.skin.envMapIntensity = 0.4;
   return m;
 }

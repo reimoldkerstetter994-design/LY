@@ -95,11 +95,14 @@ const shot = async (name) => {
 
 /* ------------------------------------------------------------------ scenes */
 
-console.log('01 corridor');
+/**
+ * Find the longest straight corridor once and remember it. Several scenes need
+ * to stand somewhere with open floor ahead — placing the creature "5 m in front
+ * of wherever the camera happens to be" buries it inside a wall.
+ */
 await page.evaluate(() => {
   const g = window.__hollow.game;
   const maze = g.level.maze;
-  // A straight corridor cell with a long unbroken sightline.
   let best = null;
   let bestLen = 0;
   for (const c of maze.floors) {
@@ -113,14 +116,22 @@ await page.evaluate(() => {
       }
     }
   }
-  if (best) {
-    const w = maze.worldOf(best.c.x, best.c.y);
-    g.player.pos.set(w.x, 0, w.z);
-    g.player.yaw = Math.atan2(-best.dx, -best.dy);
-    g.player.pitch = -0.05;
-    g.player.flashOn = true;
-    g.player.battery = 1;
-  }
+  const w = maze.worldOf(best.c.x, best.c.y);
+  window.__spot = { x: w.x, z: w.z, dx: best.dx, dy: best.dy, len: bestLen };
+  window.__standInCorridor = (back = 0) => {
+    const s = window.__spot;
+    const p = window.__hollow.game.player;
+    p.pos.set(s.x - s.dx * back * 2.9, 0, s.z - s.dy * back * 2.9);
+    p.yaw = Math.atan2(-s.dx, -s.dy);
+    p.flashOn = true;
+    p.battery = 1;
+  };
+});
+
+console.log('01 corridor');
+await page.evaluate(() => {
+  window.__standInCorridor();
+  window.__hollow.game.player.pitch = -0.05;
 });
 await shot('01-corridor');
 
@@ -144,30 +155,33 @@ await shot('02-wall');
 console.log('03 the creature, upright');
 await page.evaluate(() => {
   const g = window.__hollow.game;
+  // Stand back down the corridor so there is open floor to put it on.
+  window.__standInCorridor(2);
   const m = g.monsters.find((x) => !x.phantom);
   const fwd = g.player.forward();
-  // Back off from the wall and put it in the open, five metres out.
   m.pos.set(g.player.pos.x + fwd.x * 5, 0, g.player.pos.z + fwd.z * 5);
   m.yaw = m.yawToward(g.player.pos.x, g.player.pos.z);
   m.speed = 0;
   m.gait = 0;
   m.state = 'patrol';
-  g.player.pitch = 0.06;
+  g.player.pitch = 0.02;
 });
 await shot('03-creature');
 
 console.log('04 the creature, charging');
 await page.evaluate(() => {
   const g = window.__hollow.game;
+  window.__standInCorridor(2);
   const m = g.monsters.find((x) => !x.phantom);
   const fwd = g.player.forward();
-  m.pos.set(g.player.pos.x + fwd.x * 3.4, 0, g.player.pos.z + fwd.z * 3.4);
+  m.pos.set(g.player.pos.x + fwd.x * 3.2, 0, g.player.pos.z + fwd.z * 3.2);
   m.yaw = m.yawToward(g.player.pos.x, g.player.pos.z);
   m.awareness = 1;
   m.state = 'hunt';
   m.speed = 3.4;
   m.gait = 1;
   m.jaw = 1;
+  g.player.pitch = 0.04;
   g.director.tension = 0.95;
 });
 await shot('04-charging');
@@ -175,14 +189,29 @@ await shot('04-charging');
 console.log('05 lit room');
 await page.evaluate(() => {
   const g = window.__hollow.game;
+  const maze = g.level.maze;
   const lamp = g.level.lamps.find((l) => l.alive);
   if (lamp) {
     lamp.brownout = 1;
     lamp.flickerDepth = 0.1;
-    const dir = g.level.maze.isFloor(lamp.cell.x, lamp.cell.y + 2) ? [0, 1] : [1, 0];
-    g.player.pos.set(lamp.pos.x - dir[0] * 5, 0, lamp.pos.z - dir[1] * 5);
-    g.player.yaw = Math.atan2(dir[0], dir[1]);
+    // Back away from the lamp along whichever direction stays on open floor.
+    // Stepping blind put the camera inside a wall, which renders as pure black
+    // because every wall quad faces the other way.
+    let bestDir = [0, 0];
+    let bestBack = 0;
+    for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
+      let n = 0;
+      while (n < 3 && maze.isFloor(lamp.cell.x + dx * (n + 1), lamp.cell.y + dy * (n + 1))) n++;
+      if (n > bestBack) {
+        bestBack = n;
+        bestDir = [dx, dy];
+      }
+    }
+    const c = maze.worldOf(lamp.cell.x + bestDir[0] * bestBack, lamp.cell.y + bestDir[1] * bestBack);
+    g.player.pos.set(c.x, 0, c.z);
+    g.player.yaw = Math.atan2(bestDir[0], bestDir[1]);
     g.player.pitch = 0.1;
+    g.player.flashOn = false;
   }
   const m = g.monsters.find((x) => !x.phantom);
   m.teleportNear(g.player.pos, 20, 40);

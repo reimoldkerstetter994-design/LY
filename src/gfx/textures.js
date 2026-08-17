@@ -361,6 +361,93 @@ function recipeFabric(u, v, o) {
   o.rough = clamp01(0.93 - blood * 0.35);
 }
 
+/**
+ * Skin for the thing in the dark.
+ *
+ * This used to borrow the upholstery texture, which is why the creature read as
+ * a cloth doll: a 300-cycle weave at normal strength 2.4 is unmistakably fabric
+ * no matter what colour you tint it. Real-looking skin needs three scales at
+ * once — pores, blotchy discolouration, and a few large wet patches — plus
+ * roughness that varies, because uniformly glossy skin looks like vinyl.
+ */
+function recipeSkin(u, v, o) {
+  /* Every scale here does a different job, and the reason there are so many is
+   * that a single band of noise is exactly what reads as moulded plaster: the
+   * eye needs coarse tonal patches to break the silhouette up, mid-scale
+   * mottling inside those, and micro-relief for the torch to skim across. */
+  const pores = clamp01(1 - noise.worley(u, v, 96).f1 * 2.6);
+  const grain = fbm(u * 150, v * 150, 2);
+  // Creases: skin dragged over bone, pulled into long slack folds.
+  const cw = noise.worley(u * 1.2 + 61, v * 3.1 + 5, 22);
+  const crease = clamp01(1 - (cw.f2 - cw.f1) * 9) ** 1.6;
+  // Coarse patches — the load-bearing variation. Dark necrotic areas and
+  // stretched pale ones, at a scale big enough to see across a corridor.
+  const patch = fbm(u * 2.3 + 41, v * 2.3 - 17, 4);
+  const mottle = fbm(u * 8.5, v * 8.5, 4);
+  const necrosis = smoothstep((patch - 0.56) * 3.6);
+  const bleached = smoothstep((0.42 - patch) * 4.2);
+  const bruise = smoothstep((fbm(u * 4 + 17, v * 4 - 9, 4) - 0.57) * 4.2);
+  // Veins pulled tight under skin that has too little fat behind it.
+  const w = noise.worley(u * 1.4 + 3, v * 1.4 + 8, 11);
+  const vein = clamp01(1 - (w.f2 - w.f1) * 15) * smoothstep((mottle - 0.42) * 6);
+  // Long healed splits.
+  const scar = clamp01(1 - Math.abs(fbm(u * 3.4 - 22, v * 9 + 5, 3) - 0.5) * 26);
+  // Dry skin lifting at the edges of the necrotic patches.
+  const flake = clamp01(1 - noise.worley(u * 1.1 + 88, v * 1.1 + 3, 34).f1 * 3) * necrosis;
+  // Where it is wet, and it is mostly wet.
+  const wet = smoothstep((fbm(u * 3.1 - 6, v * 3.1 + 14, 4) - 0.43) * 4);
+
+  // Bloodless grey with a jaundiced cast — not pink, and never red overall.
+  // Kept dark: lit by a torch at two metres, anything brighter clips to a white
+  // silhouette and the creature looks like polished marble.
+  let r = 0.235 + mottle * 0.1 + grain * 0.028;
+  let g = 0.219 + mottle * 0.093 + grain * 0.028;
+  let b = 0.198 + mottle * 0.07 + grain * 0.023;
+
+  // Necrotic patches go very dark and slightly green; bleached ones go pale and
+  // waxy. Between them the body stops being one flat tone.
+  r = lerp(r, 0.088, necrosis * 0.85);
+  g = lerp(g, 0.094, necrosis * 0.85);
+  b = lerp(b, 0.076, necrosis * 0.85);
+  r = lerp(r, 0.46, bleached * 0.75);
+  g = lerp(g, 0.435, bleached * 0.75);
+  b = lerp(b, 0.395, bleached * 0.75);
+  // Bruising drags it toward a dead violet.
+  r = lerp(r, 0.2, bruise * 0.7);
+  g = lerp(g, 0.152, bruise * 0.7);
+  b = lerp(b, 0.205, bruise * 0.7);
+  // Veins are darker and colder, never blue-bright.
+  r = lerp(r, 0.14, vein * 0.6);
+  g = lerp(g, 0.133, vein * 0.6);
+  b = lerp(b, 0.155, vein * 0.6);
+  // Scars are pale and shiny.
+  r = lerp(r, 0.44, scar * 0.6);
+  g = lerp(g, 0.4, scar * 0.6);
+  b = lerp(b, 0.365, scar * 0.6);
+  // Creases hold dirt.
+  const dirt = crease * 0.55;
+  r = lerp(r, 0.062, dirt);
+  g = lerp(g, 0.058, dirt);
+  b = lerp(b, 0.05, dirt);
+
+  o.r = r * (1 - pores * 0.24);
+  o.g = g * (1 - pores * 0.24);
+  o.b = b * (1 - pores * 0.22);
+
+  o.h =
+    0.5 -
+    pores * 0.4 -
+    crease * 0.5 +
+    mottle * 0.1 +
+    grain * 0.08 -
+    vein * 0.12 +
+    scar * 0.15 +
+    flake * 0.28;
+  // Wide spread on purpose: a single roughness value over a whole body is a
+  // uniform highlight, and a uniform highlight is what reads as polished stone.
+  o.rough = clamp01(0.66 - wet * 0.46 - scar * 0.22 + pores * 0.12 + flake * 0.3 + necrosis * 0.2);
+}
+
 function recipeBloodStain(u, v, o) {
   // Used as an alpha-mapped decal; albedo is dark arterial red.
   const d = Math.hypot(u - 0.5, v - 0.5) * 2;
@@ -521,6 +608,7 @@ const RECIPES = {
   metal: { fn: recipeRustMetal, normalStrength: 1.9 },
   wood: { fn: recipeWood, normalStrength: 2.2 },
   fabric: { fn: recipeFabric, normalStrength: 1.5 },
+  skin: { fn: recipeSkin, normalStrength: 1.1 },
 };
 
 /**

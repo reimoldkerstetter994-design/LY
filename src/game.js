@@ -554,7 +554,10 @@ export class Game {
     const wantAdapt = player.hiding ? 1 : clamp01(1 - litness * 3);
     // Opens slowly, shuts fast — the same asymmetry your own eyes have.
     this._adapt = damp(this._adapt, wantAdapt, wantAdapt > this._adapt ? this.adaptRate : 4, dt);
-    this.darkAdapt.intensity = this._adapt * (player.hiding ? 2.7 : 1.45);
+    // Hiding gets a much bigger lift: a locker is enclosed, so without it the
+    // player is staring at an unreadable black rectangle while the thing that
+    // is about to kill them walks past the slats.
+    this.darkAdapt.intensity = this._adapt * (player.hiding ? 4.6 : 1.45);
 
     /* -------------------------------------------------------- fx + audio */
     const fx = this.director.fx;
@@ -563,7 +566,7 @@ export class Game {
       tension: this.director.tension,
       hiding: player.hiding,
       ...fx,
-      exposure: fx.exposure * (1 + this._adapt * 0.3),
+      exposure: fx.exposure * (1 + this._adapt * (player.hiding ? 0.5 : 0.3)),
       // Adapted vision is grainy and washed out.
       grainBoost: this._adapt * 0.05,
       desaturate: this._adapt * 0.42,

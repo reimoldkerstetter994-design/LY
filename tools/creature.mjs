@@ -46,8 +46,11 @@ await page.evaluate(() => {
   g.mode = 'playing';
   g.input.enabled = true;
   g.input.locked = true;
-  // Studio lighting: this is an inspection, not a mood shot.
+  // Studio lighting: this is an inspection, not a mood shot. The level's own
+  // lamps have to go — one of them sitting behind the subject blows the whole
+  // frame out and nothing about the model can be judged.
   g.ambient.intensity = 0.9;
+  for (const l of g.level.lamps) l.alive = false;
   document.getElementById('hud').classList.add('hidden');
   // Freeze the Director too, otherwise it keeps restoring torch brightness.
   g.director.update = () => {};
@@ -86,8 +89,10 @@ const pose = (opts) =>
     m.state = o.state;
     m.awareness = o.state === 'hunt' ? 1 : 0;
     m.repathTimer = 999;
-    // Face the camera position we are about to move to.
-    m.yaw = o.angle + Math.PI;
+    // By default it turns to face the camera. `yaw` overrides that, which is the
+    // only way to get an actual profile — otherwise the "side" shot just showed
+    // the creature swivelling round to look at us again.
+    m.yaw = o.yaw ?? o.angle + Math.PI;
 
     // Player forward is (-sin(yaw), -cos(yaw)), so standing at +dir and facing
     // the origin of that offset means yaw === angle.
@@ -112,8 +117,10 @@ const measure = () =>
       return v.setFromMatrixPosition(obj.matrixWorld).y;
     };
     const feet = m.legs.map((l) => yOf(l.ankle));
+    // Only the rigid parts under the rig (feet, toes, fingers) can be measured
+    // from their bounding boxes — the body is skinned, so its geometry bounds
+    // are still in bind pose. Floor contact is a foot question anyway.
     let lowest = Infinity;
-    let top = -Infinity;
     m.root.traverse((o) => {
       if (!o.isMesh) return;
       o.geometry.computeBoundingBox();
@@ -121,20 +128,29 @@ const measure = () =>
       o.updateWorldMatrix(true, false);
       bb.applyMatrix4(o.matrixWorld);
       lowest = Math.min(lowest, bb.min.y);
-      top = Math.max(top, bb.max.y);
     });
+    const crown = yOf(m.head) + 0.3;
     return {
       gait: +m.gait.toFixed(2),
       ankleY: feet.map((f) => +f.toFixed(3)),
-      lowestMeshY: +lowest.toFixed(3),
-      topMeshY: +top.toFixed(3),
-      height: +(top - lowest).toFixed(2),
+      lowestY: +lowest.toFixed(3),
+      crownY: +crown.toFixed(3),
+      height: +(crown - lowest).toFixed(2),
     };
   });
 
 const shots = [
   { name: '01-idle-front', dist: 3.2, angle: 0, pitch: 0.05, gait: 0, speed: 0, state: 'patrol' },
-  { name: '02-idle-side', dist: 3.2, angle: Math.PI / 2, pitch: 0.05, gait: 0, speed: 0, state: 'patrol' },
+  {
+    name: '02-idle-side',
+    dist: 3.2,
+    angle: Math.PI / 2,
+    yaw: 0,
+    pitch: 0.05,
+    gait: 0,
+    speed: 0,
+    state: 'patrol',
+  },
   { name: '03-walk', dist: 3.6, angle: 0.4, pitch: 0.05, gait: 0, speed: 1.5, state: 'patrol' },
   { name: '04-sprint', dist: 3.6, angle: 0.4, pitch: 0.1, gait: 1, speed: 3.4, state: 'hunt' },
   { name: '05-attack-close', dist: 1.6, angle: 0, pitch: 0.18, gait: 0.4, speed: 2.0, state: 'attack' },
