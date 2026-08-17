@@ -552,7 +552,7 @@ export class Monster {
       const da = Math.abs(angDelta(a, FRONT));
 
       // Just enough relief to catch a raking torch; the rest is shading.
-      d += ribField(a, y) * 0.0022;
+      d += ribField(a, y) * 0.0038;
       // Sternum: a hollow between the two halves of the cage.
       d -= blob(a, y, FRONT, 1.86, 0.22, 0.1) * 0.016;
       // Collarbones, and the pit between them.
@@ -653,15 +653,19 @@ export class Monster {
       }
       // Ribs: dirt and self-shadow in the gaps is what actually reads as a cage
       // under skin, so the grooves get darkened far harder than they are deep.
-      s += clamp01(-ribField(a, y)) * 0.3;
+      s += clamp01(-ribField(a, y)) * 0.44;
       s += blob(a, y, FRONT, 2.02, 0.3, 0.024) * 0.35;
       // Grime gathers in the groin, under the belly and in the armpits.
       s += smoothstep((1.12 - y) / 0.12) * 0.4;
       s += band(y, 1.52, 0.06) * front * 0.16;
       for (const k of [-1, 1]) s += blob(a, y, FRONT + k * 1.45, 1.95, 0.3, 0.06) * 0.3;
-      // Blotchy filth over the whole body.
-      s += clamp01(surfNoise.fbm(a * 2.3 + 11, y * 3.1, 4) * 0.9 + 0.45) * 0.3;
-      s += clamp01(surfNoise.fbm(a * 7 + 44, y * 9, 3) * 0.7 + 0.35) * 0.12;
+      // Coarse blotching — dead patches and ingrained filth. This is the body's
+      // large-scale tonal variation, and it lives here rather than in the albedo
+      // map because the map tiles several times across the torso and anything
+      // this size baked into it repeats as an obvious grid.
+      s += smoothstep((surfNoise.fbm(a * 1.5 + 11, y * 1.9, 4) - 0.45) * 3.2) * 0.4;
+      s += smoothstep((surfNoise.fbm(a * 3.1 + 63, y * 4.2, 4) - 0.5) * 3.6) * 0.22;
+      s += clamp01(surfNoise.fbm(a * 7 + 44, y * 9, 3) * 0.7 + 0.35) * 0.1;
       return s;
     };
 
@@ -799,6 +803,8 @@ export class Monster {
             return (
               inner * (0.15 + 0.4 * smoothstep((0.22 - t) / 0.22)) +
               smoothstep((t - 0.72) / 0.3) * 0.35 +
+              // Coarse blotching, unique per vertex so it cannot tile.
+              smoothstep((surfNoise.fbm(a * 1.6 + 21, y * 2.1, 4) - 0.46) * 3.2) * 0.36 +
               (1 - surfNoise.fbm(a * 2.7, y * 3, 3)) * 0.1
             );
           },
@@ -878,6 +884,7 @@ export class Monster {
             return (
               inner * 0.4 +
               smoothstep((t - 0.8) / 0.25) * 0.4 +
+              smoothstep((surfNoise.fbm(a * 1.6 + 35, y * 2.1, 4) - 0.46) * 3.2) * 0.36 +
               (1 - surfNoise.fbm(a * 2.4 + 8, y * 3, 3)) * 0.1
             );
           },
@@ -1489,8 +1496,11 @@ export class Monster {
 
       if (this.state === STATE.ATTACK) {
         const reach = clamp01(this.grabbing / 0.4 + 0.35);
-        arm.shoulder.rotation.x = lerp(arm.shoulder.rotation.x, 1.5 + reach * 0.35, 0.8);
-        arm.elbow.rotation.x = lerp(arm.elbow.rotation.x, -0.2, 0.8);
+        // Held back from horizontal on purpose. Linear blend skinning loses
+        // volume in proportion to the angle it has to blend across, and past
+        // about 80 degrees the shoulder collapsed into a visible pinch.
+        arm.shoulder.rotation.x = lerp(arm.shoulder.rotation.x, 1.15 + reach * 0.25, 0.8);
+        arm.elbow.rotation.x = lerp(arm.elbow.rotation.x, -0.34, 0.8);
         arm.shoulder.rotation.z = arm.side * (0.45 - reach * 0.3);
         arm.wrist.rotation.x = 0.5;
       }

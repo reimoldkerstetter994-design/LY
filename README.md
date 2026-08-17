@@ -24,7 +24,32 @@ npm run preview  # http://127.0.0.1:4173
 
 需要支持 WebGL2 的桌面浏览器 + 鼠标键盘。**强烈建议戴耳机**。
 
+界面文案为中文，每一处都附有英文字幕行（菜单、HUD、提示、剧情字幕、结算画面）。
+
 > ⚠️ 含突发惊吓、高频闪光与强烈低频音效。光敏性癫痫患者请勿游玩。
+
+<details>
+<summary>English</summary>
+
+A **3D first-person survival horror game** that runs in the browser. The entire
+hospital — geometry, materials, the creature, every sound — is generated at
+runtime from code. There are no art or audio asset files in this repository.
+
+Find 5 fuses, throw the breaker, and get out through the fire door. Turning the
+power back on makes the corridors readable — and lets the thing in the ward see
+you too.
+
+```bash
+npm install && npm run dev      # http://127.0.0.1:5173
+```
+
+Needs a desktop browser with WebGL2, a mouse and a keyboard. Headphones strongly
+recommended. Interface text is Chinese with an English subtitle line throughout.
+
+> ⚠️ Contains jump scares, flashing lights and loud low-frequency audio. Not
+> suitable for photosensitive players.
+
+</details>
 
 ---
 
@@ -64,7 +89,7 @@ npm run preview  # http://127.0.0.1:4173
 | PBR 贴图 | 逐像素跑 value/worley 噪声，烘出 albedo + roughness，再用 Sobel 从高度图推法线（无缝平铺） |
 | 道具 | 由基本体拼出病床、轮椅、输液架、储物柜、货架、油桶、水槽、马桶、隔帘、吊钩…… 合并后用 `InstancedMesh` 批量绘制 |
 | 墙上血字 | Canvas 2D 手写字 + 程序化血滴，烘成带透明通道的贴花 |
-| 怪物 | 代码搭出的骨架层级 + 纯手写程序化动画（没有骨骼蒙皮，没有动画文件） |
+| 怪物 | 代码生成的骨架 + 蒙皮网格：把一串环形截面扫成一整张连续的皮，肋骨/眉骨/眼窝/颧骨都是往这张皮里压出来或拉出来的（不是叠基本体）。动画全靠代码，四肢用两骨 IK 解算落地点 |
 | 全部音效 | Web Audio 实时合成：脚步、心跳、呼吸、低语、金属撞击、门轴、尖叫、惊吓音墙、混响用程序化生成的脉冲响应 |
 
 ### 渲染

@@ -380,10 +380,13 @@ function recipeSkin(u, v, o) {
   // Creases: skin dragged over bone, pulled into long slack folds.
   const cw = noise.worley(u * 1.2 + 61, v * 3.1 + 5, 22);
   const crease = clamp01(1 - (cw.f2 - cw.f1) * 9) ** 1.6;
-  // Coarse patches — the load-bearing variation. Dark necrotic areas and
-  // stretched pale ones, at a scale big enough to see across a corridor.
-  const patch = fbm(u * 2.3 + 41, v * 2.3 - 17, 4);
-  const mottle = fbm(u * 8.5, v * 8.5, 4);
+  /* Nothing in here may be much coarser than the tile, because this map is
+   * repeated several times across the body. Big blotches baked in at low
+   * frequency came back as a grid of identical 10 cm patches. The coarse tonal
+   * variation lives in the creature's vertex colours instead, where it is
+   * generated once across the whole surface and cannot repeat. */
+  const patch = fbm(u * 7.5 + 41, v * 7.5 - 17, 4);
+  const mottle = fbm(u * 13, v * 13, 4);
   const necrosis = smoothstep((patch - 0.56) * 3.6);
   const bleached = smoothstep((0.42 - patch) * 4.2);
   const bruise = smoothstep((fbm(u * 4 + 17, v * 4 - 9, 4) - 0.57) * 4.2);
@@ -404,14 +407,13 @@ function recipeSkin(u, v, o) {
   let g = 0.219 + mottle * 0.093 + grain * 0.028;
   let b = 0.198 + mottle * 0.07 + grain * 0.023;
 
-  // Necrotic patches go very dark and slightly green; bleached ones go pale and
-  // waxy. Between them the body stops being one flat tone.
-  r = lerp(r, 0.088, necrosis * 0.85);
-  g = lerp(g, 0.094, necrosis * 0.85);
-  b = lerp(b, 0.076, necrosis * 0.85);
-  r = lerp(r, 0.46, bleached * 0.75);
-  g = lerp(g, 0.435, bleached * 0.75);
-  b = lerp(b, 0.395, bleached * 0.75);
+  // Necrotic patches go dark and slightly green; bleached ones go pale and waxy.
+  r = lerp(r, 0.088, necrosis * 0.5);
+  g = lerp(g, 0.094, necrosis * 0.5);
+  b = lerp(b, 0.076, necrosis * 0.5);
+  r = lerp(r, 0.46, bleached * 0.42);
+  g = lerp(g, 0.435, bleached * 0.42);
+  b = lerp(b, 0.395, bleached * 0.42);
   // Bruising drags it toward a dead violet.
   r = lerp(r, 0.2, bruise * 0.7);
   g = lerp(g, 0.152, bruise * 0.7);
@@ -445,7 +447,9 @@ function recipeSkin(u, v, o) {
     flake * 0.28;
   // Wide spread on purpose: a single roughness value over a whole body is a
   // uniform highlight, and a uniform highlight is what reads as polished stone.
-  o.rough = clamp01(0.66 - wet * 0.46 - scar * 0.22 + pores * 0.12 + flake * 0.3 + necrosis * 0.2);
+  // The floor matters as much as the spread though — letting the wet patches run
+  // down to 0.2 turned them into mirrors and the body came back looking glazed.
+  o.rough = clamp01(0.74 - wet * 0.3 - scar * 0.13 + pores * 0.1 + flake * 0.26 + necrosis * 0.16);
 }
 
 function recipeBloodStain(u, v, o) {

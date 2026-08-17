@@ -103,8 +103,10 @@ export function buildMaterials(tex) {
       // same map as the surface roughness is what stops it reading as polished
       // stone: at 0.55 flat it laid one broad highlight over the whole body and
       // every bit of baked detail underneath disappeared into it.
-      clearcoat: 0.3,
-      clearcoatRoughness: 0.34,
+      clearcoat: 0.26,
+      // Multiplies against the map, so this has to stay high or the wet patches
+      // come back as hard specular dots.
+      clearcoatRoughness: 0.78,
       clearcoatRoughnessMap: tex.skin.roughnessMap,
       // Sheen stays neutral and weak. A red sheen tinted the entire creature
       // terracotta and made it look like a painted figurine.
