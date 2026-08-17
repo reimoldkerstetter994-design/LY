@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>黑潮 · BLACKTIDE</title>
+    <meta name="description" content="台风夜。废弃海滨旅馆。第一人称超真实动态恐怖。" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect fill='%03060a' width='64' height='64'/><path fill='%23101822' d='M6 44 L18 22 L32 38 L46 16 L58 44 V58 H6Z'/><circle fill='%236b1d22' cx='32' cy='28' r='3'/></svg>" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="view"></canvas>
+
+      <div id="vignette" class="fx"></div>
+      <canvas id="grain" class="fx"></canvas>
+      <div id="rain-glass" class="fx"></div>
+      <div id="hurt" class="fx"></div>
+      <div id="flash" class="fx"></div>
+      <div id="static-fx" class="fx"></div>
+      <div id="letterbox" class="fx"></div>
+      <div id="blood-edge" class="fx"></div>
+      <div id="sanity-warp" class="fx"></div>
+
+      <div id="hud" class="hidden">
+        <div id="objective">找到四份旅客记录。弄清楚潮水为什么会走路。</div>
+        <div id="crosshair"></div>
+        <div id="prompt"></div>
+        <div id="subtitle"></div>
+        <div id="meters">
+          <div class="meter"><span>体力</span><div class="bar"><i id="bar-stamina"></i></div></div>
+          <div class="meter"><span>手电</span><div class="bar"><i id="bar-battery"></i></div></div>
+          <div class="meter"><span>神智</span><div class="bar"><i id="bar-sanity"></i></div></div>
+        </div>
+        <div id="inventory">
+          <div class="slot" data-k="l0" title="旅客记录"></div>
+          <div class="slot" data-k="l1" title="旅客记录"></div>
+          <div class="slot" data-k="l2" title="旅客记录"></div>
+          <div class="slot" data-k="l3" title="旅客记录"></div>
+          <div class="slot key" data-k="office" title="办公钥匙"></div>
+          <div class="slot key" data-k="room201" title="201钥匙"></div>
+          <div class="slot key" data-k="boiler" title="锅炉钥匙"></div>
+          <div class="slot key" data-k="boat" title="小艇钥匙"></div>
+        </div>
+        <div id="hint">F 手电 · E 交互 · Shift 跑 · Ctrl 蹲 · Esc 暂停</div>
+      </div>
+
+      <div id="note-layer" class="screen hidden">
+        <article id="note-paper">
+          <h3 id="note-title"></h3>
+          <p id="note-body"></p>
+          <div class="btn-row"><button id="btn-note-close" type="button">放下</button></div>
+        </article>
+      </div>
+
+      <div id="log-layer" class="screen hidden">
+        <div class="log-box">
+          <div class="wave"></div>
+          <p id="log-line"></p>
+          <div class="btn-row"><button id="btn-log-skip" type="button">合上记录</button></div>
+        </div>
+      </div>
+
+      <div id="title" class="screen">
+        <div class="title-rain"></div>
+        <p class="eyebrow">台风夜 · 黑潮旅馆</p>
+        <h1>黑<span>潮</span></h1>
+        <p class="en">B L A C K T I D E</p>
+        <p class="tag">
+          妹妹最后一条短信只剩半句：<br />
+          「别来。水已经进到墙里了。」<br />
+          你还是来了。潮位表停在 3:13。
+        </p>
+        <div class="btn-row">
+          <button id="btn-start" type="button">推开旋转门</button>
+          <button id="btn-howto" type="button" class="ghost">操作说明</button>
+        </div>
+        <div class="sliders">
+          <label>鼠标灵敏度 <b id="sens-val">1.0</b></label>
+          <input id="sens" type="range" min="0.35" max="2.4" step="0.05" value="1" />
+          <label>音量 <b id="vol-val">80%</b></label>
+          <input id="vol" type="range" min="0" max="100" step="1" value="80" />
+        </div>
+        <p class="warn">戴耳机。关灯。这不是休闲游戏。</p>
+      </div>
+
+      <div id="howto" class="screen hidden">
+        <div class="panel">
+          <h2>你不该进来</h2>
+          <ul>
+            <li><b>W A S D</b> 移动 · <b>鼠标</b> 环视</li>
+            <li><b>Shift</b> 奔跑（它听得见）</li>
+            <li><b>Ctrl</b> 蹲下 · 靠近柜子可 <b>E</b> 躲藏</li>
+            <li><b>F</b> 手电（亮光会把它招来）</li>
+            <li><b>E</b> 开门、拾取、阅读</li>
+            <li>神智掉光时，走廊会开始说谎</li>
+            <li>目标：集齐四份旅客记录，找到小艇钥匙，从码头逃走</li>
+          </ul>
+          <div class="btn-row"><button id="btn-howto-back" type="button">返回</button></div>
+        </div>
+      </div>
+
+      <div id="pause" class="screen hidden">
+        <div class="panel slim">
+          <h2>潮水还在涨</h2>
+          <div class="btn-row">
+            <button id="btn-resume" type="button">继续</button>
+            <button id="btn-quit" type="button" class="ghost">回到门廊</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="ending" class="screen hidden">
+        <div class="end-copy">
+          <p class="eyebrow" id="end-eyebrow">黑潮旅馆</p>
+          <h2 id="end-title"></h2>
+          <p id="end-body"></p>
+          <div class="btn-row"><button id="btn-again" type="button">再进一次</button></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="vendor/three.min.js"></script>
+    <script src="js/textures.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/hotel.js"></script>
+    <script src="js/entity.js"></script>
+    <script src="js/game.js"></script>
+  </body>
+</html>
