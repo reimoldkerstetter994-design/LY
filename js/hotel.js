@@ -293,7 +293,10 @@
     box(13, 1.7, 0.35, 2.6, 0.55, 0.08, mats.rust, false, false);
     const sign = box(13, 2.35, 0.4, 1.8, 0.35, 0.06, mats.glowRed, false, false);
     sign.material = mats.glowRed;
-    lamp(13, 2.85, 2.6, 0xffc8a0, 1.35, 12, false);
+    lamp(13, 2.85, 2.6, 0xffc8a0, 1.8, 13, false);
+    const lobbyFill = new THREE.PointLight(0xffd2a8, 1.1, 11, 1.6);
+    lobbyFill.position.set(13, 2.3, 3.4);
+    scene.add(lobbyFill);
     lamp(10.5, 2.85, 7.5, 0xffd0aa, 0.85, 9);
     lamp(15.5, 2.85, 7.5, 0xffd0aa, 0.85, 9);
     note("lobby", 13.6, 0.86, 2.4, "前台便条");
@@ -414,9 +417,9 @@
 
   function exterior() {
     // night sky box-ish ground around hotel
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshStandardMaterial({
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshPhongMaterial({
       color: 0x05080c,
-      roughness: 1,
+      shininess: 2,
     }));
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.02;
@@ -458,16 +461,26 @@
     return [
       { id: "lobby-din", x: 8, z: 2, dir: "w", key: null },
       { id: "lobby-rec", x: 17, z: 2, dir: "e", key: null },
+      { id: "lobby-hall", x: 12, z: 4, dir: "n", key: null },
+      { id: "lobby-hall2", x: 13, z: 4, dir: "n", key: null },
+      { id: "din-kit", x: 3, z: 6, dir: "n", key: null },
+      { id: "hall-stairs", x: 12, z: 11, dir: "n", key: null },
+      { id: "hall-stairs2", x: 13, z: 11, dir: "n", key: null },
       { id: "hall-kit", x: 8, z: 8, dir: "w", key: null },
       { id: "hall-off", x: 17, z: 8, dir: "e", key: "office", label: "办公室" },
       { id: "off-lounge", x: 21, z: 8, dir: "e", key: null },
       { id: "hall-rest", x: 17, z: 13, dir: "e", key: null },
+      { id: "up-stairs", x: 12, z: 11, dir: "n", key: null },
+      { id: "up-stairs2", x: 13, z: 11, dir: "n", key: null },
       { id: "d201", x: 10, z: 2, dir: "w", key: "room201", label: "201" },
       { id: "d202", x: 15, z: 2, dir: "e", key: null, label: "202" },
       { id: "d203", x: 10, z: 7, dir: "w", key: null, label: "203" },
       { id: "d204", x: 15, z: 7, dir: "e", key: null, label: "204" },
       { id: "d205", x: 10, z: 12, dir: "w", key: null, label: "205" },
       { id: "d206", x: 15, z: 13, dir: "e", key: null, label: "布草间" },
+      { id: "c-stairs", x: 8, z: 7, dir: "n", key: null },
+      { id: "c-stairs2", x: 9, z: 7, dir: "n", key: null },
+      { id: "c-pier", x: 8, z: 3, dir: "s", key: null },
       { id: "boiler", x: 6, z: 4, dir: "w", key: "boiler", label: "锅炉房" },
       { id: "storage", x: 11, z: 4, dir: "e", key: null, label: "储藏" },
     ];
@@ -564,9 +577,10 @@
     scene = target;
     reset();
     mats = BTTex.makeMats();
-    const gDoors = makeDoors().filter((d) => !String(d.id).startsWith("d") && d.id !== "boiler" && d.id !== "storage");
-    const uDoors = makeDoors().filter((d) => String(d.id).startsWith("d"));
-    const cDoors = makeDoors().filter((d) => d.id === "boiler" || d.id === "storage");
+    const cellarIds = { boiler: 1, storage: 1, "c-stairs": 1, "c-stairs2": 1, "c-pier": 1 };
+    const gDoors = makeDoors().filter((d) => !String(d.id).startsWith("d") && !String(d.id).startsWith("up-") && !cellarIds[d.id]);
+    const uDoors = makeDoors().filter((d) => String(d.id).startsWith("d") || String(d.id).startsWith("up-"));
+    const cDoors = makeDoors().filter((d) => cellarIds[d.id]);
     const wins = makeWindows();
 
     buildFloor(groundGrid(), 0, GH, gDoors, wins, 0, 0, (x, z) => z >= 12 && x >= 8 && x < 18);

@@ -135,14 +135,44 @@
   }
 
   function boot() {
+    try {
+      bootInner();
+      if (location.hash === "#play") startGame();
+    } catch (err) {
+      const box = document.createElement("pre");
+      box.style.cssText = "position:fixed;left:12px;top:12px;right:12px;z-index:99;color:#f88;background:#200;padding:12px;white-space:pre-wrap;font:13px monospace";
+      box.textContent = String(err && err.stack ? err.stack : err);
+      document.body.appendChild(box);
+      throw err;
+    }
+  }
+
+  function bootInner() {
     const canvas = $("view");
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.6));
+    try {
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        failIfMajorPerformanceCaveat: false,
+        powerPreference: "default",
+      });
+    } catch (e) {
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: false,
+        failIfMajorPerformanceCaveat: false,
+      });
+    }
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     renderer.setSize(innerWidth, innerHeight);
-    renderer.shadowMap.enabled = true;
+    const gl = renderer.getContext();
+    const dbg = gl && gl.getExtension("WEBGL_debug_renderer_info");
+    const gpu = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || "") : "";
+    const software = /swiftshader|llvmpipe|softpipe|software|microsoft basic/i.test(gpu);
+    renderer.shadowMap.enabled = !software;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.88;
+    renderer.toneMapping = software ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = software ? 1.15 : 0.88;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     scene = new THREE.Scene();
@@ -162,7 +192,7 @@
     scene.add(moon);
 
     flashLight = new THREE.SpotLight(0xffe6bf, 0, 19, 0.58, 0.38, 1.05);
-    flashLight.castShadow = true;
+    flashLight.castShadow = renderer.shadowMap.enabled;
     flashLight.shadow.mapSize.set(1024, 1024);
     flashLight.shadow.camera.near = 0.2;
     flashLight.shadow.camera.far = 17;
@@ -272,6 +302,12 @@
     show("ending", false);
     show("pause", false);
     show("hud", true);
+    if (location.hash === "#play") {
+      flashOn = true;
+      state = "play";
+      setSub("F 打开手电。别跑太响。", 3.2);
+      return;
+    }
     state = "intro";
     let i = 0;
     const step = () => {

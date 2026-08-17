@@ -85,16 +85,18 @@
 
   function std(map, opts) {
     opts = opts || {};
-    return new THREE.MeshStandardMaterial({
+    const shiny = opts.roughness != null ? (1 - opts.roughness) * 48 : 8;
+    return new THREE.MeshPhongMaterial({
       map,
-      roughness: opts.roughness != null ? opts.roughness : 0.86,
-      metalness: opts.metalness || 0,
       color: opts.color != null ? opts.color : 0xffffff,
-      emissive: opts.emissive || 0x000000,
-      emissiveIntensity: opts.emissiveIntensity || 0,
+      specular: opts.metalness ? 0x666666 : 0x222222,
+      shininess: Math.max(4, shiny),
+      emissive: opts.emissive || 0x1a1612,
+      emissiveIntensity: opts.emissiveIntensity != null ? opts.emissiveIntensity : 0.22,
       transparent: !!opts.transparent,
       opacity: opts.opacity != null ? opts.opacity : 1,
       side: opts.side || THREE.FrontSide,
+      flatShading: false,
     });
   }
 
@@ -150,7 +152,7 @@
 
   function concrete(seed) {
     return tex("cc" + seed, 512, (ctx, s) => {
-      ctx.fillStyle = "#1c1e20";
+      ctx.fillStyle = "#3a3c40";
       ctx.fillRect(0, 0, s, s);
       stains(ctx, s, seed, "rgba(0,0,0,0.35)", 16);
       stains(ctx, s, seed + 4, "rgba(40,50,40,0.18)", 8);
@@ -160,7 +162,7 @@
 
   function carpet(seed) {
     return tex("cp" + seed, 512, (ctx, s) => {
-      ctx.fillStyle = "#2a1416";
+      ctx.fillStyle = "#4a2428";
       ctx.fillRect(0, 0, s, s);
       const r = rng(seed);
       ctx.strokeStyle = "rgba(80,20,24,0.35)";
@@ -208,12 +210,12 @@
 
   function makeMats() {
     return {
-      paper: std(wallpaper(1, "#3a3228", "rgba(50,42,34,0.5)"), { roughness: 0.92 }),
-      paperDark: std(wallpaper(2, "#241c18", "rgba(18,12,10,0.6)"), { roughness: 0.9 }),
-      stripe: std(wallpaper(3, "#2c1c20", "rgba(90,24,30,0.35)"), { roughness: 0.88 }),
-      seaWall: std(wallpaper(4, "#1c2428", null), { roughness: 0.9 }),
-      wood: std(wood(5, "#3a2a1c", "#2a1c12"), { roughness: 0.72 }),
-      woodLight: std(wood(6, "#4a3824", "#322616"), { roughness: 0.7 }),
+      paper: std(wallpaper(1, "#6a5a48", "rgba(80,68,54,0.5)"), { roughness: 0.92 }),
+      paperDark: std(wallpaper(2, "#4a3a32", "rgba(40,28,22,0.55)"), { roughness: 0.9 }),
+      stripe: std(wallpaper(3, "#4a3034", "rgba(120,40,48,0.35)"), { roughness: 0.88 }),
+      seaWall: std(wallpaper(4, "#3a4a52", null), { roughness: 0.9 }),
+      wood: std(wood(5, "#6a4a32", "#4a3220"), { roughness: 0.72 }),
+      woodLight: std(wood(6, "#7a5a38", "#5a4028"), { roughness: 0.7 }),
       tile: std(tile(7), { roughness: 0.35, metalness: 0.08 }),
       tileWall: std(tile(8), { roughness: 0.4 }),
       concrete: std(concrete(9), { roughness: 0.95 }),
@@ -222,19 +224,19 @@
       rust: std(rust(12), { roughness: 0.55, metalness: 0.35 }),
       metal: std(rust(13), { color: 0x888890, roughness: 0.4, metalness: 0.7 }),
       glass: std(glass(), { roughness: 0.12, metalness: 0.15, transparent: true, opacity: 0.28, side: THREE.DoubleSide }),
-      water: new THREE.MeshStandardMaterial({
+      water: new THREE.MeshPhongMaterial({
         color: 0x0a1a1c,
-        roughness: 0.18,
-        metalness: 0.35,
+        specular: 0x88aacc,
+        shininess: 60,
         transparent: true,
         opacity: 0.55,
       }),
-      black: new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.9 }),
-      gold: new THREE.MeshStandardMaterial({ color: 0x8a6a32, roughness: 0.35, metalness: 0.65 }),
-      cloth: new THREE.MeshStandardMaterial({ color: 0x2a1a1c, roughness: 1 }),
-      skin: new THREE.MeshStandardMaterial({ color: 0x1a2422, roughness: 0.45, metalness: 0.05 }),
-      glowRed: new THREE.MeshStandardMaterial({ color: 0x220000, emissive: 0xff2211, emissiveIntensity: 1.4 }),
-      glowCyan: new THREE.MeshStandardMaterial({ color: 0x001018, emissive: 0x44aacc, emissiveIntensity: 0.9 }),
+      black: new THREE.MeshPhongMaterial({ color: 0x080808, shininess: 4 }),
+      gold: new THREE.MeshPhongMaterial({ color: 0x8a6a32, specular: 0xaa8844, shininess: 42 }),
+      cloth: new THREE.MeshPhongMaterial({ color: 0x2a1a1c, shininess: 2 }),
+      skin: new THREE.MeshPhongMaterial({ color: 0x1a2422, shininess: 18, specular: 0x223322 }),
+      glowRed: new THREE.MeshPhongMaterial({ color: 0x220000, emissive: 0xff2211, emissiveIntensity: 1.4 }),
+      glowCyan: new THREE.MeshPhongMaterial({ color: 0x001018, emissive: 0x44aacc, emissiveIntensity: 0.9 }),
     };
   }
 
