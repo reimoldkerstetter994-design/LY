@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>深渊回廊 — 超真实3D恐怖游戏</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="loading-screen">
+    <div class="loading-content">
+      <h1>深渊回廊</h1>
+      <p class="subtitle">ABYSS CORRIDOR</p>
+      <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
+      <p id="loading-text">正在加载恐怖世界...</p>
+    </div>
+  </div>
+
+  <div id="menu-screen" class="hidden">
+    <div class="menu-content">
+      <h1>深渊回廊</h1>
+      <p class="tagline">不要回头。不要呼吸。不要让它听见你。</p>
+      <div class="warning">⚠ 本游戏包含惊吓、闪烁灯光和恐怖音效，请佩戴耳机体验</div>
+      <button id="btn-start" class="btn-primary">开始游戏</button>
+      <div class="controls-info">
+        <h3>操作说明</h3>
+        <ul>
+          <li><kbd>W A S D</kbd> 移动</li>
+          <li><kbd>鼠标</kbd> 环顾四周</li>
+          <li><kbd>Shift</kbd> 奔跑（会发出声音）</li>
+          <li><kbd>F</kbd> 开关手电筒</li>
+          <li><kbd>E</kbd> 拾取钥匙 / 开门</li>
+          <li><kbd>Ctrl</kbd> 蹲下躲藏</li>
+        </ul>
+        <p class="objective">目标：在废弃精神病院中找到 <strong>3把钥匙</strong>，打开出口大门逃离。</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="hud" class="hidden">
+    <div id="vignette"></div>
+    <div id="damage-overlay"></div>
+    <div id="jumpscare-overlay" class="hidden">
+      <img id="jumpscare-img" alt="" />
+    </div>
+    <div id="sanity-effect"></div>
+
+    <div class="hud-top">
+      <div class="hud-item">
+        <span class="hud-label">钥匙</span>
+        <span id="keys-count">0 / 3</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">理智</span>
+        <div class="bar-container"><div id="sanity-bar" class="bar sanity"></div></div>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">电量</span>
+        <div class="bar-container"><div id="battery-bar" class="bar battery"></div></div>
+      </div>
+    </div>
+
+    <div id="crosshair">+</div>
+    <div id="interaction-prompt" class="hidden">按 E 交互</div>
+    <div id="message-box" class="hidden"></div>
+    <div id="heartbeat-indicator" class="hidden">💓</div>
+
+    <div class="hud-bottom">
+      <div id="status-text"></div>
+    </div>
+  </div>
+
+  <div id="game-over-screen" class="hidden">
+    <div class="menu-content">
+      <h1 id="end-title">你死了</h1>
+      <p id="end-message">它在黑暗中找到了你...</p>
+      <button id="btn-retry" class="btn-primary">再试一次</button>
+      <button id="btn-menu" class="btn-secondary">返回菜单</button>
+    </div>
+  </div>
+
+  <div id="win-screen" class="hidden">
+    <div class="menu-content">
+      <h1>你逃出来了</h1>
+      <p>但那些声音... 还会跟着你吗？</p>
+      <p id="win-stats"></p>
+      <button id="btn-retry-win" class="btn-primary">再玩一次</button>
+    </div>
+  </div>
+
+  <canvas id="game-canvas"></canvas>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./node_modules/three/build/three.module.js",
+      "three/addons/": "./node_modules/three/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

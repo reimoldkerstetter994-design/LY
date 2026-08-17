@@ -1,0 +1,19 @@
+{
+  "name": "abyss-corridor",
+  "version": "1.0.0",
+  "description": "超真实3D恐怖游戏 - 深渊回廊",
+  "scripts": {
+    "start": "npx --yes serve . -p 3000",
+    "dev": "npx --yes serve . -p 3000"
+  },
+  "keywords": [
+    "horror",
+    "3d",
+    "game",
+    "threejs"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.160.0"
+  }
+}
