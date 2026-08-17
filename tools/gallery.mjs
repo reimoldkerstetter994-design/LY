@@ -239,6 +239,8 @@ await page.evaluate(() => {
   const g = window.__hollow.game;
   const l = g.level.lockers[0];
   const m = g.monsters.find((x) => !x.phantom);
+  // Snap dark adaption instead of waiting the realistic few seconds for it.
+  g.adaptRate = 30;
   if (l) {
     g.player.enterLocker(l);
     // Something is out there, and it is close.
@@ -254,6 +256,7 @@ await shot('09-locker');
 console.log('10 face flash');
 await page.evaluate(() => {
   const g = window.__hollow.game;
+  g.adaptRate = 0.3;
   g.player.exitLocker();
   g.player.flashOn = true;
   g.director._fire('faceFlash', { player: g.player, camera: g.camera });

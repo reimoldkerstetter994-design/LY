@@ -205,15 +205,19 @@ export class Level {
     }
     this.fuseCells = picked.slice(0, need);
 
-    // Batteries: sprinkled everywhere, more of them on easier settings.
-    const batteryCount = Math.round(7 * (2 - this.settings.diff.batteryDrain));
-    this.batteryCells = rng
-      .shuffle(maze.floors.filter((f) => field[maze.idx(f.x, f.y)] > 3))
-      .slice(0, batteryCount);
+    // Batteries: sprinkled everywhere, more of them on easier settings. The
+    // cells themselves are chosen after dressing, from whatever is still free.
+    this.batteryCount = Math.round(7 * (2 - this.settings.diff.batteryDrain));
 
     // Monster starts far from the player.
     const far = maze.floors.filter((f) => field[maze.idx(f.x, f.y)] > 12);
     this.monsterSpawnCell = far.length ? rng.pick(far) : this.exitCell;
+
+    // Reserve the objective cells before dressing, so nothing gets buried
+    // under a gurney or walled in by a shelf.
+    this._mark(this.spawnCell.x, this.spawnCell.y);
+    this._mark(this.exitCell.x, this.exitCell.y);
+    for (const c of this.fuseCells) this._mark(c.x, c.y);
   }
 
   _buildShell() {
@@ -664,8 +668,15 @@ export class Level {
 
     /* --------------------------------------------------------- batteries */
     const batGeo = makeBattery();
-    for (const cell of this.batteryCells) {
-      if (!this._isFree(cell.x, cell.y)) continue;
+    const batteryCells = rng
+      .shuffle(
+        this.maze.floors.filter(
+          (f) =>
+            this._isFree(f.x, f.y) && this.spawnField[this.maze.idx(f.x, f.y)] > 3,
+        ),
+      )
+      .slice(0, this.batteryCount);
+    for (const cell of batteryCells) {
       const c = this.maze.worldOf(cell.x, cell.y);
       const px = c.x + rng.range(-1.1, 1.1);
       const pz = c.z + rng.range(-1.1, 1.1);
@@ -1085,9 +1096,24 @@ export class Level {
   }
 
   dispose() {
+    const seenGeo = new Set();
     this.root.traverse((o) => {
-      if (o.geometry) o.geometry.dispose();
+      if (o.geometry && !seenGeo.has(o.geometry)) {
+        seenGeo.add(o.geometry);
+        o.geometry.dispose();
+      }
     });
+    // Only the materials this level owns — the shared library outlives the run.
+    const owned = new Set(this.graffitiMats ?? []);
+    if (this.dustMat) owned.add(this.dustMat);
+    if (this.tubeMesh) owned.add(this.tubeMesh.material);
+    for (const slot of this.spotPool ?? []) {
+      for (const m of slot.shaft?.userData?.materials ?? []) owned.add(m);
+    }
+    for (const m of owned) {
+      m.map?.dispose();
+      m.dispose();
+    }
     this.scene.remove(this.root);
   }
 }

@@ -136,13 +136,22 @@ function cracks(u, v, freq = 7, sharp = 26) {
   return 1 - edge; // 1 on the crack line
 }
 
+/**
+ * Cracks confined to blotches. A uniform worley network reads as crazy paving
+ * rather than damage, so the pattern is masked by a low-frequency fBm.
+ */
+function patchyCracks(u, v, freq, sharp, seed = 0) {
+  const mask = smoothstep((fbm(u * 2.4 + seed, v * 2.4 - seed, 3) - 0.54) * 5.5);
+  return cracks(u, v, freq, sharp) * mask;
+}
+
 /* ----------------------------------------------------------------- recipes */
 
 function recipeConcreteFloor(u, v, o) {
   const base = fbm(u * 6, v * 6, 6);
   const fine = fbm(u * 42, v * 42, 3);
   const pits = clamp01(1 - noise.worley(u, v, 30).f1 * 2.2);
-  const crack = cracks(u, v, 16, 46) * 0.9;
+  const crack = patchyCracks(u, v, 18, 48, 7) * 0.9;
   const wet = grime(u, v, 3.2, 1.1);
   const stain = smoothstep((wet - 0.42) * 3);
 
@@ -164,58 +173,104 @@ function recipeConcreteFloor(u, v, o) {
 }
 
 function recipeWallTile(u, v, o) {
-  // 6 x 6 tiles per texture with grout lines.
-  const N = 6;
+  // Small institutional wall tiles: 12 per texture repeat, which at the
+  // wall's texture scale works out to roughly 15 cm squares.
+  const N = 12;
   const tx = u * N;
   const ty = v * N;
-  const fx = tx - Math.floor(tx);
-  const fy = ty - Math.floor(ty);
-  const groutW = 0.05;
-  const edge =
-    Math.min(fx, 1 - fx) < groutW || Math.min(fy, 1 - fy) < groutW ? 1 : 0;
-  const bevel =
-    smoothstep((Math.min(fx, 1 - fx) - groutW) * 9) * smoothstep((Math.min(fy, 1 - fy) - groutW) * 9);
+  const ix = Math.floor(tx);
+  const iy = Math.floor(ty);
+  const fx = tx - ix;
+  const fy = ty - iy;
 
-  const perTile = fbm(Math.floor(tx) * 3.1 + 0.5, Math.floor(ty) * 2.7 + 0.5, 2);
+  // Distance to the nearest grout line, in tile units.
+  const dEdge = Math.min(Math.min(fx, 1 - fx), Math.min(fy, 1 - fy));
+  const groutW = 0.042;
+  // Both masks are smooth. A hard inside/outside test aliases into a
+  // shimmering checkerboard the moment the wall is more than a few metres off,
+  // which is what made these read as bathroom-set glass blocks.
+  const grout = 1 - smoothstep((dEdge - groutW) * 30);
+  const bevel = smoothstep((dEdge - groutW) * 7);
+
+  // Per-tile tone. Institutional tiling is never one flat colour — kiln
+  // variation plus decades of nicotine leave every tile slightly its own.
+  const jitter = fbm(ix * 3.1 + 0.5, iy * 2.7 + 0.5, 2);
+  const warm = fbm(ix * 1.27 + 9.5, iy * 1.73 - 4.5, 2);
+  // Each tile also sits very slightly proud or sunk and off-square, so the
+  // flashlight's highlight breaks up across the wall instead of sliding over
+  // it like one sheet of plastic.
+  const lean = (fx - 0.5) * (jitter - 0.5) * 0.1 + (fy - 0.5) * (warm - 0.5) * 0.1;
+  const set = (jitter - 0.5) * 0.05;
+
   const dirt = grime(u, v, 5, 1.15);
   const dripping = clamp01(fbm(u * 9, v * 1.6, 4) * 1.5 - 0.62);
-  const crack = cracks(u, v, 14, 40);
-  const missing = perTile > 0.79 ? 1 : 0;
+  const crack = patchyCracks(u, v, 22, 52, 19);
+  // A handful of tiles have popped off entirely, exposing dark adhesive.
+  const missing = smoothstep((jitter - 0.88) * 40);
+  // ...and a few more have lost a corner.
+  const chip =
+    smoothstep((jitter - 0.7) * 24) *
+    smoothstep((0.34 - Math.hypot(fx - (warm > 0.5 ? 1 : 0), fy - 0.5 - set)) * 12);
 
-  let base = 0.86 + perTile * 0.09;
-  base = lerp(base, 0.42, clamp01(dirt * 0.75));
-  base = lerp(base, 0.26, dripping * 0.8);
-  if (edge) base *= 0.6;
-  if (missing) base *= 0.5;
+  // Glazed off-white ceramic sits around 0.7 reflectance, not 0.9.
+  let base = 0.68 + jitter * 0.1 - warm * 0.05;
+  base = lerp(base, 0.4, clamp01(dirt * 0.8));
+  base = lerp(base, 0.24, dripping * 0.82);
+  base = lerp(base, 0.3, grout * 0.55);
+  base = lerp(base, 0.11, missing);
+  base = lerp(base, 0.34, chip * 0.8);
 
-  o.r = base * (1 - dripping * 0.1);
-  o.g = base * (0.985 - dirt * 0.06);
-  o.b = base * (0.93 - dirt * 0.13) + 0.012;
+  // Grout is a dirty warm grey; the glaze itself is faintly green-cream.
+  const cream = 1 - grout * 0.45;
+  o.r = base * (1.02 - dripping * 0.08);
+  o.g = base * (0.995 - dirt * 0.05) * (1 + (1 - grout) * 0.008);
+  o.b = base * (0.93 - dirt * 0.12) * cream + 0.01;
 
-  o.h = (missing ? 0.15 : 0.5 + bevel * 0.45) - crack * 0.5 - (edge ? 0.35 : 0);
+  o.h =
+    0.5 +
+    bevel * 0.055 -
+    grout * 0.075 -
+    crack * 0.1 -
+    missing * 0.22 -
+    chip * 0.14 +
+    lean;
+  // The glaze is the only genuinely shiny thing down here, and it only stays
+  // shiny where nothing has run down it.
   o.rough = clamp01(
-    (missing ? 0.95 : lerp(0.34, 0.85, dirt)) + (edge ? 0.25 : 0) + dripping * 0.1,
+    lerp(0.22, 0.8, clamp01(dirt * 1.1)) +
+      grout * 0.62 +
+      dripping * 0.16 +
+      missing * 0.5 +
+      chip * 0.4,
   );
 }
 
 function recipePaintedWall(u, v, o) {
   const base = fbm(u * 5, v * 5, 5);
+  // Mid-frequency roller texture. Without it the paint covers whole metres in
+  // one smooth gradient and the wall looks like untextured geometry.
+  const roller = fbm(u * 11, v * 13, 4);
+  const stipple = fbm(u * 58, v * 61, 2);
   const peelMask = fbm(u * 3.2 + 3, v * 3.2 - 7, 4);
   const peel = smoothstep((peelMask - 0.52) * 6);
+  // Where paint has lifted, it lifts in flakes with hard edges, not a fade.
+  const flake = smoothstep((fbm(u * 16 + 5, v * 16 + 2, 3) - 0.5) * 9) * peel;
   const plaster = fbm(u * 24, v * 24, 3);
   const dirt = grime(u, v, 4.5, 1.2);
   const mould = clamp01(fbm(u * 7 - 2, v * 7 + 5, 5) * 1.7 - 0.9);
-  const crack = cracks(u, v, 13, 42);
+  const crack = patchyCracks(u, v, 24, 54, 31);
 
   // Institutional green paint over grey plaster.
-  const paintR = 0.6 + base * 0.1;
-  const paintG = 0.65 + base * 0.11;
-  const paintB = 0.54 + base * 0.08;
+  const tone = base * 0.1 + roller * 0.05 + stipple * 0.025;
+  const paintR = 0.56 + tone;
+  const paintG = 0.61 + tone * 1.08;
+  const paintB = 0.5 + tone * 0.82;
   const plasterC = 0.5 + plaster * 0.18;
 
-  let r = lerp(paintR, plasterC, peel);
-  let g = lerp(paintG, plasterC * 0.98, peel);
-  let b = lerp(paintB, plasterC * 0.9, peel);
+  const bare = clamp01(peel * 0.55 + flake * 0.6);
+  let r = lerp(paintR, plasterC, bare);
+  let g = lerp(paintG, plasterC * 0.98, bare);
+  let b = lerp(paintB, plasterC * 0.9, bare);
 
   const d = clamp01(dirt * 0.7);
   r = lerp(r, 0.24, d * 0.62);
@@ -228,8 +283,9 @@ function recipePaintedWall(u, v, o) {
   o.r = r * (1 - crack * 0.2);
   o.g = g * (1 - crack * 0.2);
   o.b = b * (1 - crack * 0.2);
-  o.h = 0.5 + base * 0.1 - peel * 0.16 - crack * 0.22 + plaster * 0.06;
-  o.rough = clamp01(lerp(0.55, 0.95, peel) + d * 0.1);
+  o.h =
+    0.5 + base * 0.08 + roller * 0.05 + stipple * 0.035 - flake * 0.14 - crack * 0.22 + plaster * 0.05;
+  o.rough = clamp01(lerp(0.62, 0.95, bare) + d * 0.1 + stipple * 0.05);
 }
 
 function recipeCeiling(u, v, o) {
@@ -459,7 +515,7 @@ export const GRAFFITI_LINES = [
 
 const RECIPES = {
   floor: { fn: recipeConcreteFloor, normalStrength: 1.5 },
-  tile: { fn: recipeWallTile, normalStrength: 2.2 },
+  tile: { fn: recipeWallTile, normalStrength: 1.6 },
   wall: { fn: recipePaintedWall, normalStrength: 1.4 },
   ceiling: { fn: recipeCeiling, normalStrength: 1.3 },
   metal: { fn: recipeRustMetal, normalStrength: 1.9 },

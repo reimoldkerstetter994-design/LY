@@ -24,7 +24,7 @@ import { bakeTextureLibrary } from './gfx/textures.js';
 import { buildMaterials } from './gfx/materials.js';
 import { PostFX } from './gfx/postfx.js';
 import { Level } from './world/level.js';
-import { Player } from './entities/player.js';
+import { Player, VIEW_LAYER } from './entities/player.js';
 import { Monster, STATE } from './entities/monster.js';
 import { Director } from './systems/director.js';
 import { HUD } from './ui/hud.js';
@@ -92,11 +92,22 @@ export class Game {
       70,
     );
     this.camera.rotation.order = 'YXZ';
+    // Layer 1 holds the first-person view model, lit separately (see Player).
+    this.camera.layers.enable(VIEW_LAYER);
     this.scene.add(this.camera);
 
     // Just enough bounce light that pitch-black rooms keep their silhouettes.
-    this.ambient = new HemisphereLight(0x1b2430, 0x0a0b10, 0.55);
+    this.ambient = new HemisphereLight(0x1b2430, 0x0a0b10, 0.8);
     this.scene.add(this.ambient);
+
+    // Dark adaptation. Stay in the black — or shut yourself in a locker — and
+    // the eye slowly opens up: a murky, colourless view of shapes. Any real
+    // light snaps it shut again.
+    this.darkAdapt = new HemisphereLight(0x55657c, 0x161b24, 0);
+    this.scene.add(this.darkAdapt);
+    this._adapt = 0;
+    /** How fast the eye opens up, in units per second. */
+    this.adaptRate = 0.3;
 
     this.postfx = new PostFX(this.renderer, this.scene, this.camera, q);
 
@@ -211,6 +222,8 @@ export class Game {
     this.time = 0;
     this._deathT = 0;
     this._winT = 0;
+    this._adapt = 0;
+    this.darkAdapt.intensity = 0;
     this.hud.show(true);
     this.audio.resume();
     this.audio.setMuffled(0);
@@ -243,8 +256,7 @@ export class Game {
     if (this.monsters) for (const m of this.monsters) m.dispose();
     this.monsters = [];
     if (this.player) {
-      this.camera.remove(this.player.beamHolder);
-      this.camera.remove(this.player.viewModel);
+      this.player.dispose();
       this.player = null;
     }
     if (this.level) {
@@ -535,12 +547,26 @@ export class Game {
     this.level.update(dt, player.pos);
     this.director.update(dt, { player, monsters: this.monsters, camera: this.camera });
 
+    /* ------------------------------------------------------ dark adaption */
+    const litness = clamp01(
+      this.level.lightAt(player.pos) + (player.flashOn ? player.flashHealth : 0),
+    );
+    const wantAdapt = player.hiding ? 1 : clamp01(1 - litness * 3);
+    // Opens slowly, shuts fast — the same asymmetry your own eyes have.
+    this._adapt = damp(this._adapt, wantAdapt, wantAdapt > this._adapt ? this.adaptRate : 4, dt);
+    this.darkAdapt.intensity = this._adapt * (player.hiding ? 2.7 : 1.45);
+
     /* -------------------------------------------------------- fx + audio */
+    const fx = this.director.fx;
     this.postfx.update(dt, {
       sanity: this.director.sanity,
       tension: this.director.tension,
       hiding: player.hiding,
-      ...this.director.fx,
+      ...fx,
+      exposure: fx.exposure * (1 + this._adapt * 0.3),
+      // Adapted vision is grainy and washed out.
+      grainBoost: this._adapt * 0.05,
+      desaturate: this._adapt * 0.42,
     });
     this.audio.update(dt, this._audioState());
 

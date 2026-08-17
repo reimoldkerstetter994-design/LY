@@ -10,6 +10,7 @@ import {
   Object3D,
   SpotLight,
   PointLight,
+  HemisphereLight,
   CylinderGeometry,
   SphereGeometry,
   BoxGeometry,
@@ -28,6 +29,9 @@ const RADIUS = 0.34;
 
 const SPEED = { walk: 2.45, sprint: 4.55, crouch: 1.15 };
 const NOISE = { walk: 0.5, sprint: 1, crouch: 0.12, still: 0.02 };
+
+/** Render layer reserved for the first-person view model. */
+export const VIEW_LAYER = 1;
 
 export class Player {
   constructor({ camera, scene, level, audio, input, settings, bus }) {
@@ -121,8 +125,12 @@ export class Player {
     // A real torch is a tight hot core inside a much softer spill, so this is
     // built from two lights: only the core pays for shadows.
     const q = this.settings.q;
-    this.spot = new SpotLight(0xfff1d8, 0, 34, 0.36, 0.62, 1.15);
-    this.spot.position.set(0.14, -0.14, 0);
+    // Both cones are seated well behind the lens. Inverse-square falloff is
+    // brutal in the first metre: with the emitter at the hand, walking up to a
+    // door blows it to flat white. Backing the virtual origin off by ~1.4 m
+    // costs almost nothing down the corridor and keeps close surfaces readable.
+    this.spot = new SpotLight(0xfff1d8, 0, 36, 0.34, 0.5, 1.15);
+    this.spot.position.set(0.14, -0.14, 1.4);
     this.spot.castShadow = true;
     this.spot.shadow.mapSize.set(q.shadowMapSize, q.shadowMapSize);
     this.spot.shadow.camera.near = 0.2;
@@ -139,17 +147,18 @@ export class Player {
     this.beamHolder.add(this.spotTarget);
     this.spot.target = this.spotTarget;
 
-    this.flood = new SpotLight(0xffeccd, 0, 18, 1.0, 0.95, 1.45);
-    this.flood.position.set(0.14, -0.14, 0);
+    this.flood = new SpotLight(0xffeccd, 0, 22, 1.15, 0.8, 1.25);
+    this.flood.position.set(0.14, -0.14, 0.9);
     this.flood.castShadow = false;
     this.flood.target = this.spotTarget;
     this.beamHolder.add(this.flood);
 
-    // Close-range bounce, pushed well past the hand so it lights the world
-    // rather than blowing out the view model.
-    this.hotspot = new PointLight(0xffeacb, 0, 4.5, 2);
-    this.hotspot.position.set(0.14, -0.12, -1.1);
-    this.beamHolder.add(this.hotspot);
+    // Omnidirectional near-field fill. Physically this stands in for the light
+    // bouncing off the floor: without it, corridor side walls sit at a grazing
+    // angle to the beam and read as pure black, which makes the place unreadable.
+    this.bounce = new PointLight(0xffeacb, 0, 9, 1.55);
+    this.bounce.position.set(0.1, -0.35, 0.15);
+    this.beamHolder.add(this.bounce);
 
     // Volumetric cone: local -Y is rotated onto the camera's -Z.
     if (q.volumetricSteps > 0) {
@@ -213,10 +222,23 @@ export class Player {
     thumb.rotation.set(-0.9, 0.2, -0.5);
     this.viewModel.add(thumb);
 
+    // The view model lives on its own render layer with its own two lights.
+    // World lights sit only a few centimetres from the hand, so without this
+    // isolation the torch blows its own hand out to pure white.
     this.viewModel.traverse((o) => {
       o.castShadow = false;
       o.receiveShadow = false;
+      o.layers.set(VIEW_LAYER);
     });
+
+    this.vmKey = new PointLight(0xffe4bc, 0, 2.2, 1.1);
+    this.vmKey.position.set(0.55, 0.1, -0.15);
+    this.vmKey.layers.set(VIEW_LAYER);
+    cam.add(this.vmKey);
+
+    this.vmFill = new HemisphereLight(0x2a3444, 0x0d0f14, 0.5);
+    this.vmFill.layers.set(VIEW_LAYER);
+    cam.add(this.vmFill);
   }
 
   /* --------------------------------------------------------------- actions */
@@ -260,8 +282,10 @@ export class Player {
     // slatted HUD overlay sells the enclosure instead.
     locker.hinge.visible = false;
     this.pos.set(locker.inside.x, 0, locker.inside.z);
-    this.hideYaw = locker.yaw;
-    this.yaw = locker.yaw;
+    // The locker's own +Z faces out of the wall; the camera looks down -Z, so
+    // facing out of the door means yaw + PI.
+    this.hideYaw = locker.yaw + Math.PI;
+    this.yaw = this.hideYaw;
     // Nobody hides in a cupboard with the torch on.
     if (this.flashOn) {
       this.flashOn = false;
@@ -298,6 +322,26 @@ export class Player {
   shake(amount, decay = 2.6) {
     this._shake = Math.max(this._shake, amount);
     this._shakeDecay = decay;
+  }
+
+  /** Detach everything this player hung off the shared camera. */
+  dispose() {
+    for (const obj of [this.beamHolder, this.viewModel, this.vmKey, this.vmFill]) {
+      if (obj) this.camera.remove(obj);
+    }
+    const seen = new Set();
+    for (const root of [this.beamHolder, this.viewModel]) {
+      root?.traverse((o) => {
+        if (o.geometry && !seen.has(o.geometry)) {
+          seen.add(o.geometry);
+          o.geometry.dispose();
+        }
+        if (o.material && !seen.has(o.material)) {
+          seen.add(o.material);
+          o.material.dispose();
+        }
+      });
+    }
   }
 
   get eyePosition() {
@@ -449,14 +493,17 @@ export class Player {
     const beamJitter = this.fear * 0.02;
 
     const lit = (this.flashOn ? this.flashHealth : 0) * this.lightScale;
-    this.spot.intensity = lit * 55;
-    this.flood.intensity = lit * 12;
-    this.hotspot.intensity = lit * 1.1;
+    this.spot.intensity = lit * 30;
+    this.flood.intensity = lit * 9;
+    this.bounce.intensity = lit * 3.4;
     this.spot.visible = lit > 0.01;
     this.flood.visible = lit > 0.01;
-    this.hotspot.visible = lit > 0.01;
+    this.bounce.visible = lit > 0.01;
     // Kept below 1 so bloom flares instead of clipping to a white blob.
     this.lensMat.color.setRGB(lit * 0.85 + 0.015, lit * 0.8 + 0.015, lit * 0.66 + 0.015);
+    // The hand is lit by the spill off the torch body, so it follows the beam.
+    this.vmKey.intensity = 0.12 + lit * 0.85;
+    this.vmFill.intensity = 0.18 + lit * 0.5;
     if (this.beam) {
       this.beam.visible = lit > 0.02;
       this.beam.setTime(ctx.time);

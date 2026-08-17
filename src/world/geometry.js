@@ -141,21 +141,24 @@ export function buildShellGeometry(maze) {
     for (const { d, n } of dirs) {
       if (!solid(x + d[0], y + d[1])) continue;
 
-      // Edge endpoints (p → q) walking counter-clockwise around this cell.
+      // Edge endpoints p → q, ordered so that (p_bottom, q_bottom, q_top)
+      // winds counter-clockwise when viewed from the normal's side. Get this
+      // backwards and every wall is back-face culled from inside the corridor,
+      // which reads as "the room has no walls, just blackness".
       let p;
       let q;
       if (d[1] === -1) {
-        p = [x1, z0];
-        q = [x0, z0];
-      } else if (d[0] === 1) {
-        p = [x1, z1];
-        q = [x1, z0];
-      } else if (d[1] === 1) {
-        p = [x0, z1];
-        q = [x1, z1];
-      } else {
         p = [x0, z0];
+        q = [x1, z0];
+      } else if (d[0] === 1) {
+        p = [x1, z0];
+        q = [x1, z1];
+      } else if (d[1] === 1) {
+        p = [x1, z1];
         q = [x0, z1];
+      } else {
+        p = [x0, z1];
+        q = [x0, z0];
       }
 
       // Darken the ends of a wall segment that butt into another wall.

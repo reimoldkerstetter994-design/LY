@@ -111,7 +111,7 @@ export const HorrorGradeShader = {
       // --- chromatic aberration, stronger toward the edges
       vec2 dir = uv - 0.5;
       float edge = dot(dir, dir);
-      float ab = uAberration * (1.0 + edge * 5.5) + uPulse * 0.0022 + uWarp * 0.004;
+      float ab = uAberration * (1.0 + edge * 3.2) + uPulse * 0.0022 + uWarp * 0.004;
       vec3 col;
       col.r = texture2D(tDiffuse, uv + dir * ab).r;
       col.g = texture2D(tDiffuse, uv).g;
@@ -247,9 +247,10 @@ export class PostFX {
 
     u.uVignette.value = 0.82 + tension * 0.42 + insanity * 0.3 + (s.hiding ? 0.5 : 0);
     u.uAberration.value = 0.0012 + tension * 0.0055 + insanity * 0.006;
-    u.uGrain.value = 0.05 + insanity * 0.1 + tension * 0.035;
+    u.uGrain.value = 0.05 + insanity * 0.1 + tension * 0.035 + (s.grainBoost ?? 0);
     u.uWarp.value = insanity * 1.25 + (s.warpBoost ?? 0);
-    u.uSaturation.value = 0.78 - insanity * 0.42 + tension * 0.1;
+    // Scotopic vision has almost no colour, so dark adaption drains it.
+    u.uSaturation.value = clamp01(0.78 - insanity * 0.42 + tension * 0.1 - (s.desaturate ?? 0));
     u.uDamage.value = clamp01(s.damage ?? 0);
     u.uGlitch.value = clamp01((s.glitch ?? 0) + Math.max(0, insanity - 0.72) * 0.8);
     u.uExposure.value = s.exposure ?? 1;
