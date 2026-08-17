@@ -1,0 +1,806 @@
+/* ============================================================
+   空壳病房 · THE HOLLOW WARD — UI shell
+   ============================================================ */
+
+:root {
+  --blood: #7d0f13;
+  --blood-bright: #c8232a;
+  --bone: #cfc7b8;
+  --ash: #8a8578;
+  --ink: #05060a;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  color: var(--bone);
+  font-family: 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  cursor: default;
+  user-select: none;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+}
+
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.hidden {
+  display: none !important;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 2px 6px;
+  margin-right: 4px;
+  border: 1px solid #4a4640;
+  border-bottom-width: 3px;
+  border-radius: 4px;
+  background: linear-gradient(#26241f, #14130f);
+  color: #ded6c6;
+  font: 600 12px/1.4 'SFMono-Regular', Consolas, monospace;
+  text-align: center;
+}
+
+/* ============================ 菜单 ============================ */
+
+.menu-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(90, 20, 20, 0.18), transparent 60%),
+    radial-gradient(ellipse at 50% 120%, rgba(0, 0, 0, 0.9), transparent 70%),
+    linear-gradient(#07070a, #000);
+  animation: bgbreathe 11s ease-in-out infinite;
+}
+
+.menu-bg.soft {
+  background: rgba(2, 2, 4, 0.82);
+  backdrop-filter: blur(7px) saturate(0.5);
+  animation: none;
+}
+
+.menu-bg::after,
+.death-bg::after,
+.win-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.055;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
+  animation: grain 0.55s steps(3) infinite;
+  pointer-events: none;
+}
+
+@keyframes bgbreathe {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.28); }
+}
+
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  33% { transform: translate(-3%, 2%); }
+  66% { transform: translate(2%, -3%); }
+  100% { transform: translate(0, 0); }
+}
+
+.menu-panel {
+  position: relative;
+  z-index: 2;
+  max-width: 720px;
+  margin: 0 auto;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 34px 44px 40px;
+  text-align: center;
+}
+
+.menu-panel.narrow {
+  max-width: 460px;
+  background: rgba(6, 6, 9, 0.72);
+  border: 1px solid rgba(120, 110, 95, 0.14);
+  border-radius: 3px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.85);
+}
+
+.game-title {
+  font-size: clamp(44px, 9vw, 96px);
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: #ded4c2;
+  text-shadow:
+    0 0 1px #000,
+    0 0 26px rgba(190, 30, 30, 0.35),
+    0 6px 40px rgba(0, 0, 0, 0.9);
+  animation: titleflicker 6.5s infinite;
+}
+
+@keyframes titleflicker {
+  0%, 94%, 100% { opacity: 1; }
+  95% { opacity: 0.35; }
+  96% { opacity: 0.9; }
+  97% { opacity: 0.2; }
+  98% { opacity: 0.85; }
+}
+
+.game-subtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  letter-spacing: 0.62em;
+  color: #6c6559;
+  text-indent: 0.62em;
+}
+
+.menu-blurb {
+  margin: 26px auto 30px;
+  max-width: 520px;
+  font-size: 14px;
+  line-height: 2;
+  color: #8d8677;
+}
+
+.menu-blurb em {
+  color: #b3323a;
+  font-style: italic;
+}
+
+h2 {
+  font-size: 20px;
+  letter-spacing: 0.35em;
+  font-weight: 700;
+  color: #cec4b2;
+  margin-bottom: 22px;
+  text-indent: 0.35em;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  margin-top: 26px;
+}
+
+.btn {
+  min-width: 260px;
+  padding: 13px 26px;
+  font-size: 14px;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: #b9b1a1;
+  background: rgba(20, 19, 22, 0.7);
+  border: 1px solid rgba(140, 130, 112, 0.2);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: color 0.16s, background 0.16s, border-color 0.16s, transform 0.08s, letter-spacing 0.16s;
+}
+
+.btn:hover {
+  color: #f2ece0;
+  background: rgba(70, 12, 14, 0.55);
+  border-color: rgba(200, 35, 42, 0.55);
+  letter-spacing: 0.38em;
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.995);
+}
+
+.btn.primary {
+  color: #eee6d6;
+  border-color: rgba(200, 35, 42, 0.42);
+  background: linear-gradient(rgba(60, 10, 12, 0.6), rgba(18, 6, 7, 0.7));
+}
+
+.btn.danger:hover {
+  background: rgba(120, 14, 16, 0.6);
+}
+
+.difficulty-row {
+  margin-top: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.row-label {
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: #6b6459;
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid rgba(140, 130, 112, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.seg button {
+  padding: 8px 16px;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: #8d8677;
+  background: rgba(16, 15, 18, 0.7);
+  border: none;
+  border-right: 1px solid rgba(140, 130, 112, 0.14);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.seg button:last-child {
+  border-right: none;
+}
+
+.seg button:hover {
+  color: #ded6c6;
+}
+
+.seg button.active {
+  color: #fff;
+  background: rgba(140, 18, 22, 0.75);
+  text-shadow: 0 0 10px rgba(255, 60, 60, 0.5);
+}
+
+.menu-warn {
+  margin-top: 34px;
+  font-size: 11px;
+  line-height: 1.8;
+  color: #5e5850;
+}
+
+/* ============================ 设置 ============================ */
+
+.setting {
+  text-align: left;
+  margin-bottom: 18px;
+}
+
+.setting > label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: #7e7768;
+  margin-bottom: 8px;
+}
+
+.setting.inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.setting.inline > label {
+  margin-bottom: 0;
+}
+
+input[type='range'] {
+  width: 100%;
+  height: 3px;
+  appearance: none;
+  background: #2b2823;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #b6262c;
+  box-shadow: 0 0 10px rgba(200, 35, 42, 0.7);
+  cursor: pointer;
+}
+
+input[type='checkbox'] {
+  appearance: none;
+  width: 40px;
+  height: 18px;
+  border-radius: 10px;
+  background: #262320;
+  border: 1px solid rgba(140, 130, 112, 0.2);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+
+input[type='checkbox']::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #7b736a;
+  transition: transform 0.18s, background 0.18s;
+}
+
+input[type='checkbox']:checked {
+  background: rgba(140, 18, 22, 0.8);
+}
+
+input[type='checkbox']:checked::after {
+  transform: translateX(21px);
+  background: #f0e6d6;
+}
+
+/* ============================ 操作说明 ============================ */
+
+.keys {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+  text-align: left;
+  margin-bottom: 26px;
+}
+
+.keys > div {
+  font-size: 13px;
+  color: #9a9285;
+  display: flex;
+  align-items: center;
+}
+
+.keys span {
+  margin-left: 8px;
+}
+
+.tips {
+  text-align: left;
+  font-size: 13px;
+  line-height: 2;
+  color: #857e70;
+  padding-left: 20px;
+}
+
+.tips b {
+  color: #c1373d;
+}
+
+/* ============================ HUD ============================ */
+
+#hud {
+  pointer-events: none;
+  z-index: 5;
+}
+
+.hud-top {
+  position: absolute;
+  top: 22px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: rgba(200, 192, 178, 0.5);
+  text-shadow: 0 2px 8px #000;
+  transition: opacity 0.5s;
+}
+
+#objective-count {
+  margin-top: 6px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(226, 216, 200, 0.75);
+}
+
+#objective-count.done {
+  color: #d6474d;
+  text-shadow: 0 0 16px rgba(200, 35, 42, 0.7);
+}
+
+.hud-bottom-left {
+  position: absolute;
+  left: 26px;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.meter-label {
+  width: 30px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: rgba(190, 182, 168, 0.42);
+  text-align: right;
+}
+
+.meter-track {
+  width: 168px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
+.meter-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 2px;
+  transform-origin: left center;
+  transition: width 0.18s linear, background 0.4s, box-shadow 0.4s;
+}
+
+.meter-fill.battery {
+  background: linear-gradient(90deg, #6f6a2c, #d8cf6a);
+  box-shadow: 0 0 8px rgba(216, 207, 106, 0.4);
+}
+
+.meter-fill.stamina {
+  background: linear-gradient(90deg, #2a5a63, #63c2d3);
+  box-shadow: 0 0 8px rgba(99, 194, 211, 0.35);
+}
+
+.meter-fill.sanity {
+  background: linear-gradient(90deg, #5c1f24, #c8323a);
+  box-shadow: 0 0 8px rgba(200, 50, 58, 0.4);
+}
+
+.meter-fill.low {
+  background: linear-gradient(90deg, #7d0f13, #ff3b3b) !important;
+  animation: lowpulse 0.7s ease-in-out infinite;
+}
+
+@keyframes lowpulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.hud-bottom-right {
+  position: absolute;
+  right: 26px;
+  bottom: 24px;
+  text-align: right;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: rgba(190, 182, 168, 0.42);
+  line-height: 2;
+}
+
+.hud-bottom-right b {
+  color: rgba(226, 216, 200, 0.8);
+  font-size: 14px;
+}
+
+/* ====================== 躲藏时的柜门视野 ====================== */
+
+#hide-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 260px 110px rgba(0, 0, 0, 0.97);
+}
+
+#hide-overlay .slats {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.9) 0px,
+    rgba(0, 0, 0, 0.9) 26px,
+    rgba(0, 0, 0, 0) 26px,
+    rgba(0, 0, 0, 0) 44px
+  );
+  mask-image: radial-gradient(ellipse 46% 40% at 50% 50%, transparent 30%, #000 88%);
+  -webkit-mask-image: radial-gradient(ellipse 46% 40% at 50% 50%, transparent 30%, #000 88%);
+  opacity: 0.92;
+}
+
+#hide-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 52% 46% at 50% 50%, transparent 42%, rgba(0, 0, 0, 0.98) 82%);
+}
+
+.hide-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 54px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: rgba(220, 212, 198, 0.55);
+  text-shadow: 0 2px 8px #000;
+}
+
+.breath-meter {
+  position: absolute;
+  left: 50%;
+  bottom: 34px;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#breath-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #2a5a63, #8fd8e6);
+  transition: width 0.1s linear;
+}
+
+#crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  margin: -1.5px 0 0 -1.5px;
+  border-radius: 50%;
+  background: rgba(235, 228, 214, 0.32);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+  transition: transform 0.15s, background 0.15s;
+}
+
+#crosshair.active {
+  transform: scale(2.6);
+  background: rgba(255, 240, 220, 0.85);
+}
+
+#prompt {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 42px);
+  transform: translateX(-50%);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  color: rgba(238, 230, 214, 0.9);
+  text-shadow: 0 2px 10px #000;
+  white-space: nowrap;
+}
+
+#subtitle {
+  position: absolute;
+  left: 50%;
+  bottom: 88px;
+  transform: translateX(-50%);
+  max-width: 70vw;
+  text-align: center;
+  font-size: 15px;
+  line-height: 1.7;
+  color: rgba(232, 224, 208, 0.9);
+  text-shadow: 0 2px 12px #000, 0 0 30px #000;
+  opacity: 0;
+  transition: opacity 0.5s;
+  font-style: italic;
+}
+
+#subtitle.show {
+  opacity: 1;
+}
+
+#toast-stack {
+  position: absolute;
+  left: 50%;
+  top: 16%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.toast {
+  padding: 8px 18px;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  color: #efe7d8;
+  background: rgba(8, 8, 10, 0.6);
+  border-left: 2px solid var(--blood-bright);
+  text-shadow: 0 2px 8px #000;
+  animation: toastin 0.35s ease-out, toastout 0.6s ease-in 2.6s forwards;
+}
+
+@keyframes toastin {
+  from { opacity: 0; transform: translateY(-14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes toastout {
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+#stats {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font: 11px/1.6 'SFMono-Regular', Consolas, monospace;
+  color: rgba(140, 220, 160, 0.65);
+  text-shadow: 0 1px 3px #000;
+  white-space: pre;
+}
+
+#vignette-pulse {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 220px 60px rgba(90, 0, 0, 0);
+  transition: box-shadow 0.25s;
+}
+
+#damage-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(160, 0, 0, 0) 30%, rgba(120, 0, 0, 0.9) 100%);
+  opacity: 0;
+}
+
+#damage-flash.hit {
+  animation: hitflash 0.5s ease-out;
+}
+
+@keyframes hitflash {
+  0% { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+
+/* ============================ 载入 ============================ */
+
+#loading {
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  transition: opacity 0.7s;
+}
+
+#loading.fade {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-inner {
+  text-align: center;
+}
+
+.loading-title {
+  font-size: 34px;
+  letter-spacing: 0.4em;
+  color: #cfc7b8;
+  text-indent: 0.4em;
+}
+
+.loading-sub {
+  margin-top: 8px;
+  font-size: 10px;
+  letter-spacing: 0.6em;
+  color: #514c45;
+  text-indent: 0.6em;
+}
+
+.loading-bar {
+  width: 260px;
+  height: 2px;
+  margin: 30px auto 12px;
+  background: #1b1a17;
+  overflow: hidden;
+}
+
+#loading-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #5d1014, #c8232a);
+  box-shadow: 0 0 12px rgba(200, 35, 42, 0.8);
+  transition: width 0.25s;
+}
+
+#loading-status {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: #4e4942;
+}
+
+/* ============================ 死亡 / 逃脱 ============================ */
+
+.death-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(70, 0, 0, 0.6), #000 70%);
+  animation: deathin 1.6s ease-out;
+}
+
+.win-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(200, 190, 170, 0.14), #000 70%);
+  animation: deathin 1.8s ease-out;
+}
+
+@keyframes deathin {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.death-panel {
+  position: relative;
+  z-index: 2;
+  top: 50%;
+  transform: translateY(-50%);
+  text-align: center;
+  animation: deathin 2.2s ease-out;
+}
+
+.death-title {
+  font-size: clamp(34px, 7vw, 68px);
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: #8d1418;
+  text-shadow: 0 0 40px rgba(160, 0, 0, 0.6);
+}
+
+.win-title {
+  font-size: clamp(30px, 6vw, 58px);
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: #ddd3bf;
+  text-shadow: 0 0 40px rgba(255, 240, 210, 0.25);
+}
+
+.death-reason,
+.win-text {
+  margin-top: 18px;
+  font-size: 14px;
+  line-height: 2;
+  color: #8a8377;
+  font-style: italic;
+}
+
+.death-stats {
+  margin: 26px auto 0;
+  font: 12px/2 'SFMono-Regular', Consolas, monospace;
+  color: #635d54;
+  letter-spacing: 0.08em;
+}
+
+#click-to-play {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  cursor: pointer;
+}
+
+.ctp-inner {
+  font-size: 14px;
+  letter-spacing: 0.4em;
+  color: #cfc7b8;
+  animation: lowpulse 2s ease-in-out infinite;
+}

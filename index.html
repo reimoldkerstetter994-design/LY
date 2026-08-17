@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#000000" />
+    <title>空壳病房 · THE HOLLOW WARD</title>
+    <link rel="stylesheet" href="/src/styles/main.css" />
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+
+    <!-- ===================== 游戏内 HUD ===================== -->
+    <div id="hud" class="layer hidden">
+      <div id="vignette-pulse"></div>
+      <div id="damage-flash"></div>
+
+      <div class="hud-top">
+        <div id="objective-text">寻找 5 枚保险丝，重启配电盘</div>
+        <div id="objective-count"><span id="fuse-have">0</span> / <span id="fuse-need">5</span></div>
+      </div>
+
+      <div class="hud-bottom-left">
+        <div class="meter" title="手电筒电量">
+          <div class="meter-label">电量</div>
+          <div class="meter-track"><div id="battery-fill" class="meter-fill battery"></div></div>
+        </div>
+        <div class="meter" title="体力">
+          <div class="meter-label">体力</div>
+          <div class="meter-track"><div id="stamina-fill" class="meter-fill stamina"></div></div>
+        </div>
+        <div class="meter" title="理智">
+          <div class="meter-label">理智</div>
+          <div class="meter-track"><div id="sanity-fill" class="meter-fill sanity"></div></div>
+        </div>
+      </div>
+
+      <div class="hud-bottom-right">
+        <div id="battery-count">备用电池 <b>0</b></div>
+        <div id="stance-text">站立</div>
+      </div>
+
+      <div id="hide-overlay" class="hidden">
+        <div class="slats"></div>
+        <div class="hide-hint"><kbd>E</kbd> 出来 · <kbd>Q</kbd> 屏住呼吸</div>
+        <div class="breath-meter"><div id="breath-fill"></div></div>
+      </div>
+
+      <div id="crosshair"></div>
+      <div id="prompt" class="hidden"><kbd>E</kbd> <span id="prompt-text"></span></div>
+      <div id="subtitle"></div>
+      <div id="toast-stack"></div>
+      <div id="stats" class="hidden"></div>
+    </div>
+
+    <!-- ===================== 载入 ===================== -->
+    <div id="loading" class="layer">
+      <div class="loading-inner">
+        <div class="loading-title">空壳病房</div>
+        <div class="loading-sub">THE HOLLOW WARD</div>
+        <div class="loading-bar"><div id="loading-fill"></div></div>
+        <div id="loading-status">正在唤醒黑暗…</div>
+      </div>
+    </div>
+
+    <!-- ===================== 主菜单 ===================== -->
+    <div id="menu" class="layer hidden">
+      <div class="menu-bg"></div>
+      <div class="menu-panel">
+        <h1 class="game-title">空壳病房</h1>
+        <div class="game-subtitle">THE HOLLOW WARD</div>
+        <p class="menu-blurb">
+          1987 年冬，圣墨林精神病院 B 区在一夜之间人间蒸发。<br />
+          你带着一支快没电的手电走进去。<br />
+          <em>它一直都在这里，只是在等你先出声。</em>
+        </p>
+
+        <div class="menu-buttons">
+          <button id="btn-play" class="btn primary">进入病房</button>
+          <button id="btn-settings" class="btn">设置</button>
+          <button id="btn-howto" class="btn">操作说明</button>
+        </div>
+
+        <div class="difficulty-row">
+          <span class="row-label">恐惧强度</span>
+          <div class="seg" id="difficulty-seg">
+            <button data-diff="calm">胆小</button>
+            <button data-diff="normal" class="active">标准</button>
+            <button data-diff="nightmare">噩梦</button>
+          </div>
+        </div>
+        <div class="menu-warn">
+          ⚠ 含突发惊吓、高频闪光与强烈音效。建议戴耳机，光敏性癫痫患者请勿游玩。
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 设置 ===================== -->
+    <div id="settings" class="layer hidden">
+      <div class="menu-bg"></div>
+      <div class="menu-panel narrow">
+        <h2>设置</h2>
+
+        <div class="setting">
+          <label>画质</label>
+          <div class="seg" id="quality-seg">
+            <button data-q="low">流畅</button>
+            <button data-q="medium" class="active">均衡</button>
+            <button data-q="high">极致</button>
+          </div>
+        </div>
+
+        <div class="setting">
+          <label>鼠标灵敏度 <span id="sens-val">1.00</span></label>
+          <input id="sens-range" type="range" min="0.2" max="3" step="0.05" value="1" />
+        </div>
+
+        <div class="setting">
+          <label>主音量 <span id="vol-val">80%</span></label>
+          <input id="vol-range" type="range" min="0" max="1" step="0.01" value="0.8" />
+        </div>
+
+        <div class="setting">
+          <label>视野 FOV <span id="fov-val">75</span></label>
+          <input id="fov-range" type="range" min="60" max="100" step="1" value="75" />
+        </div>
+
+        <div class="setting inline">
+          <label for="chk-bob">镜头晃动（头部摆动）</label>
+          <input id="chk-bob" type="checkbox" checked />
+        </div>
+        <div class="setting inline">
+          <label for="chk-flash">突发闪光效果</label>
+          <input id="chk-flash" type="checkbox" checked />
+        </div>
+        <div class="setting inline">
+          <label for="chk-stats">显示性能信息</label>
+          <input id="chk-stats" type="checkbox" />
+        </div>
+
+        <div class="menu-buttons">
+          <button id="btn-settings-back" class="btn primary">返回</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 操作说明 ===================== -->
+    <div id="howto" class="layer hidden">
+      <div class="menu-bg"></div>
+      <div class="menu-panel">
+        <h2>操作说明</h2>
+        <div class="keys">
+          <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>移动</span></div>
+          <div><kbd>Shift</kbd><span>奔跑（很吵，它听得见）</span></div>
+          <div><kbd>Ctrl</kbd><span>蹲伏潜行（几乎无声）</span></div>
+          <div><kbd>F</kbd><span>手电筒开关</span></div>
+          <div><kbd>R</kbd><span>更换电池</span></div>
+          <div><kbd>E</kbd><span>互动 / 拾取 / 躲进柜子</span></div>
+          <div><kbd>Q</kbd><span>屏住呼吸（躲藏时降低被发现概率）</span></div>
+          <div><kbd>Esc</kbd><span>暂停</span></div>
+        </div>
+        <ul class="tips">
+          <li>黑暗会持续消耗<b>理智</b>；理智见底时，你会开始看见不存在的东西。</li>
+          <li>手电能照亮，也会把你暴露给它。听到<b>低频喘息</b>时立刻关灯。</li>
+          <li>它靠<b>声音</b>与<b>视线</b>狩猎：奔跑声传得最远，蹲伏几乎无声。</li>
+          <li>被追时钻进<b>铁皮柜</b>，按 <kbd>Q</kbd> 屏息，等它走远。</li>
+          <li>集齐 5 枚保险丝 → 回到<b>配电盘</b>合闸 → 从<b>安全门</b>逃出去。</li>
+        </ul>
+        <div class="menu-buttons">
+          <button id="btn-howto-back" class="btn primary">返回</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 暂停 ===================== -->
+    <div id="pause" class="layer hidden">
+      <div class="menu-bg soft"></div>
+      <div class="menu-panel narrow">
+        <h2>暂停</h2>
+        <div id="pause-objective" class="pause-objective"></div>
+        <div class="menu-buttons">
+          <button id="btn-resume" class="btn primary">继续</button>
+          <button id="btn-pause-settings" class="btn">设置</button>
+          <button id="btn-quit" class="btn danger">放弃并回到主菜单</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 死亡 ===================== -->
+    <div id="death" class="layer hidden">
+      <div class="death-bg"></div>
+      <div class="death-panel">
+        <div class="death-title">你没能出去</div>
+        <div id="death-reason" class="death-reason"></div>
+        <div id="death-stats" class="death-stats"></div>
+        <div class="menu-buttons">
+          <button id="btn-retry" class="btn primary">再试一次</button>
+          <button id="btn-death-menu" class="btn">主菜单</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 逃脱 ===================== -->
+    <div id="win" class="layer hidden">
+      <div class="win-bg"></div>
+      <div class="death-panel">
+        <div class="win-title">你活着走了出来</div>
+        <div class="win-text">
+          晨光刺得眼睛发痛。身后的门自己关上了，<br />
+          门缝里没有风，却有呼吸。
+        </div>
+        <div id="win-stats" class="death-stats"></div>
+        <div class="menu-buttons">
+          <button id="btn-again" class="btn primary">再来一次（新的病院）</button>
+          <button id="btn-win-menu" class="btn">主菜单</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="click-to-play" class="layer hidden">
+      <div class="ctp-inner">点击屏幕继续</div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.vite/
+*.log
+
+# Output from the headless testing tools.
+tools/shots/
+tools/gallery/
+tools/creature/
