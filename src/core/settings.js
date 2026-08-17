@@ -7,6 +7,7 @@ const KEY = 'hollow-ward.settings.v1';
 export const QUALITY = {
   low: {
     label: '流畅',
+    labelEn: 'Performance',
     pixelRatio: 0.75,
     shadowMapSize: 512,
     shadowLights: 1,
@@ -23,6 +24,7 @@ export const QUALITY = {
   },
   medium: {
     label: '均衡',
+    labelEn: 'Balanced',
     pixelRatio: 1,
     shadowMapSize: 1024,
     shadowLights: 2,
@@ -39,6 +41,7 @@ export const QUALITY = {
   },
   high: {
     label: '极致',
+    labelEn: 'Ultra',
     pixelRatio: 1.25,
     shadowMapSize: 2048,
     shadowLights: 3,
@@ -58,6 +61,7 @@ export const QUALITY = {
 export const DIFFICULTY = {
   calm: {
     label: '胆小',
+    labelEn: 'Timid',
     fuses: 4,
     monsterSpeed: 2.35,
     monsterHunger: 0.68,
@@ -71,6 +75,7 @@ export const DIFFICULTY = {
   },
   normal: {
     label: '标准',
+    labelEn: 'Standard',
     fuses: 5,
     monsterSpeed: 2.95,
     monsterHunger: 1,
@@ -84,6 +89,7 @@ export const DIFFICULTY = {
   },
   nightmare: {
     label: '噩梦',
+    labelEn: 'Nightmare',
     fuses: 6,
     monsterSpeed: 3.5,
     monsterHunger: 1.4,

@@ -133,12 +133,12 @@ export class Game {
 
     this.bus.on('caught', (m) => this._onCaught(m));
     this.bus.on('near-miss', () => {
-      this.bus.emit('subtitle', '它走了。你的手还在抖。');
+      this.bus.emit('subtitle', '它走了。你的手还在抖。', "It's gone. Your hands are still shaking.");
       this.run.nearMisses++;
     });
     this.bus.on('hunt-begin', () => {
       this.run.chases++;
-      this.bus.emit('subtitle', '它看见你了。跑。');
+      this.bus.emit('subtitle', '它看见你了。跑。', 'It has seen you. Run.');
     });
     this.bus.on('despawn', (p) => this._despawn(p));
     this.bus.on('hide', (on) => {
@@ -150,14 +150,14 @@ export class Game {
 
   async preload(onProgress) {
     const q = this.settings.q;
-    onProgress?.(0.02, '正在唤醒黑暗…');
+    onProgress?.(0.02, ['正在唤醒黑暗…', 'Waking the dark...']);
     this.textures = await bakeTextureLibrary({
       size: q.textureSize,
       aniso: Math.min(q.anisotropy, this.renderer.capabilities.getMaxAnisotropy()),
-      onProgress: (f, label) => onProgress?.(0.05 + f * 0.85, `烘制材质 · ${label}`),
+      onProgress: (f, label) => onProgress?.(0.05 + f * 0.85, [`烘制材质 · ${label}`, `Baking materials · ${label}`]),
     });
     this.materials = buildMaterials(this.textures);
-    onProgress?.(0.98, '准备就绪');
+    onProgress?.(0.98, ['准备就绪', 'Ready']);
     this.mode = MODE.MENU;
   }
 
@@ -227,8 +227,8 @@ export class Game {
     this.hud.show(true);
     this.audio.resume();
     this.audio.setMuffled(0);
-    this.bus.emit('subtitle', '门在你身后合上了。');
-    this.hud.toast(`收集 ${this.run.fusesNeeded} 枚保险丝`);
+    this.bus.emit('subtitle', '门在你身后合上了。', 'The door has closed behind you.');
+    this.hud.toast(`收集 ${this.run.fusesNeeded} 枚保险丝`, `Collect ${this.run.fusesNeeded} fuses`);
   }
 
   _spawnPhantom() {
@@ -331,7 +331,7 @@ export class Game {
         break;
       case 'locker':
         player.enterLocker(it.data);
-        this.bus.emit('subtitle', '铁皮很冷。你能听见自己的心跳。');
+        this.bus.emit('subtitle', '铁皮很冷。你能听见自己的心跳。', 'The steel is cold. You can hear your own heartbeat.');
         break;
       case 'fuse': {
         it.data.taken = true;
@@ -340,8 +340,11 @@ export class Game {
         this.audio.pickup();
         this.bus.emit('noise', { pos: player.pos.clone(), level: 0.3 });
         const left = this.run.fusesNeeded - this.run.fuses;
-        this.hud.toast(left > 0 ? `保险丝 ${this.run.fuses}/${this.run.fusesNeeded}` : '保险丝已集齐');
-        if (left === 0) this.bus.emit('subtitle', '够了。去配电盘。');
+        this.hud.toast(
+          left > 0 ? `保险丝 ${this.run.fuses}/${this.run.fusesNeeded}` : '保险丝已集齐',
+          left > 0 ? `Fuses ${this.run.fuses}/${this.run.fusesNeeded}` : 'All fuses collected',
+        );
+        if (left === 0) this.bus.emit('subtitle', '够了。去配电盘。', "That's enough. Get to the breaker panel.");
         break;
       }
       case 'battery': {
@@ -349,12 +352,15 @@ export class Game {
         it.data.group.visible = false;
         player.spareBatteries++;
         this.audio.pickup();
-        this.hud.toast('拾取电池');
+        this.hud.toast('拾取电池', 'Battery collected');
         break;
       }
       case 'breaker': {
         if (this.run.fuses < this.run.fusesNeeded) {
-          this.hud.toast(`还缺 ${this.run.fusesNeeded - this.run.fuses} 枚保险丝`);
+          this.hud.toast(
+            `还缺 ${this.run.fusesNeeded - this.run.fuses} 枚保险丝`,
+            `${this.run.fusesNeeded - this.run.fuses} fuses still missing`,
+          );
           this.audio.click({ pitch: 0.6, intensity: 0.6 });
           return;
         }
@@ -365,15 +371,15 @@ export class Game {
         this.audio.powerUp();
         this.director.onPowerRestored({ monsters: this.monsters, player });
         this.bus.emit('noise', { pos: player.pos.clone(), level: 1 });
-        this.hud.toast('配电盘合闸 — 安全门已解锁');
+        this.hud.toast('配电盘合闸 — 安全门已解锁', 'Breaker closed — the fire door is unlocked');
         this._spawnExtraMonster();
         break;
       }
       case 'exit': {
         if (!this.run.powered) {
-          this.hud.toast('门是锁死的 — 需要先恢复供电');
+          this.hud.toast('门是锁死的 — 需要先恢复供电', 'The door is dead-locked — restore power first');
           this.audio.click({ pitch: 0.5, intensity: 0.7 });
-          this.bus.emit('subtitle', '推不动。得先把电闸合上。');
+          this.bus.emit('subtitle', '推不动。得先把电闸合上。', "It won't budge. The power has to be back on first.");
           return;
         }
         it.data.open = true;
@@ -576,9 +582,9 @@ export class Game {
     /* --------------------------------------------------------------- HUD */
     const objective = !this.run.powered
       ? this.run.fuses < this.run.fusesNeeded
-        ? '寻找保险丝，重启配电盘'
-        : '回到配电盘，合上闸刀'
-      : '逃到安全门';
+        ? ['寻找保险丝，重启配电盘', 'Find the fuses and restart the breaker panel']
+        : ['回到配电盘，合上闸刀', 'Return to the breaker panel and throw the switch']
+      : ['逃到安全门', 'Escape through the fire door'];
     this.hud.update(dt, {
       battery: player.battery,
       stamina: player.stamina,
@@ -665,7 +671,9 @@ export class Game {
       this.mode = MODE.DEAD;
       this.hud.show(false);
       this.bus.emit('death', {
-        reason: this.run.powered ? '它在灯光下追上了你。' : '你在黑暗里被抓住了。',
+        reason: this.run.powered
+          ? ['它在灯光下追上了你。', 'It ran you down in the light.']
+          : ['你在黑暗里被抓住了。', 'It took you in the dark.'],
         stats: this.runStats(),
       });
     }

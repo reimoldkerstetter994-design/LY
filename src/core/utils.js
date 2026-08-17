@@ -185,9 +185,9 @@ export class Bus {
     this.map.get(evt)?.delete(fn);
   }
 
-  emit(evt, payload) {
+  emit(evt, ...payload) {
     const set = this.map.get(evt);
     if (!set) return;
-    for (const fn of set) fn(payload);
+    for (const fn of set) fn(...payload);
   }
 }

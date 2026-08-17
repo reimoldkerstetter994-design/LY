@@ -598,7 +598,7 @@ export class Level {
           new Vector3(Math.sin(a.yaw), 0, Math.cos(a.yaw)).multiplyScalar(0.5),
         ),
         radius: 1.5,
-        label: '躲进柜子',
+        label: ['躲进柜子', 'Hide in the locker'],
         data: locker,
       });
     }
@@ -660,7 +660,7 @@ export class Level {
         kind: 'fuse',
         pos: group.position.clone(),
         radius: 2.0,
-        label: '拾取保险丝',
+        label: ['拾取保险丝', 'Take the fuse'],
         data: item,
       });
       this._mark(cell.x, cell.y);
@@ -699,7 +699,7 @@ export class Level {
         kind: 'battery',
         pos: new Vector3(px, 0.3, pz),
         radius: 1.7,
-        label: '拾取电池',
+        label: ['拾取电池', 'Take the battery'],
         data: item,
       });
     }
@@ -746,7 +746,7 @@ export class Level {
           kind: 'breaker',
           pos: group.position.clone(),
           radius: 2.2,
-          label: '合上配电盘闸刀',
+          label: ['合上配电盘闸刀', 'Throw the breaker switch'],
           data: this.breaker,
         });
         this.breakerPos = group.position.clone();
@@ -780,7 +780,7 @@ export class Level {
       kind: 'exit',
       pos: new Vector3(group.position.x, 1.3, group.position.z),
       radius: 2.6,
-      label: '推开安全门',
+      label: ['推开安全门', 'Push the fire door open'],
       data: this.exit,
     });
     this._mark(this.exitCell.x, this.exitCell.y);

@@ -8,6 +8,16 @@ import { clamp01 } from '../core/utils.js';
 
 const $ = (id) => document.getElementById(id);
 
+/** Escape, because a few of these strings are assembled from run state. */
+const esc = (s) =>
+  String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+
+/**
+ * Chinese primary, English gloss underneath. Every player-facing string in the
+ * game goes through here so the UI is readable in both languages.
+ */
+const bilingual = (zh, en) => (en ? `${esc(zh)}<span class="en">${esc(en)}</span>` : esc(zh));
+
 export class HUD {
   constructor(bus) {
     this.bus = bus;
@@ -35,24 +45,35 @@ export class HUD {
     };
     this._last = {};
     this._subtitleTimer = 0;
-    bus.on('toast', (text) => this.toast(text));
-    bus.on('subtitle', (text) => this.subtitle(text));
+    bus.on('toast', (zh, en) => this.toast(zh, en));
+    bus.on('subtitle', (zh, en) => this.subtitle(zh, en));
   }
 
   show(on) {
     this.el.hud.classList.toggle('hidden', !on);
   }
 
-  toast(text) {
+  toast(zh, en) {
     const div = document.createElement('div');
     div.className = 'toast';
-    div.textContent = text;
+    div.innerHTML = bilingual(zh, en);
     this.el.toasts.appendChild(div);
     setTimeout(() => div.remove(), 3400);
   }
 
-  subtitle(text, seconds = 4.5) {
-    this.el.subtitle.textContent = text;
+  /** Spoken lines are shown in Chinese with an English gloss underneath. */
+  subtitle(zh, en, seconds = 4.5) {
+    this.el.subtitle.textContent = '';
+    const top = document.createElement('div');
+    top.className = 'sub-zh';
+    top.textContent = zh;
+    this.el.subtitle.appendChild(top);
+    if (en) {
+      const bottom = document.createElement('div');
+      bottom.className = 'sub-en';
+      bottom.textContent = en;
+      this.el.subtitle.appendChild(bottom);
+    }
     this.el.subtitle.classList.add('show');
     this._subtitleTimer = seconds;
   }
@@ -87,22 +108,41 @@ export class HUD {
     if (el) el.textContent = text;
   }
 
+  /** As `setText`, but the value is a [chinese, english] pair. */
+  setBi(key, pair) {
+    const [zh, en] = pair;
+    const sig = `${zh}\u0000${en ?? ''}`;
+    if (this._last[`b:${key}`] === sig) return;
+    this._last[`b:${key}`] = sig;
+    const el = this.el[key];
+    if (el) el.innerHTML = bilingual(zh, en);
+  }
+
   update(dt, s) {
     this.setMeter('battery', s.battery, 0.2);
     this.setMeter('stamina', s.stamina, 0.25);
     this.setMeter('sanity', s.sanity, 0.3);
 
-    this.setText('objective', s.objectiveText);
+    this.setBi('objective', s.objectiveText);
     this.setText('have', String(s.fuses));
     this.setText('need', String(s.fusesNeeded));
     this.el.count.classList.toggle('done', s.fuses >= s.fusesNeeded);
-    this.el.batteryCount.innerHTML = `备用电池 <b>${s.spareBatteries}</b>`;
-    this.setText('stance', s.hiding ? '躲藏中' : s.crouching ? '蹲伏' : s.sprinting ? '奔跑' : '站立');
+    this.setBi('batteryCount', [`备用电池 ${s.spareBatteries}`, `Spare batteries ${s.spareBatteries}`]);
+    this.setBi(
+      'stance',
+      s.hiding
+        ? ['躲藏中', 'Hiding']
+        : s.crouching
+          ? ['蹲伏', 'Crouching']
+          : s.sprinting
+            ? ['奔跑', 'Running']
+            : ['站立', 'Standing'],
+    );
 
     // Interaction prompt.
     if (s.prompt) {
       this.el.prompt.classList.remove('hidden');
-      this.setText('promptText', s.prompt);
+      this.setBi('promptText', s.prompt);
       this.el.crosshair.classList.add('active');
     } else {
       this.el.prompt.classList.add('hidden');

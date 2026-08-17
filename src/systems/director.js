@@ -141,12 +141,20 @@ export class Director {
     switch (name) {
       case 'clang': {
         this.audio.clang({ pan, distance: rng.range(6, 20), intensity: 1.1 });
-        if (rng.chance(0.4)) this.bus.emit('subtitle', '远处有东西倒了。');
+        if (rng.chance(0.4)) {
+          this.bus.emit('subtitle', '远处有东西倒了。', 'Something fell over, far away.');
+        }
         break;
       }
       case 'whisper': {
         this.audio.whisper(pan * 0.8, 0.9);
-        this.bus.emit('subtitle', rng.pick(['…别开灯……', '…它就在你后面……', '…第七间……', '…出不去的……']));
+        const line = rng.pick([
+          ['…别开灯……', "...don't turn the light on..."],
+          ['…它就在你后面……', "...it's right behind you..."],
+          ['…第七间……', '...room seven...'],
+          ['…出不去的……', "...there's no way out..."],
+        ]);
+        this.bus.emit('subtitle', line[0], line[1]);
         break;
       }
       case 'lightsOut': {
@@ -166,7 +174,7 @@ export class Director {
       case 'breathBehind': {
         this.audio.breath('in', 1.6);
         setTimeout(() => this.audio.breath('out', 1.7), 420);
-        this.bus.emit('subtitle', '有人贴着你的后颈呼吸。');
+        this.bus.emit('subtitle', '有人贴着你的后颈呼吸。', 'Something is breathing on the back of your neck.');
         this.fx.warpBoost = 0.4;
         player.shake(0.06, 2);
         break;
@@ -302,6 +310,6 @@ export class Director {
     this.tension = Math.max(this.tension, 0.7);
     this.quiet = 0;
     this.scareCooldown = 12;
-    this.bus.emit('subtitle', '灯亮了。它现在也看得见你了。');
+    this.bus.emit('subtitle', '灯亮了。它现在也看得见你了。', 'The lights are on. Now it can see you too.');
   }
 }

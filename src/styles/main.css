@@ -603,6 +603,55 @@ input[type='checkbox']:checked::after {
   opacity: 1;
 }
 
+/* The English gloss sits under the Chinese line, quieter, so it reads as a
+   subtitle rather than competing with it. */
+.sub-en {
+  margin-top: 2px;
+  font-size: 12px;
+  font-style: normal;
+  letter-spacing: 0.06em;
+  color: rgba(206, 196, 178, 0.62);
+}
+
+/* Every Chinese string in the UI carries an English gloss. `.en` breaks onto its
+   own line under the label; `<i>` glosses stay inline for the tight segmented
+   controls and keyboard rows where a second line would blow the layout apart. */
+.en {
+  display: block;
+  margin-top: 3px;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 0.66em;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: 0.07em;
+  line-height: 1.35;
+  text-transform: none;
+  opacity: 0.55;
+}
+
+.keys span i,
+.seg button i,
+.meter-label i {
+  display: block;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 0.7em;
+  font-style: normal;
+  letter-spacing: 0.06em;
+  opacity: 0.5;
+}
+
+.meter-label i {
+  display: inline;
+  margin-left: 4px;
+}
+
+.death-title .en,
+.win-title .en,
+.game-title .en {
+  letter-spacing: 0.3em;
+  opacity: 0.42;
+}
+
 #toast-stack {
   position: absolute;
   left: 50%;

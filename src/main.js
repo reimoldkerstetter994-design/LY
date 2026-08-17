@@ -40,7 +40,11 @@ const game = new Game({ canvas: $('scene'), settings });
 
 function setLoading(frac, label) {
   $('loading-fill').style.width = `${Math.round(frac * 100)}%`;
-  if (label) $('loading-status').textContent = label;
+  if (!label) return;
+  const [zh, en] = Array.isArray(label) ? label : [label, null];
+  $('loading-status').innerHTML = en
+    ? `${zh}<span class="en">${en}</span>`
+    : zh;
 }
 
 function showLoading(on) {
@@ -79,7 +83,10 @@ function wireSettings() {
       syncSettingsUI();
       game.applySettings();
       game.rebuildPostFX();
-      game.hud.toast(`画质：${QUALITY[btn.dataset.q].label}（部分设置下一局生效）`);
+      game.hud.toast(
+        `画质：${QUALITY[btn.dataset.q].label}（部分设置下一局生效）`,
+        `Quality: ${QUALITY[btn.dataset.q].labelEn} (some options apply next run)`,
+      );
     });
   });
 
@@ -117,10 +124,10 @@ async function beginRun() {
   hideAll();
   game.hud.show(false);
   showLoading(true);
-  setLoading(0.02, '正在建造病院…');
+  setLoading(0.02, ['正在建造病院…', 'Building the hospital...']);
   // Let the loading screen paint before the heavy synchronous work starts.
   await new Promise((r) => requestAnimationFrame(() => r()));
-  await game.startRun((frac, label) => setLoading(0.05 + frac * 0.95, label ?? '建造中…'));
+  await game.startRun((frac, label) => setLoading(0.05 + frac * 0.95, label ?? ['建造中…', 'Building...']));
   showLoading(false);
   // Pointer lock has to come from a user gesture, so ask for one click.
   show('ctp');
@@ -184,7 +191,7 @@ function wireFlow() {
   });
 
   game.bus.on('death', ({ reason, stats }) => {
-    $('death-reason').textContent = reason;
+    $('death-reason').innerHTML = `${reason[0]}<span class="en">${reason[1]}</span>`;
     $('death-stats').textContent = stats;
     show('death');
   });
@@ -209,7 +216,7 @@ async function boot() {
     await game.preload(setLoading);
   } catch (err) {
     console.error(err);
-    setLoading(1, `载入失败：${err?.message ?? err}`);
+    setLoading(1, [`载入失败：${err?.message ?? err}`, `Failed to load: ${err?.message ?? err}`]);
     return;
   }
   showLoading(false);
