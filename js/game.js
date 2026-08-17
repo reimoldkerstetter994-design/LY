@@ -94,7 +94,7 @@
   let logPlaying = false;
 
   const player = {
-    pos: new THREE.Vector3(13, 0, 1.9),
+    pos: new THREE.Vector3(13, 0, 1.55),
     radius: 0.22,
     get flashOn() { return flashOn; },
     get running() { return keys.Shift && stamina > 0.05 && !crouch && !hiding; },
@@ -142,26 +142,26 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.62;
+    renderer.toneMappingExposure = 0.88;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x04060a);
-    scene.fog = new THREE.FogExp2(0x070b10, 0.068);
+    scene.fog = new THREE.FogExp2(0x0a1016, 0.042);
 
     camera = new THREE.PerspectiveCamera(74, innerWidth / innerHeight, 0.06, 90);
     clock = new THREE.Clock();
     raycaster = new THREE.Raycaster();
 
-    ambient = new THREE.AmbientLight(0x1a2430, 0.22);
+    ambient = new THREE.AmbientLight(0x2a3644, 0.42);
     scene.add(ambient);
-    hemi = new THREE.HemisphereLight(0x243044, 0x0a0806, 0.28);
+    hemi = new THREE.HemisphereLight(0x3a4e66, 0x140c08, 0.48);
     scene.add(hemi);
-    moon = new THREE.DirectionalLight(0x6a88aa, 0.18);
+    moon = new THREE.DirectionalLight(0x7a96b4, 0.32);
     moon.position.set(-10, 20, -8);
     scene.add(moon);
 
-    flashLight = new THREE.SpotLight(0xffe6bf, 0, 17, 0.52, 0.4, 1.2);
+    flashLight = new THREE.SpotLight(0xffe6bf, 0, 19, 0.58, 0.38, 1.05);
     flashLight.castShadow = true;
     flashLight.shadow.mapSize.set(1024, 1024);
     flashLight.shadow.camera.near = 0.2;
@@ -241,8 +241,8 @@
   }
 
   function resetRun() {
-    player.pos.set(13, 0, 1.9);
-    yaw = 0;
+    player.pos.set(13, 0, 1.55);
+    yaw = Math.PI;
     pitch = 0;
     stamina = 1;
     battery = 1;
@@ -282,7 +282,7 @@
         setTimeout(step, 2300);
       } else {
         state = "play";
-        setSub("", 0);
+        setSub("F 打开手电。别跑太响。", 3.2);
         tryLock();
       }
     };
@@ -527,8 +527,8 @@
     const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     flashLight.position.copy(camera.position);
     flashLight.target.position.copy(camera.position).add(dir);
-    flashLight.intensity = flashOn && battery > 0 ? 3.4 : 0;
-    fill.intensity = flashOn ? 0.12 : 0.28;
+    flashLight.intensity = flashOn && battery > 0 ? 4.2 : 0;
+    fill.intensity = flashOn ? 0.16 : 0.55;
     if (flashOn) battery = Math.max(0, battery - dt * 0.018);
     if (battery <= 0) flashOn = false;
   }

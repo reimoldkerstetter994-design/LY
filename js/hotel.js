@@ -293,9 +293,9 @@
     box(13, 1.7, 0.35, 2.6, 0.55, 0.08, mats.rust, false, false);
     const sign = box(13, 2.35, 0.4, 1.8, 0.35, 0.06, mats.glowRed, false, false);
     sign.material = mats.glowRed;
-    lamp(13, 2.85, 2.6, 0xffc8a0, 0.7, 9);
-    lamp(10.5, 2.85, 7.5, 0xffd0aa, 0.45, 7);
-    lamp(15.5, 2.85, 7.5, 0xffd0aa, 0.45, 7);
+    lamp(13, 2.85, 2.6, 0xffc8a0, 1.35, 12, false);
+    lamp(10.5, 2.85, 7.5, 0xffd0aa, 0.85, 9);
+    lamp(15.5, 2.85, 7.5, 0xffd0aa, 0.85, 9);
     note("lobby", 13.6, 0.86, 2.4, "前台便条");
     logItem(0, 21.2, 1.08, 2.4);
 
@@ -303,7 +303,7 @@
     box(21, 0.52, 2.2, 3.2, 1.04, 0.8, mats.wood, true, true);
     box(23.6, 0.9, 1.4, 0.08, 1.4, 1.1, mats.glass, false, false);
     keyItem("office", 20.2, 1.08, 2.15, "办公室钥匙");
-    lamp(22, 2.9, 3, 0xffe0b0, 0.5, 7);
+    lamp(22, 2.9, 3, 0xffe0b0, 0.95, 8);
 
     // dining
     box(3.6, 0.4, 3.2, 2.4, 0.8, 1.2, mats.wood, true, true);
@@ -445,10 +445,13 @@
 
     // hotel neon
     const neon = box(13, 4.6, -0.4, 4.6, 0.7, 0.12, mats.glowRed, false, false);
-    const nl = new THREE.PointLight(0xff2233, 1.1, 14, 2);
+    const nl = new THREE.PointLight(0xff2233, 1.8, 16, 2);
     nl.position.set(13, 4.4, 0.4);
     scene.add(nl);
-    flickers.push({ light: nl, base: 1.1, t: 0 });
+    flickers.push({ light: nl, base: 1.8, t: 0 });
+    const porch = new THREE.PointLight(0xff6644, 0.9, 10, 2);
+    porch.position.set(13, 2.4, 1.1);
+    scene.add(porch);
   }
 
   function makeDoors() {
