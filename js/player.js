@@ -55,7 +55,7 @@ export class Player {
   }
 
   createFlashlight() {
-    this.flashlight = new THREE.SpotLight(0xffffee, 4.2, 22, Math.PI / 5.5, 0.45, 1.3);
+    this.flashlight = new THREE.SpotLight(0xffffee, 7.5, 28, Math.PI / 4.6, 0.35, 1.05);
     this.flashlight.castShadow = false;
     this.flashlight.position.set(0.15, -0.05, 0);
     this.flashlightTarget = new THREE.Object3D();
@@ -96,7 +96,7 @@ export class Player {
   toggleFlashlight() {
     if (this.isHiding) return;
     this.flashlightOn = !this.flashlightOn;
-    this.flashlight.intensity = this.flashlightOn && this.battery > 0 ? 4.2 : 0;
+    this.flashlight.intensity = this.flashlightOn && this.battery > 0 ? 7.5 : 0;
   }
 
   lock() { this.controls.lock(); }
@@ -198,9 +198,9 @@ export class Player {
         this.flashlightOn = false;
         this.flashlight.intensity = 0;
       } else if (this.battery < 18) {
-        this.flashlight.intensity = Math.random() > 0.12 ? 4.2 * (this.battery / 18) : 0;
+        this.flashlight.intensity = Math.random() > 0.12 ? 7.5 * (this.battery / 18) : 0;
       } else {
-        this.flashlight.intensity = 4.2;
+        this.flashlight.intensity = 7.5;
       }
     }
 
@@ -229,7 +229,7 @@ export class Player {
     this.notesRead = 0;
     this.isHiding = false;
     this.flashlightOn = true;
-    this.flashlight.intensity = 4.2;
+    this.flashlight.intensity = 7.5;
     this.isRunning = false;
     this.isCrouching = false;
   }

@@ -10,9 +10,9 @@ function createCanvasTexture(draw, width = 256, height = 256, repeatX = 1, repea
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(repeatX, repeatY);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.generateMipmaps = true;
-  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
   return texture;
 }
 
@@ -186,7 +186,7 @@ export class Environment {
 
     this.fogColor.set(this.map.fog);
     this.scene.background = this.fogColor;
-    this.scene.fog = new THREE.FogExp2(this.map.fog, this.map.fogDensity);
+    this.scene.fog = new THREE.Fog(this.map.fog, 8, 42);
 
     return this.snapshot();
   }
@@ -218,10 +218,10 @@ export class Environment {
       (ctx, w, h) => paintDirtyWall(ctx, w, h, this.map.ceilColor), 256, 256
     );
 
-    this.wallMat = new THREE.MeshLambertMaterial({ map: this.wallTex, color: 0xbbbbbb });
-    this.floorMat = new THREE.MeshLambertMaterial({ map: this.floorTex, color: 0x999999 });
-    this.ceilMat = new THREE.MeshLambertMaterial({ map: this.ceilTex, color: 0x777777 });
-    this.doorMat = new THREE.MeshLambertMaterial({ color: 0x3a2a1a });
+    this.wallMat = new THREE.MeshBasicMaterial({ map: this.wallTex, color: 0xc4b4a4 });
+    this.floorMat = new THREE.MeshBasicMaterial({ map: this.floorTex, color: 0x8a7a68 });
+    this.ceilMat = new THREE.MeshBasicMaterial({ map: this.ceilTex, color: 0x4a4038 });
+    this.doorMat = new THREE.MeshBasicMaterial({ color: 0x4a3220 });
     this.keyMat = new THREE.MeshLambertMaterial({
       color: 0xffd700,
       emissive: 0xaa7700,
@@ -356,7 +356,7 @@ export class Environment {
   }
 
   createLighting() {
-    this.ambientLight = new THREE.AmbientLight(this.map.ambient, 0.32);
+    this.ambientLight = new THREE.AmbientLight(this.map.ambient, 0.55);
     this.scene.add(this.ambientLight);
 
     const hemi = this.scene.getObjectByName('hemi-fill');
@@ -364,8 +364,8 @@ export class Environment {
 
     const candidates = this.walkable.filter((_, i) => i % 7 === 0).slice(0, 5);
     candidates.forEach((pos, i) => {
-      const intensity = 0.45 + (i % 2) * 0.15;
-      const light = new THREE.PointLight(this.map.lightTint, intensity, 10, 2);
+      const intensity = 0.85 + (i % 2) * 0.25;
+      const light = new THREE.PointLight(this.map.lightTint, intensity, 14, 1.6);
       light.position.set(pos.x, 3.1, pos.z);
       light.castShadow = false;
       this.root.add(light);
@@ -393,7 +393,7 @@ export class Environment {
     });
 
     if (this.exitDoor) {
-      const red = new THREE.PointLight(0xff2200, 0.35, 12, 2);
+      const red = new THREE.PointLight(0xff2200, 0.7, 14, 1.8);
       red.position.copy(this.exitDoor.position);
       red.position.y = 2.6;
       this.root.add(red);

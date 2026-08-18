@@ -234,8 +234,8 @@ export class UI {
   }
 
   updateVignette(intensity) {
-    const size = 42 - intensity * 18;
-    this.vignette.style.background = `radial-gradient(ellipse at center, transparent ${size}%, rgba(0,0,0,${0.55 + intensity * 0.35}) 100%)`;
+    const size = 64 - intensity * 16;
+    this.vignette.style.background = `radial-gradient(ellipse at center, transparent ${size}%, rgba(0,0,0,${0.28 + intensity * 0.35}) 100%)`;
   }
 
   onStart(cb) { this.onStartCallback = cb; }

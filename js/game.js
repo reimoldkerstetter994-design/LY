@@ -58,8 +58,8 @@ export class Game {
 
   initScene() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a0808);
-    const hemi = new THREE.HemisphereLight(0x445566, 0x1a1510, 0.28);
+    this.scene.background = new THREE.Color(0x1a1410);
+    const hemi = new THREE.HemisphereLight(0x8899aa, 0x2a2018, 0.5);
     hemi.name = 'hemi-fill';
     this.scene.add(hemi);
     this.camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.12, 70);
@@ -130,8 +130,8 @@ export class Game {
     this.gameTime = 0;
     this.frame = 0;
     this.startTime = Date.now();
-    this.scareTimer = 8 + Math.random() * 8;
-    this.blackoutTimer = 22;
+    this.scareTimer = 16 + Math.random() * 10;
+    this.blackoutTimer = 48;
     this.isBlackout = false;
     this.surviveLeft = this.mode.duration || 0;
     this.waveTimer = 38;
