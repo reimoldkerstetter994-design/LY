@@ -1,6 +1,7 @@
 {
   "name": "abyss-corridor",
   "version": "1.0.0",
+  "type": "module",
   "description": "超真实3D恐怖游戏 - 深渊回廊",
   "scripts": {
     "start": "npx --yes serve . -p 3000",

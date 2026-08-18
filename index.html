@@ -17,28 +17,50 @@
   </div>
 
   <div id="menu-screen" class="hidden">
-    <div class="menu-content">
+    <div class="menu-content menu-wide">
       <h1>深渊回廊</h1>
       <p class="tagline">不要回头。不要呼吸。不要让它听见你。</p>
-      <div class="warning">⚠ 本游戏包含惊吓、闪烁灯光和恐怖音效，请佩戴耳机体验</div>
+      <div class="warning">⚠ 包含惊吓、闪烁灯光与恐怖音效，建议佩戴耳机</div>
+
+      <div class="select-block">
+        <h3>玩法</h3>
+        <div class="chip-row">
+          <button class="chip active" data-mode="escape">逃离</button>
+          <button class="chip" data-mode="survive">生存</button>
+          <button class="chip" data-mode="hunt">猎杀</button>
+        </div>
+        <p id="mode-desc" class="mode-desc">收集全部钥匙，打开出口逃离。蹲下、躲进柜子可以降低被发现的概率。</p>
+      </div>
+
+      <div class="select-block">
+        <h3>地图</h3>
+        <div class="chip-row maps">
+          <button class="chip active" data-map="hospital">废弃医院</button>
+          <button class="chip" data-map="school">废弃学校</button>
+          <button class="chip" data-map="catacombs">地下墓穴</button>
+          <button class="chip" data-map="manor">荒废庄园</button>
+        </div>
+      </div>
+
       <button id="btn-start" class="btn-primary">开始游戏</button>
+
       <div class="controls-info">
-        <h3>操作说明</h3>
+        <h3>操作</h3>
         <ul>
           <li><kbd>W A S D</kbd> 移动</li>
-          <li><kbd>鼠标</kbd> 环顾四周</li>
-          <li><kbd>Shift</kbd> 奔跑（会发出声音）</li>
-          <li><kbd>F</kbd> 开关手电筒</li>
-          <li><kbd>E</kbd> 拾取钥匙 / 开门</li>
-          <li><kbd>Ctrl</kbd> 蹲下躲藏</li>
+          <li><kbd>鼠标</kbd> 环顾</li>
+          <li><kbd>Shift</kbd> 奔跑（耗体力，更易被发现）</li>
+          <li><kbd>F</kbd> 手电筒</li>
+          <li><kbd>E</kbd> 拾取 / 开门 / 躲藏</li>
+          <li><kbd>Ctrl</kbd> 蹲下</li>
         </ul>
-        <p class="objective">目标：在废弃精神病院中找到 <strong>3把钥匙</strong>，打开出口大门逃离。</p>
       </div>
     </div>
   </div>
 
   <div id="hud" class="hidden">
     <div id="vignette"></div>
+    <div id="grain"></div>
     <div id="damage-overlay"></div>
     <div id="jumpscare-overlay" class="hidden">
       <img id="jumpscare-img" alt="" />
@@ -47,7 +69,7 @@
 
     <div class="hud-top">
       <div class="hud-item">
-        <span class="hud-label">钥匙</span>
+        <span class="hud-label" id="keys-label">钥匙</span>
         <span id="keys-count">0 / 3</span>
       </div>
       <div class="hud-item">
@@ -58,15 +80,33 @@
         <span class="hud-label">电量</span>
         <div class="bar-container"><div id="battery-bar" class="bar battery"></div></div>
       </div>
+      <div class="hud-item">
+        <span class="hud-label">体力</span>
+        <div class="bar-container"><div id="stamina-bar" class="bar stamina"></div></div>
+      </div>
+      <div class="hud-item timer-item">
+        <span class="hud-label">时间</span>
+        <span id="timer-count">0:00</span>
+      </div>
     </div>
 
+    <div id="objective-text" class="objective-hud"></div>
     <div id="crosshair">+</div>
     <div id="interaction-prompt" class="hidden">按 E 交互</div>
     <div id="message-box" class="hidden"></div>
-    <div id="heartbeat-indicator" class="hidden">💓</div>
+    <div id="heartbeat-indicator" class="hidden">♥</div>
 
     <div class="hud-bottom">
       <div id="status-text"></div>
+    </div>
+  </div>
+
+  <div id="pause-screen" class="hidden">
+    <div class="menu-content">
+      <h1>暂停</h1>
+      <p class="tagline">它还在走廊里走。</p>
+      <button id="btn-resume" class="btn-primary">继续</button>
+      <button class="btn-secondary" data-to-menu>返回菜单</button>
     </div>
   </div>
 
@@ -75,7 +115,7 @@
       <h1 id="end-title">你死了</h1>
       <p id="end-message">它在黑暗中找到了你...</p>
       <button id="btn-retry" class="btn-primary">再试一次</button>
-      <button id="btn-menu" class="btn-secondary">返回菜单</button>
+      <button class="btn-secondary" data-to-menu>返回菜单</button>
     </div>
   </div>
 
@@ -85,6 +125,7 @@
       <p>但那些声音... 还会跟着你吗？</p>
       <p id="win-stats"></p>
       <button id="btn-retry-win" class="btn-primary">再玩一次</button>
+      <button class="btn-secondary" data-to-menu>返回菜单</button>
     </div>
   </div>
 

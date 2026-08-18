@@ -175,12 +175,15 @@ export class HorrorAudio {
 
   // 心跳声
   startHeartbeat(intensity = 0.5) {
+    const next = Math.round(intensity * 10) / 10;
+    if (this._hbIntensity === next && this.heartbeatInterval) return;
+    this._hbIntensity = next;
     this.stopHeartbeat();
     const beat = () => {
       if (!this.initialized) return;
-      this.playHeartbeat(intensity);
+      this.playHeartbeat(next);
     };
-    const interval = Math.max(300, 900 - intensity * 600);
+    const interval = Math.max(320, 920 - next * 600);
     this.heartbeatInterval = setInterval(beat, interval);
     beat();
   }
@@ -418,6 +421,73 @@ export class HorrorAudio {
     gain.connect(this.ambientGain);
     osc.start(now);
     osc.stop(now + duration + 0.1);
+  }
+
+  playLocker() {
+    if (!this.initialized) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(140, now);
+    osc.frequency.exponentialRampToValueAtTime(70, now + 0.25);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.35);
+  }
+
+  playRadioStatic(duration = 1.2) {
+    this.playNoiseBurst(0.07, duration);
+  }
+
+  playDrip() {
+    if (!this.initialized) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(900, now);
+    osc.frequency.exponentialRampToValueAtTime(220, now + 0.12);
+    gain.gain.setValueAtTime(0.06, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.2);
+  }
+
+  playBehindSteps() {
+    if (!this.initialized) return;
+    let i = 0;
+    const tick = () => {
+      this.playEnemyFootstep();
+      i++;
+      if (i < 4) setTimeout(tick, 380);
+    };
+    tick();
+  }
+
+  playBreath() {
+    if (!this.initialized) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+    osc.type = 'triangle';
+    osc.frequency.value = 90;
+    filter.type = 'lowpass';
+    filter.frequency.value = 280;
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.05, now + 0.4);
+    gain.gain.linearRampToValueAtTime(0.001, now + 1.2);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 1.3);
   }
 
   destroy() {

@@ -1,347 +1,320 @@
 import * as THREE from 'three';
 
-/**
- * 恐怖敌人 AI - "影魔"
- */
+const TYPES = {
+  stalker: {
+    id: 'stalker',
+    name: '影魔',
+    height: 2.4,
+    bodyScale: [1, 1, 1],
+    color: 0x0a0a0a,
+    eye: 0xff0000,
+    speed: 2.2,
+    chase: 4.6,
+    detect: 11,
+    attack: 1.45,
+    lose: 18,
+    spawnDelay: 6,
+    canTeleport: true,
+    crouch: false,
+  },
+  crawler: {
+    id: 'crawler',
+    name: '爬行者',
+    height: 0.7,
+    bodyScale: [1.1, 0.35, 1.4],
+    color: 0x1a0a08,
+    eye: 0xff6600,
+    speed: 2.8,
+    chase: 5.8,
+    detect: 8,
+    attack: 1.2,
+    lose: 14,
+    spawnDelay: 10,
+    canTeleport: false,
+    crouch: true,
+  },
+  whisperer: {
+    id: 'whisperer',
+    name: '低语者',
+    height: 2.1,
+    bodyScale: [0.7, 1.15, 0.7],
+    color: 0x14101a,
+    eye: 0xaa66ff,
+    speed: 1.6,
+    chase: 3.4,
+    detect: 16,
+    attack: 1.3,
+    lose: 22,
+    spawnDelay: 12,
+    canTeleport: true,
+    sanityAura: 4,
+    fadeFar: true,
+  },
+  watcher: {
+    id: 'watcher',
+    name: '注视者',
+    height: 2.8,
+    bodyScale: [0.85, 1.3, 0.85],
+    color: 0x080810,
+    eye: 0xffffff,
+    speed: 1.2,
+    chase: 5.2,
+    detect: 14,
+    attack: 1.5,
+    lose: 20,
+    spawnDelay: 14,
+    canTeleport: true,
+    stare: true,
+  },
+};
+
+function createEnemyMesh(type) {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshLambertMaterial({
+    color: type.color,
+    transparent: type.fadeFar || false,
+    opacity: 0.95,
+  });
+
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.38, 1.8, 6), mat);
+  body.position.y = type.crouch ? 0.45 : 1.0;
+  body.scale.set(type.bodyScale[0], type.bodyScale[1], type.bodyScale[2]);
+  group.add(body);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 6, 6), mat);
+  head.position.y = type.crouch ? 0.85 : type.height;
+  head.scale.set(1, type.crouch ? 0.7 : 1.2, 0.85);
+  group.add(head);
+
+  const eyeMat = new THREE.MeshBasicMaterial({ color: type.eye });
+  const eyeGeo = new THREE.SphereGeometry(0.035, 6, 6);
+  const ly = type.crouch ? 0.88 : type.height + 0.02;
+  const lz = type.crouch ? 0.22 : 0.14;
+  const left = new THREE.Mesh(eyeGeo, eyeMat);
+  left.position.set(-0.08, ly, lz);
+  const right = new THREE.Mesh(eyeGeo, eyeMat);
+  right.position.set(0.08, ly, lz);
+  group.add(left, right);
+
+  if (type.crouch) {
+    [-0.22, 0.22].forEach(sx => {
+      const limb = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.7), mat);
+      limb.position.set(sx, 0.18, 0.15);
+      group.add(limb);
+    });
+  }
+
+  group.visible = false;
+  group.userData.bodyMat = mat;
+  return group;
+}
+
 export class Enemy {
-  constructor(scene, audio) {
+  constructor(scene, audio, typeId, index) {
     this.scene = scene;
     this.audio = audio;
-    this.mesh = null;
+    this.type = TYPES[typeId] || TYPES.stalker;
+    this.index = index;
+    this.mesh = createEnemyMesh(this.type);
+    this.scene.add(this.mesh);
     this.position = new THREE.Vector3();
     this.targetPosition = new THREE.Vector3();
-    this.state = 'dormant'; // dormant, stalking, chasing, attacking, teleporting
-    this.speed = 2.5;
-    this.chaseSpeed = 5.5;
-    this.detectionRange = 12;
-    this.attackRange = 1.5;
-    this.loseRange = 20;
+    this.lastKnownPlayerPos = new THREE.Vector3();
+    this.state = 'dormant';
+    this.hasSpawned = false;
     this.attackCooldown = 0;
     this.footstepTimer = 0;
-    this.teleportCooldown = 15;
-    this.teleportTimer = 10;
+    this.teleportTimer = 8 + index * 4;
     this.stalkTimer = 0;
-    this.visible = false;
-    this.eyeGlow = null;
-    this.patrolPoints = [];
-    this.currentPatrolIndex = 0;
-    this.jumpscareTriggered = false;
-    this.lastKnownPlayerPos = new THREE.Vector3();
     this.investigateTimer = 0;
-    this.spawnDistance = 25;
-    this.hasSpawned = false;
+    this.jumpscareTriggered = false;
+    this.patrolPoints = [];
+    this.currentPatrolIndex = index % 3;
+    this._dir = new THREE.Vector3();
   }
 
-  create() {
-    const group = new THREE.Group();
-
-    // 身体 - 高大瘦长的人形阴影
-    const bodyGeo = new THREE.CylinderGeometry(0.3, 0.5, 2.2, 8);
-    const bodyMat = new THREE.MeshStandardMaterial({
-      color: 0x0a0a0a,
-      roughness: 1,
-      metalness: 0,
-      transparent: true,
-      opacity: 0.95,
-    });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 1.1;
-    group.add(body);
-
-    // 头部
-    const headGeo = new THREE.SphereGeometry(0.25, 8, 8);
-    const head = new THREE.Mesh(headGeo, bodyMat);
-    head.position.y = 2.4;
-    head.scale.set(1, 1.3, 0.8);
-    group.add(head);
-
-    // 发光红眼
-    const eyeGeo = new THREE.SphereGeometry(0.04, 8, 8);
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-    leftEye.position.set(-0.1, 2.45, 0.15);
-    const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-    rightEye.position.set(0.1, 2.45, 0.15);
-    group.add(leftEye, rightEye);
-
-    // 眼睛点光源
-    this.eyeGlow = new THREE.PointLight(0xff0000, 0, 5);
-    this.eyeGlow.position.set(0, 2.4, 0.3);
-    group.add(this.eyeGlow);
-
-    // 手臂 - 异常修长
-    const armGeo = new THREE.CylinderGeometry(0.05, 0.08, 1.5, 6);
-    [-0.4, 0.4].forEach(sx => {
-      const arm = new THREE.Mesh(armGeo, bodyMat);
-      arm.position.set(sx, 1.5, 0);
-      arm.rotation.z = sx > 0 ? -0.3 : 0.3;
-      arm.rotation.x = -0.5;
-      group.add(arm);
-    });
-
-    // 腿部
-    [-0.15, 0.15].forEach(sx => {
-      const leg = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.08, 0.06, 1.0, 6),
-        bodyMat
-      );
-      leg.position.set(sx, 0.5, 0);
-      group.add(leg);
-    });
-
-    group.visible = false;
-    this.mesh = group;
-    this.scene.add(group);
-
-    // 设置巡逻点
-    this.patrolPoints = [
-      new THREE.Vector3(15, 0, -20),
-      new THREE.Vector3(-15, 0, -10),
-      new THREE.Vector3(10, 0, 10),
-      new THREE.Vector3(-10, 0, 20),
-      new THREE.Vector3(0, 0, -5),
-      new THREE.Vector3(18, 0, 5),
-    ];
-
-    return group;
+  setPatrol(points) {
+    this.patrolPoints = points.length ? points : [new THREE.Vector3()];
+    this.currentPatrolIndex = this.index % this.patrolPoints.length;
   }
 
-  spawn(playerPos) {
+  spawn(fromPos, env) {
     if (this.hasSpawned) return;
-
-    // 在玩家视野外生成
-    const angle = Math.random() * Math.PI * 2;
-    const dist = this.spawnDistance + Math.random() * 5;
-    this.position.set(
-      playerPos.x + Math.cos(angle) * dist,
-      0,
-      playerPos.z + Math.sin(angle) * dist
-    );
+    const spot = env.getRandomWalkable(12 + this.index * 2, fromPos);
+    this.position.copy(spot);
     this.mesh.position.copy(this.position);
     this.mesh.visible = true;
-    this.visible = true;
     this.state = 'stalking';
     this.hasSpawned = true;
-    this.eyeGlow.intensity = 0.3;
-
   }
 
-  update(delta, playerPos, playerCrouching, playerRunning, playerFlashlightOn, walls) {
+  tryMove(nx, nz, env, dtSpeed) {
+    if (!env.isBlockedWorld(nx, nz, 0.35)) {
+      this.position.x = nx;
+      this.position.z = nz;
+      return;
+    }
+    if (!env.isBlockedWorld(nx, this.position.z, 0.35)) this.position.x = nx;
+    else if (!env.isBlockedWorld(this.position.x, nz, 0.35)) this.position.z = nz;
+  }
+
+  update(delta, player, env, lookDir) {
     if (!this.hasSpawned) {
-      // 延迟生成
       this.stalkTimer += delta;
-      if (this.stalkTimer > 8) {
-        this.spawn(playerPos);
-      }
-      return { distance: Infinity, state: 'dormant' };
+      if (this.stalkTimer > this.type.spawnDelay) this.spawn(player.position, env);
+      return { distance: Infinity, state: 'dormant', attacking: false, name: this.type.name };
     }
 
-    const distToPlayer = this.position.distanceTo(playerPos);
+    const dist = this.position.distanceTo(player.position);
     this.attackCooldown = Math.max(0, this.attackCooldown - delta);
     this.teleportTimer -= delta;
     this.footstepTimer -= delta;
 
-    // 检测范围受蹲下和手电筒影响
-    let effectiveDetection = this.detectionRange;
-    if (playerCrouching) effectiveDetection *= 0.5;
-    if (playerRunning) effectiveDetection *= 2;
-    if (!playerFlashlightOn) effectiveDetection *= 0.7;
+    let detect = this.type.detect;
+    if (player.isHiding) detect *= 0.18;
+    else if (player.isCrouching) detect *= 0.55;
+    if (player.isRunning) detect *= 1.85;
+    if (!player.flashlightOn) detect *= 0.75;
 
-    // 视线检测
-    const canSeePlayer = distToPlayer < effectiveDetection && this.hasLineOfSight(playerPos, walls);
+    const canSee = dist < detect && env.hasLineOfSight(
+      this.position.x, this.position.z, player.position.x, player.position.z
+    );
+
+    if (this.type.stare && lookDir && canSee) {
+      this._dir.subVectors(this.position, player.position).setY(0).normalize();
+      const facing = lookDir.dot(this._dir);
+      if (facing > 0.72 && this.state !== 'chasing') {
+        this.state = 'stalking';
+      } else if (facing < 0.15 && dist < detect) {
+        this.state = 'chasing';
+        this.lastKnownPlayerPos.copy(player.position);
+      }
+    }
 
     switch (this.state) {
       case 'stalking':
-        this.updateStalking(delta, playerPos, canSeePlayer);
+        this.updateStalking(delta, player.position, canSee, env);
         break;
       case 'chasing':
-        this.updateChasing(delta, playerPos, canSeePlayer, playerCrouching);
+        this.updateChasing(delta, player.position, canSee, env);
         break;
       case 'investigating':
-        this.updateInvestigating(delta, playerPos, canSeePlayer);
+        this.updateInvestigating(delta, canSee, env);
         break;
       case 'attacking':
-        this.updateAttacking(delta);
+        if (this.attackCooldown <= 1) this.state = 'chasing';
         break;
       case 'teleporting':
-        this.updateTeleporting(delta, playerPos);
+        this.updateTeleporting(delta, player.position, env);
         break;
     }
 
-    // 随机传送
-    if (this.teleportTimer <= 0 && this.state !== 'attacking' && this.state !== 'teleporting') {
-      if (distToPlayer > 8 && distToPlayer < 30 && Math.random() > 0.6) {
-        this.startTeleport(playerPos);
+    if (this.type.canTeleport && this.teleportTimer <= 0 && this.state !== 'attacking' && this.state !== 'teleporting') {
+      if (dist > 9 && dist < 28 && Math.random() > 0.55) {
+        this.state = 'teleporting';
+        this.mesh.visible = false;
+        this.teleportTimer = 1.4;
+      } else {
+        this.teleportTimer = 12 + Math.random() * 10;
       }
-      this.teleportTimer = this.teleportCooldown + Math.random() * 10;
     }
 
-    // 更新网格位置
+    this._nearAudio = dist < 14;
     this.mesh.position.copy(this.position);
+    const look = this.state === 'chasing' ? player.position : this.targetPosition;
+    this._dir.subVectors(look, this.position);
+    if (this._dir.lengthSq() > 0.04) this.mesh.rotation.y = Math.atan2(this._dir.x, this._dir.z);
 
-    // 面向玩家
-    if (this.state === 'chasing' || this.state === 'stalking') {
-      const lookTarget = this.state === 'chasing' ? playerPos : this.targetPosition;
-      const dir = new THREE.Vector3().subVectors(lookTarget, this.position);
-      dir.y = 0;
-      if (dir.length() > 0.1) {
-        const angle = Math.atan2(dir.x, dir.z);
-        this.mesh.rotation.y = angle;
-      }
+    if (this.type.fadeFar && this.mesh.userData.bodyMat) {
+      this.mesh.userData.bodyMat.opacity = dist > 14 ? 0.15 : dist > 7 ? 0.45 : 0.9;
     }
-
-    // 眼睛发光强度
-    if (this.eyeGlow) {
-      const glowIntensity = this.state === 'chasing' ? 2 : 0.3;
-      this.eyeGlow.intensity = THREE.MathUtils.lerp(this.eyeGlow.intensity, glowIntensity, delta * 3);
-    }
-
-    // 出现/消失动画
-    if (this.mesh.material) {
-      // handled per child
-    }
-
-  // 远处时半透明
-    const opacity = distToPlayer > 15 ? 0.3 : distToPlayer > 8 ? 0.6 : 0.95;
-    this.mesh.traverse(child => {
-      if (child.material && child.material.transparent !== undefined) {
-        child.material.opacity = opacity;
-      }
-    });
 
     return {
-      distance: distToPlayer,
+      distance: dist,
       state: this.state,
-      canSee: canSeePlayer,
       attacking: this.state === 'attacking',
+      name: this.type.name,
+      sanityDrain: this.type.sanityAura && dist < 10 ? this.type.sanityAura : 0,
     };
   }
 
-  updateStalking(delta, playerPos, canSeePlayer) {
-    // 巡逻
-    const target = this.patrolPoints[this.currentPatrolIndex];
-    const dir = new THREE.Vector3().subVectors(target, this.position);
-    dir.y = 0;
-    const dist = dir.length();
-
-    if (dist < 1) {
+  updateStalking(delta, playerPos, canSee, env) {
+    const target = this.patrolPoints[this.currentPatrolIndex] || playerPos;
+    this._dir.subVectors(target, this.position).setY(0);
+    if (this._dir.length() < 1.2) {
       this.currentPatrolIndex = (this.currentPatrolIndex + 1) % this.patrolPoints.length;
     } else {
-      dir.normalize();
-      this.position.add(dir.multiplyScalar(this.speed * 0.5 * delta));
+      this._dir.normalize();
+      this.tryMove(
+        this.position.x + this._dir.x * this.type.speed * 0.45 * delta,
+        this.position.z + this._dir.z * this.type.speed * 0.45 * delta,
+        env
+      );
       this.targetPosition.copy(target);
     }
-
-    if (canSeePlayer) {
+    if (canSee) {
       this.state = 'chasing';
       this.lastKnownPlayerPos.copy(playerPos);
     }
-
-    this.playFootstepSound();
+    this.stepSound(false);
   }
 
-  updateChasing(delta, playerPos, canSeePlayer, playerCrouching) {
-    if (canSeePlayer) {
-      this.lastKnownPlayerPos.copy(playerPos);
+  updateChasing(delta, playerPos, canSee, env) {
+    if (canSee) this.lastKnownPlayerPos.copy(playerPos);
+    const target = canSee ? playerPos : this.lastKnownPlayerPos;
+    this._dir.subVectors(target, this.position).setY(0);
+    const dist = this._dir.length();
+    if (dist > 0.45) {
+      this._dir.normalize();
+      this.tryMove(
+        this.position.x + this._dir.x * this.type.chase * delta,
+        this.position.z + this._dir.z * this.type.chase * delta,
+        env
+      );
     }
-
-    const target = canSeePlayer ? playerPos : this.lastKnownPlayerPos;
-    const dir = new THREE.Vector3().subVectors(target, this.position);
-    dir.y = 0;
-    const dist = dir.length();
-
-    if (dist > 0.5) {
-      dir.normalize();
-      const speed = playerCrouching ? this.chaseSpeed * 0.7 : this.chaseSpeed;
-      this.position.add(dir.multiplyScalar(speed * delta));
-    }
-
-    // 攻击判定
-    if (dist < this.attackRange && this.attackCooldown <= 0) {
+    if (dist < this.type.attack && this.attackCooldown <= 0) {
       this.state = 'attacking';
-      this.attackCooldown = 2;
+      this.attackCooldown = 1.8;
       return;
     }
-
-    // 失去目标
-    if (!canSeePlayer && dist > this.loseRange) {
+    if (!canSee && dist > this.type.lose) {
       this.state = 'investigating';
-      this.investigateTimer = 5;
+      this.investigateTimer = 4;
     }
-
-    this.playFootstepSound(true);
+    this.stepSound(true);
   }
 
-  updateInvestigating(delta, playerPos, canSeePlayer) {
-    const dir = new THREE.Vector3().subVectors(this.lastKnownPlayerPos, this.position);
-    dir.y = 0;
-    const dist = dir.length();
-
-    if (dist > 1) {
-      dir.normalize();
-      this.position.add(dir.multiplyScalar(this.speed * delta));
+  updateInvestigating(delta, canSee, env) {
+    this._dir.subVectors(this.lastKnownPlayerPos, this.position).setY(0);
+    if (this._dir.length() > 1) {
+      this._dir.normalize();
+      this.tryMove(
+        this.position.x + this._dir.x * this.type.speed * delta,
+        this.position.z + this._dir.z * this.type.speed * delta,
+        env
+      );
     }
-
     this.investigateTimer -= delta;
-
-    if (canSeePlayer) {
-      this.state = 'chasing';
-    } else if (this.investigateTimer <= 0) {
-      this.state = 'stalking';
-    }
-
-    this.playFootstepSound();
+    if (canSee) this.state = 'chasing';
+    else if (this.investigateTimer <= 0) this.state = 'stalking';
   }
 
-  updateAttacking(delta) {
-    this.attackCooldown -= delta;
-    if (this.attackCooldown <= 1) {
-      this.state = 'chasing';
-    }
-  }
-
-  startTeleport(playerPos) {
-    this.state = 'teleporting';
-    this.mesh.visible = false;
-    this.teleportTimer = 2;
-  }
-
-  updateTeleporting(delta, playerPos) {
+  updateTeleporting(delta, playerPos, env) {
     this.teleportTimer -= delta;
     if (this.teleportTimer <= 0) {
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 8 + Math.random() * 5;
-      this.position.set(
-        playerPos.x + Math.cos(angle) * dist,
-        0,
-        playerPos.z + Math.sin(angle) * dist
-      );
+      const spot = env.getRandomWalkable(7, playerPos);
+      this.position.copy(spot);
       this.mesh.position.copy(this.position);
       this.mesh.visible = true;
       this.state = 'stalking';
+      this.teleportTimer = 14 + Math.random() * 8;
     }
   }
 
-  hasLineOfSight(playerPos, walls) {
-    const origin = this.position.clone();
-    origin.y = 2;
-    const target = playerPos.clone();
-    target.y = 1.7;
-
-    const direction = new THREE.Vector3().subVectors(target, origin);
-    const distance = direction.length();
-    direction.normalize();
-
-    const raycaster = new THREE.Raycaster(origin, direction, 0, distance);
-    const intersects = raycaster.intersectObjects(walls, true);
-
-    return intersects.length === 0;
-  }
-
-  playFootstepSound(running = false) {
+  stepSound(running) {
     if (this.footstepTimer <= 0) {
-      this.audio?.playEnemyFootstep();
-      this.footstepTimer = running ? 0.4 : 0.8;
+      if (this._nearAudio) this.audio?.playEnemyFootstep();
+      this.footstepTimer = running ? 0.5 : 0.9;
     }
   }
 
@@ -349,24 +322,100 @@ export class Enemy {
     if (this.jumpscareTriggered) return false;
     this.jumpscareTriggered = true;
     this.state = 'attacking';
-    this.attackCooldown = 1.5;
+    this.attackCooldown = 1.4;
     return true;
   }
 
   reset() {
     this.state = 'dormant';
     this.hasSpawned = false;
-    this.visible = false;
     this.stalkTimer = 0;
     this.jumpscareTriggered = false;
     this.attackCooldown = 0;
-    this.teleportTimer = 10;
-    if (this.mesh) {
-      this.mesh.visible = false;
-    }
+    this.teleportTimer = 8 + this.index * 3;
+    this.mesh.visible = false;
   }
 
-  getPosition() {
-    return this.position.clone();
+  dispose() {
+    this.scene.remove(this.mesh);
+    this.mesh.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) o.material.dispose();
+    });
   }
 }
+
+export class EnemyManager {
+  constructor(scene, audio) {
+    this.scene = scene;
+    this.audio = audio;
+    this.enemies = [];
+    this._look = new THREE.Vector3();
+  }
+
+  setup(typeIds, env) {
+    this.clear();
+    const patrol = env.getPatrolPoints(8);
+    typeIds.forEach((id, i) => {
+      const enemy = new Enemy(this.scene, this.audio, id, i);
+      enemy.setPatrol(patrol);
+      this.enemies.push(enemy);
+    });
+  }
+
+  spawnExtra(typeId, env, playerPos) {
+    const enemy = new Enemy(this.scene, this.audio, typeId, this.enemies.length);
+    enemy.setPatrol(env.getPatrolPoints(6));
+    enemy.spawn(playerPos, env);
+    this.enemies.push(enemy);
+    return enemy;
+  }
+
+  update(delta, player, env) {
+    player.camera.getWorldDirection(this._look);
+    this._look.y = 0;
+    this._look.normalize();
+
+    let closest = Infinity;
+    let closestState = 'dormant';
+    let closestName = '';
+    let anyAttack = false;
+    let scareEnemy = null;
+    let aura = 0;
+
+    for (const e of this.enemies) {
+      const info = e.update(delta, player, env, this._look);
+      if (info.distance < closest) {
+        closest = info.distance;
+        closestState = info.state;
+        closestName = info.name;
+      }
+      if (info.attacking && info.distance < 2) anyAttack = true;
+      if (info.distance < 3 && info.state === 'chasing' && !e.jumpscareTriggered) {
+        scareEnemy = e;
+      }
+      aura += info.sanityDrain;
+    }
+
+    return {
+      distance: closest,
+      state: closestState,
+      name: closestName,
+      attacking: anyAttack,
+      scareEnemy,
+      sanityAura: aura,
+      count: this.enemies.filter(e => e.hasSpawned).length,
+    };
+  }
+
+  reset() {
+    this.enemies.forEach(e => e.reset());
+  }
+
+  clear() {
+    this.enemies.forEach(e => e.dispose());
+    this.enemies = [];
+  }
+}
+
+export { TYPES };

@@ -8,11 +8,16 @@ export class UI {
     this.hud = document.getElementById('hud');
     this.gameOverScreen = document.getElementById('game-over-screen');
     this.winScreen = document.getElementById('win-screen');
+    this.pauseScreen = document.getElementById('pause-screen');
     this.loadingFill = document.getElementById('loading-fill');
     this.loadingText = document.getElementById('loading-text');
     this.keysCount = document.getElementById('keys-count');
+    this.keysLabel = document.getElementById('keys-label');
     this.sanityBar = document.getElementById('sanity-bar');
     this.batteryBar = document.getElementById('battery-bar');
+    this.staminaBar = document.getElementById('stamina-bar');
+    this.timerEl = document.getElementById('timer-count');
+    this.objectiveEl = document.getElementById('objective-text');
     this.interactionPrompt = document.getElementById('interaction-prompt');
     this.messageBox = document.getElementById('message-box');
     this.statusText = document.getElementById('status-text');
@@ -21,30 +26,52 @@ export class UI {
     this.sanityEffect = document.getElementById('sanity-effect');
     this.jumpscareOverlay = document.getElementById('jumpscare-overlay');
     this.vignette = document.getElementById('vignette');
+    this.modeDesc = document.getElementById('mode-desc');
 
+    this.selectedMap = 'hospital';
+    this.selectedMode = 'escape';
     this.messageTimeout = null;
     this.onStartCallback = null;
     this.onRetryCallback = null;
     this.onMenuCallback = null;
+    this._hudCache = {};
+    this._heartShown = false;
+    this._lastPrompt = '';
 
     this.setupButtons();
+    this.setupSelectors();
   }
 
   setupButtons() {
-    document.getElementById('btn-start').addEventListener('click', () => {
-      if (this.onStartCallback) this.onStartCallback();
+    document.getElementById('btn-start').addEventListener('click', () => this.onStartCallback?.());
+    document.getElementById('btn-retry').addEventListener('click', () => this.onRetryCallback?.());
+    document.getElementById('btn-retry-win').addEventListener('click', () => this.onRetryCallback?.());
+    document.querySelectorAll('[data-to-menu]').forEach(btn => {
+      btn.addEventListener('click', () => this.onMenuCallback?.());
     });
+    document.getElementById('btn-resume')?.addEventListener('click', () => this.onResumeCallback?.());
+  }
 
-    document.getElementById('btn-retry').addEventListener('click', () => {
-      if (this.onRetryCallback) this.onRetryCallback();
+  setupSelectors() {
+    document.querySelectorAll('[data-mode]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.selectedMode = btn.dataset.mode;
+        const desc = {
+          escape: '收集全部钥匙，打开出口逃离。蹲下、躲进柜子可以降低被发现的概率。',
+          survive: '在倒计时结束前活下来。时间越久，苏醒的东西越多。',
+          hunt: '每拿一件遗物就会再唤醒一只怪物。拿齐后冲向血红的大门。',
+        };
+        if (this.modeDesc) this.modeDesc.textContent = desc[this.selectedMode];
+      });
     });
-
-    document.getElementById('btn-retry-win').addEventListener('click', () => {
-      if (this.onRetryCallback) this.onRetryCallback();
-    });
-
-    document.getElementById('btn-menu').addEventListener('click', () => {
-      if (this.onMenuCallback) this.onMenuCallback();
+    document.querySelectorAll('[data-map]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-map]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.selectedMap = btn.dataset.map;
+      });
     });
   }
 
@@ -53,79 +80,102 @@ export class UI {
     if (text) this.loadingText.textContent = text;
   }
 
-  hideLoading() {
-    this.loadingScreen.classList.add('hidden');
-  }
-
+  hideLoading() { this.loadingScreen.classList.add('hidden'); }
   showMenu() {
     this.menuScreen.classList.remove('hidden');
     this.hud.classList.add('hidden');
     this.gameOverScreen.classList.add('hidden');
     this.winScreen.classList.add('hidden');
+    this.pauseScreen?.classList.add('hidden');
   }
+  hideMenu() { this.menuScreen.classList.add('hidden'); }
+  showHUD() { this.hud.classList.remove('hidden'); }
+  hideHUD() { this.hud.classList.add('hidden'); }
 
-  hideMenu() {
-    this.menuScreen.classList.add('hidden');
-  }
+  showPause() { this.pauseScreen?.classList.remove('hidden'); }
+  hidePause() { this.pauseScreen?.classList.add('hidden'); }
 
-  showHUD() {
-    this.hud.classList.remove('hidden');
-  }
-
-  hideHUD() {
-    this.hud.classList.add('hidden');
-  }
-
-  updateHUD(player) {
-    this.keysCount.textContent = `${player.keys} / 3`;
+  updateHUD(player, extra = {}) {
+    const need = player.requiredKeys;
+    const keyText = `${player.keys} / ${need}`;
+    if (this._hudCache.keys !== keyText) {
+      this.keysCount.textContent = keyText;
+      this._hudCache.keys = keyText;
+    }
+    if (extra.collectLabel && this._hudCache.label !== extra.collectLabel) {
+      this.keysLabel.textContent = extra.collectLabel;
+      this._hudCache.label = extra.collectLabel;
+    }
     this.sanityBar.style.width = `${player.sanity}%`;
     this.batteryBar.style.width = `${player.battery}%`;
+    if (this.staminaBar) this.staminaBar.style.width = `${player.stamina}%`;
 
-    // 低理智效果
+    if (extra.timer != null && this.timerEl) {
+      const m = Math.floor(extra.timer / 60);
+      const s = Math.floor(extra.timer % 60);
+      this.timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+      this.timerEl.parentElement.classList.toggle('hidden', extra.hideTimer);
+    }
+
+    if (extra.objective && this.objectiveEl && this._hudCache.obj !== extra.objective) {
+      this.objectiveEl.textContent = extra.objective;
+      this._hudCache.obj = extra.objective;
+    }
+
     const sanityEffect = player.getSanityEffect();
     if (sanityEffect > 0) {
-      this.sanityEffect.style.opacity = sanityEffect * 0.5;
-      this.sanityEffect.style.background = `radial-gradient(ellipse at ${50 + Math.sin(Date.now() * 0.001) * 20}% ${50 + Math.cos(Date.now() * 0.002) * 20}%, rgba(100,0,150,0.3) 0%, transparent 70%)`;
-    } else {
-      this.sanityEffect.style.opacity = 0;
+      this.sanityEffect.style.opacity = String(sanityEffect * 0.55);
+      const t = Date.now() * 0.001;
+      this.sanityEffect.style.background = `radial-gradient(ellipse at ${50 + Math.sin(t) * 22}% ${50 + Math.cos(t * 1.7) * 18}%, rgba(90,0,140,0.35) 0%, transparent 70%)`;
+    } else if (this.sanityEffect.style.opacity !== '0') {
+      this.sanityEffect.style.opacity = '0';
     }
 
-    // 低电量警告
-    if (player.battery < 20) {
-      this.batteryBar.style.background = 'linear-gradient(90deg, #880000, #ff0000)';
-    }
+    this.batteryBar.style.background = player.battery < 20
+      ? 'linear-gradient(90deg, #880000, #ff0000)'
+      : 'linear-gradient(90deg, #886600, #ffcc00)';
   }
 
   showInteractionPrompt(show, text = '按 E 交互') {
-    if (show) {
+    if (!show) {
+      if (this._lastPrompt !== '') {
+        this.interactionPrompt.classList.add('hidden');
+        this._lastPrompt = '';
+      }
+      return;
+    }
+    if (this._lastPrompt !== text) {
       this.interactionPrompt.textContent = text;
       this.interactionPrompt.classList.remove('hidden');
-    } else {
-      this.interactionPrompt.classList.add('hidden');
+      this._lastPrompt = text;
     }
   }
 
   showMessage(text, duration = 3000) {
     this.messageBox.textContent = text;
     this.messageBox.classList.remove('hidden');
-
     if (this.messageTimeout) clearTimeout(this.messageTimeout);
-    this.messageTimeout = setTimeout(() => {
-      this.messageBox.classList.add('hidden');
-    }, duration);
+    this.messageTimeout = setTimeout(() => this.messageBox.classList.add('hidden'), duration);
   }
 
   setStatusText(text) {
-    this.statusText.textContent = text;
+    if (this._hudCache.status !== text) {
+      this.statusText.textContent = text;
+      this._hudCache.status = text;
+    }
   }
 
   showHeartbeat(intensity) {
     if (intensity > 0.3) {
-      this.heartbeatIndicator.classList.remove('hidden');
+      if (!this._heartShown) {
+        this.heartbeatIndicator.classList.remove('hidden');
+        this._heartShown = true;
+      }
       this.heartbeatIndicator.style.opacity = intensity;
       this.heartbeatIndicator.style.animationDuration = `${Math.max(0.3, 0.8 - intensity * 0.5)}s`;
-    } else {
+    } else if (this._heartShown) {
       this.heartbeatIndicator.classList.add('hidden');
+      this._heartShown = false;
     }
   }
 
@@ -140,70 +190,35 @@ export class UI {
 
   showJumpScare(callback) {
     this.jumpscareOverlay.classList.remove('hidden');
-
-    // 创建惊吓画面
     const canvas = document.createElement('canvas');
-    canvas.width = 800;
-    canvas.height = 600;
+    canvas.width = 640;
+    canvas.height = 480;
     const ctx = canvas.getContext('2d');
-
-    // 黑色背景
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, 800, 600);
-
-    // 恐怖面孔
+    ctx.fillRect(0, 0, 640, 480);
     ctx.fillStyle = '#0a0a0a';
     ctx.beginPath();
-    ctx.ellipse(400, 280, 120, 160, 0, 0, Math.PI * 2);
+    ctx.ellipse(320, 220, 100, 140, 0, 0, Math.PI * 2);
     ctx.fill();
-
-    // 眼睛
     ctx.fillStyle = '#ff0000';
     ctx.shadowColor = '#ff0000';
-    ctx.shadowBlur = 30;
+    ctx.shadowBlur = 24;
     ctx.beginPath();
-    ctx.ellipse(360, 240, 25, 35, -0.2, 0, Math.PI * 2);
+    ctx.ellipse(285, 190, 22, 30, -0.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(440, 240, 25, 35, 0.2, 0, Math.PI * 2);
+    ctx.ellipse(355, 190, 22, 30, 0.2, 0, Math.PI * 2);
     ctx.fill();
-
-    // 瞳孔
-    ctx.fillStyle = '#000';
     ctx.shadowBlur = 0;
-    ctx.beginPath();
-    ctx.arc(360, 240, 8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(440, 240, 8, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 嘴巴
     ctx.fillStyle = '#1a0000';
     ctx.beginPath();
-    ctx.ellipse(400, 330, 40, 60, 0, 0, Math.PI * 2);
+    ctx.ellipse(320, 270, 34, 50, 0, 0, Math.PI * 2);
     ctx.fill();
-
-    // 牙齿
-    ctx.fillStyle = '#ddd';
-    for (let i = 0; i < 8; i++) {
-      const angle = -0.5 + (i / 7) * 1;
-      const x = 400 + Math.sin(angle) * 30;
-      const y = 310 + Math.cos(angle) * 15;
-      ctx.beginPath();
-      ctx.moveTo(x - 4, y);
-      ctx.lineTo(x, y + 15);
-      ctx.lineTo(x + 4, y);
-      ctx.fill();
-    }
-
-    const img = document.getElementById('jumpscare-img');
-    img.src = canvas.toDataURL();
-
+    document.getElementById('jumpscare-img').src = canvas.toDataURL();
     setTimeout(() => {
       this.jumpscareOverlay.classList.add('hidden');
-      if (callback) callback();
-    }, 800);
+      callback?.();
+    }, 700);
   }
 
   showGameOver(message) {
@@ -215,17 +230,16 @@ export class UI {
   showWin(stats) {
     this.hud.classList.add('hidden');
     this.winScreen.classList.remove('hidden');
-    if (stats) {
-      document.getElementById('win-stats').textContent = stats;
-    }
+    if (stats) document.getElementById('win-stats').textContent = stats;
   }
 
   updateVignette(intensity) {
-    const size = 40 - intensity * 20;
-    this.vignette.style.background = `radial-gradient(ellipse at center, transparent ${size}%, rgba(0,0,0,${0.6 + intensity * 0.3}) 100%)`;
+    const size = 42 - intensity * 18;
+    this.vignette.style.background = `radial-gradient(ellipse at center, transparent ${size}%, rgba(0,0,0,${0.55 + intensity * 0.35}) 100%)`;
   }
 
-  onStart(callback) { this.onStartCallback = callback; }
-  onRetry(callback) { this.onRetryCallback = callback; }
-  onMenu(callback) { this.onMenuCallback = callback; }
+  onStart(cb) { this.onStartCallback = cb; }
+  onRetry(cb) { this.onRetryCallback = cb; }
+  onMenu(cb) { this.onMenuCallback = cb; }
+  onResume(cb) { this.onResumeCallback = cb; }
 }
