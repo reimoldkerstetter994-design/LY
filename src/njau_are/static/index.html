@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>南农 · 农业资源与环境学硕考研资料</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/assets/style.css" />
+</head>
+<body>
+  <div class="soil-bar"></div>
+  <header class="hero">
+    <p class="eyebrow">南京农业大学 · 资源与环境科学学院 · 一级学科 0903</p>
+    <h1>农业资源与环境<br /><span>学术型硕士考研资料台</span></h1>
+    <p class="lede">
+      实时抓取学校研招网与招生目录系统的公开信息，整理土壤学（090301）、植物营养学（090302）的科目、书目、分数线和复试规则。
+      不收录任何商业真题包或盗版教材。
+    </p>
+    <div class="toolbar">
+      <button id="scrape-btn" type="button">立即抓取官方最新</button>
+      <p class="meta" id="scrape-meta">正在读取本地快照…</p>
+    </div>
+    <div id="warnings" class="warnings" hidden></div>
+  </header>
+
+  <nav class="toc">
+    <a href="#programs">招生目录</a>
+    <a href="#scores">分数线</a>
+    <a href="#subjects">参考书</a>
+    <a href="#guides">复习资料</a>
+    <a href="#notices">官方动态</a>
+    <a href="#sources">来源</a>
+  </nav>
+
+  <main>
+    <section id="programs">
+      <h2>学硕专业</h2>
+      <p class="hint">农业资源与环境是一级学科，南农对应学硕为下列两个二级学科。拟招生人数含推免，统考名额以当年推免结束后为准。</p>
+      <div id="program-cards" class="cards"></div>
+    </section>
+
+    <section id="scores">
+      <h2>分数线</h2>
+      <p class="hint">国家线是农学门类下限；南农资环学院会再划专业线，外语单科通常明显高于国家线。</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>年份</th><th>口径</th><th>总分</th><th>政治</th><th>外语</th><th>业务课一</th><th>业务课二</th><th>说明</th>
+            </tr>
+          </thead>
+          <tbody id="score-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="subjects">
+      <h2>考试科目与官方书目</h2>
+      <div id="subject-list" class="subject-grid"></div>
+    </section>
+
+    <section id="guides">
+      <h2>复习资料</h2>
+      <p class="hint">以下提纲根据官方指定教材的公开目录结构原创整理，用于组织复习，不能替代原书。</p>
+      <div id="guide-tabs" class="tabs"></div>
+      <article id="guide-view" class="guide"></article>
+    </section>
+
+    <section id="notices">
+      <h2>官方动态</h2>
+      <ul id="notice-list" class="notices"></ul>
+    </section>
+
+    <section id="sources">
+      <h2>抓取范围与声明</h2>
+      <ul class="sources">
+        <li><a href="https://zsgz.njau.edu.cn" target="_blank" rel="noopener">南京农业大学研究生招生网</a></li>
+        <li><a href="https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_default.aspx" target="_blank" rel="noopener">2026 硕士招生目录查询系统</a></li>
+        <li><a href="https://re.njau.edu.cn" target="_blank" rel="noopener">资源与环境科学学院</a></li>
+        <li><a href="https://yz.chsi.com.cn" target="_blank" rel="noopener">中国研究生招生信息网</a></li>
+      </ul>
+      <p class="legal">
+        本工具仅聚合官方已经公开的招生信息，并提供原创复习框架。教材正文、历年自命题原卷、商业机构讲义受著作权保护，请自行通过合法渠道获取。
+        一切以学校当年正式公布的章程、目录和复试细则为准。
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <p>南农资环 · 土壤学 / 植物营养学 · 学硕</p>
+  </footer>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

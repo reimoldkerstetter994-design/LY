@@ -1,0 +1,905 @@
+{
+  "scraped_at": "2026-09-05T11:46:58+08:00",
+  "year": "2026",
+  "programs": [
+    {
+      "year": "2026",
+      "college": "资源与环境科学学院",
+      "college_phone": "025-84395620",
+      "code": "090301",
+      "name": "土壤学",
+      "degree_type": "学术学位",
+      "planned": 21,
+      "directions": [
+        {
+          "code": "01",
+          "name": "土壤固碳减排与碳中和",
+          "full_time": true
+        },
+        {
+          "code": "02",
+          "name": "土壤生物与生态",
+          "full_time": true
+        },
+        {
+          "code": "03",
+          "name": "土壤污染控制与修复",
+          "full_time": true
+        },
+        {
+          "code": "04",
+          "name": "土壤资源环境遥感及信息技术",
+          "full_time": true
+        }
+      ],
+      "initial_subjects": [
+        {
+          "code": "101",
+          "name": "思想政治理论",
+          "kind": "初试",
+          "books": "",
+          "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=101"
+        },
+        {
+          "code": "201",
+          "name": "英语（一）",
+          "kind": "初试",
+          "books": "",
+          "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=201"
+        },
+        {
+          "code": "314",
+          "name": "数学（农）",
+          "kind": "初试",
+          "books": "",
+          "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=314"
+        },
+        {
+          "code": "857",
+          "name": "农业资源环境概论",
+          "kind": "初试",
+          "books": "1.《土壤学》（第四版）徐建明主编，中国农业出版社，2019。2.《环境学基础》鞠美庭主编，化学工业出版社，2010或最新版。 3.《微生物学》(第8版)，沈萍，陈向东，高等教育出版社，2016。 4.《植物生理学》（第三版），武维华主编，科学出版社，2018年。",
+          "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=857"
+        }
+      ],
+      "retest_subjects": [
+        {
+          "code": "0301",
+          "name": "农业资源信息系统",
+          "kind": "复试",
+          "books": "《农业资源信息系统》（第二版），王人潮、王珂主编，中国农业出版社，2009年.",
+          "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=0301"
+        },
+        {
+          "code": "0305",
+          "name": "土壤农化分析",
+          "kind": "复试",
+          "books": "《土壤农化分析》（第三版）鲍士旦主编，中国农业出版社，2000",
+          "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=0305"
+        }
+      ],
+      "remark": "土壤学是国家重点学科和省优势学科，入选国家“双一流”建设学科，拥有国家和省部级平台5个以及“111”创新引智基地。",
+      "source_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_default.aspx"
+    },
+    {
+      "year": "2026",
+      "college": "资源与环境科学学院",
+      "college_phone": "025-84395620",
+      "code": "090302",
+      "name": "植物营养学",
+      "degree_type": "学术学位",
+      "planned": 57,
+      "directions": [
+        {
+          "code": "01",
+          "name": "植物营养生理学与养分管理",
+          "full_time": true
+        },
+        {
+          "code": "02",
+          "name": "植物营养遗传与抗逆",
+          "full_time": true
+        },
+        {
+          "code": "03",
+          "name": "新型肥料学与根际过程",
+          "full_time": true
+        }
+      ],
+      "initial_subjects": [
+        {
+          "code": "101",
+          "name": "思想政治理论",
+          "kind": "初试",
+          "books": "",
+          "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=101"
+        },
+        {
+          "code": "201",
+          "name": "英语（一）",
+          "kind": "初试",
+          "books": "",
+          "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=201"
+        },
+        {
+          "code": "315",
+          "name": "化学（农）",
+          "kind": "初试",
+          "books": "",
+          "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=315"
+        },
+        {
+          "code": "857",
+          "name": "农业资源环境概论",
+          "kind": "初试",
+          "books": "1.《土壤学》（第四版）徐建明主编，中国农业出版社，2019。2.《环境学基础》鞠美庭主编，化学工业出版社，2010或最新版。 3.《微生物学》(第8版)，沈萍，陈向东，高等教育出版社，2016。 4.《植物生理学》（第三版），武维华主编，科学出版社，2018年。",
+          "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=857"
+        }
+      ],
+      "retest_subjects": [
+        {
+          "code": "0307",
+          "name": "植物营养学",
+          "kind": "复试",
+          "books": "1.《植物营养学》，张俊伶主编，中国农业大学出版社，2021年出版。2.《遗传学》(第四版)，朱军主编，中国农业出版社，2018。",
+          "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=0307"
+        }
+      ],
+      "remark": "植物营养学是国家重点学科和省优势学科，入选国家“双一流”建设学科，拥有国家和省部级平台5个以及“111”创新引智基地。",
+      "source_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_default.aspx"
+    }
+  ],
+  "subjects": {
+    "101": {
+      "code": "101",
+      "name": "思想政治理论",
+      "kind": "初试",
+      "books": "",
+      "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=101"
+    },
+    "201": {
+      "code": "201",
+      "name": "英语（一）",
+      "kind": "初试",
+      "books": "",
+      "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=201"
+    },
+    "314": {
+      "code": "314",
+      "name": "数学（农）",
+      "kind": "初试",
+      "books": "",
+      "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=314"
+    },
+    "857": {
+      "code": "857",
+      "name": "农业资源环境概论",
+      "kind": "初试",
+      "books": "1.《土壤学》（第四版）徐建明主编，中国农业出版社，2019。2.《环境学基础》鞠美庭主编，化学工业出版社，2010或最新版。 3.《微生物学》(第8版)，沈萍，陈向东，高等教育出版社，2016。 4.《植物生理学》（第三版），武维华主编，科学出版社，2018年。",
+      "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=857"
+    },
+    "0301": {
+      "code": "0301",
+      "name": "农业资源信息系统",
+      "kind": "复试",
+      "books": "《农业资源信息系统》（第二版），王人潮、王珂主编，中国农业出版社，2009年.",
+      "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=0301"
+    },
+    "0305": {
+      "code": "0305",
+      "name": "土壤农化分析",
+      "kind": "复试",
+      "books": "《土壤农化分析》（第三版）鲍士旦主编，中国农业出版社，2000",
+      "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=0305"
+    },
+    "315": {
+      "code": "315",
+      "name": "化学（农）",
+      "kind": "初试",
+      "books": "",
+      "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=315"
+    },
+    "0307": {
+      "code": "0307",
+      "name": "植物营养学",
+      "kind": "复试",
+      "books": "1.《植物营养学》，张俊伶主编，中国农业大学出版社，2021年出版。2.《遗传学》(第四版)，朱军主编，中国农业出版社，2018。",
+      "official_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx?kmdm=0307"
+    }
+  },
+  "notices": [
+    {
+      "title": "各学院硕士研究生招生联系方式",
+      "url": "https://zsgz.njau.edu.cn/info/1007/1081.htm",
+      "date": "",
+      "source": "notices",
+      "summary": ""
+    },
+    {
+      "title": "南京农业大学关于接收2027年推免生（含直博生）提前申请的通知",
+      "url": "https://zsgz.njau.edu.cn/info/1007/1734.htm",
+      "date": "",
+      "source": "notices",
+      "summary": ""
+    },
+    {
+      "title": "南京农业大学关于2027年硕士研究生招生考试专业目录的预通知",
+      "url": "https://zsgz.njau.edu.cn/info/1007/1732.htm",
+      "date": "",
+      "source": "notices",
+      "summary": ""
+    },
+    {
+      "title": "南京农业大学关于调整全国硕士研究生招生考试初试科目的预通知",
+      "url": "https://zsgz.njau.edu.cn/info/1007/1726.htm",
+      "date": "",
+      "source": "notices",
+      "summary": ""
+    },
+    {
+      "title": "南京农业大学2026级硕士研究生调档函和协议下载通知",
+      "url": "https://zsgz.njau.edu.cn/info/1007/1725.htm",
+      "date": "",
+      "source": "notices",
+      "summary": ""
+    },
+    {
+      "title": "南京农业大学2026年硕士研究生调剂工作通知",
+      "url": "https://zsgz.njau.edu.cn/info/1007/1721.htm",
+      "date": "",
+      "source": "notices",
+      "summary": ""
+    },
+    {
+      "title": "南京农业大学2026级硕士研究生拟录取名单公示",
+      "url": "https://zsgz.njau.edu.cn/info/1007/1719.htm",
+      "date": "",
+      "source": "notices",
+      "summary": ""
+    },
+    {
+      "title": "南京农业大学2026年硕士研究生复试录取工作办法",
+      "url": "https://zsgz.njau.edu.cn/info/1007/1717.htm",
+      "date": "",
+      "source": "notices",
+      "summary": ""
+    },
+    {
+      "title": "南京农业大学2026年硕士研究生复试准备工作通知",
+      "url": "https://zsgz.njau.edu.cn/info/1007/1716.htm",
+      "date": "",
+      "source": "notices",
+      "summary": ""
+    },
+    {
+      "title": "资源与环境科学学院2027年免试研究生推荐...",
+      "url": "https://re.njau.edu.cn/info/1210/12674.htm",
+      "date": "",
+      "source": "college",
+      "summary": ""
+    },
+    {
+      "title": "南京农业大学资环学院2026年博士研究生招...",
+      "url": "https://re.njau.edu.cn/info/1078/12626.htm",
+      "date": "",
+      "source": "college",
+      "summary": ""
+    },
+    {
+      "title": "南农资环学院2026级硕士研究生拟录取名单...",
+      "url": "https://re.njau.edu.cn/info/1078/12613.htm",
+      "date": "",
+      "source": "college",
+      "summary": ""
+    }
+  ],
+  "scores": [
+    {
+      "year": "2026",
+      "program_code": "0903",
+      "program_name": "农学门类国家A线（学硕适用下限）",
+      "total": 240,
+      "politics": 33,
+      "foreign": 33,
+      "major1": 50,
+      "major2": 50,
+      "planned": null,
+      "note": "教育部《2026年全国硕士研究生招生考试考生进入复试的初试成绩基本要求》农学[09]",
+      "source": "https://yz.chsi.com.cn/kyzx/kp/202602/20260228/2293449093.html"
+    },
+    {
+      "year": "2025",
+      "program_code": "0903",
+      "program_name": "农学门类国家A线",
+      "total": 245,
+      "politics": 33,
+      "foreign": 33,
+      "major1": 50,
+      "major2": 50,
+      "planned": null,
+      "note": "教育部公布的农学门类A类考生要求",
+      "source": "https://yz.chsi.com.cn/"
+    },
+    {
+      "year": "2024",
+      "program_code": "0903",
+      "program_name": "农学门类国家A线",
+      "total": 251,
+      "politics": 33,
+      "foreign": 33,
+      "major1": 50,
+      "major2": 50,
+      "planned": null,
+      "note": "教育部公布的农学门类A类考生要求",
+      "source": "https://yz.chsi.com.cn/"
+    },
+    {
+      "year": "2026",
+      "program_code": "090301",
+      "program_name": "土壤学（学院复试线）",
+      "total": 273,
+      "politics": 33,
+      "foreign": 45,
+      "major1": 50,
+      "major2": 50,
+      "planned": 31,
+      "note": "资源与环境科学学院2026年硕士研究生复试录取工作细则；计划数含推免及专项",
+      "source": "https://zsgz.njau.edu.cn/info/1007/1717.htm"
+    },
+    {
+      "year": "2026",
+      "program_code": "090302",
+      "program_name": "植物营养学（学院复试线）",
+      "total": 275,
+      "politics": 33,
+      "foreign": 45,
+      "major1": 50,
+      "major2": 50,
+      "planned": 59,
+      "note": "资源与环境科学学院2026年硕士研究生复试录取工作细则；计划数含推免及专项",
+      "source": "https://zsgz.njau.edu.cn/info/1007/1717.htm"
+    }
+  ],
+  "warnings": [],
+  "sources": {
+    "zsgz": "https://zsgz.njau.edu.cn",
+    "catalog": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_default.aspx",
+    "subject": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_view.aspx",
+    "notices": "https://zsgz.njau.edu.cn/zsxx/sszs/sszxtz.htm",
+    "catalog_page": "https://zsgz.njau.edu.cn/info/1006/1656.htm",
+    "charter": "https://zsgz.njau.edu.cn/info/1007/1692.htm",
+    "preview_2027": "https://zsgz.njau.edu.cn/info/1007/1732.htm",
+    "subjects_2027": "https://zsgz.njau.edu.cn/info/1007/1726.htm",
+    "retest_2026": "https://zsgz.njau.edu.cn/info/1007/1717.htm",
+    "college": "https://re.njau.edu.cn",
+    "college_news": "https://re.njau.edu.cn/tzgg/yjszs.htm",
+    "chsi": "https://yz.chsi.com.cn",
+    "national_line_2026": "https://yz.chsi.com.cn/kyzx/kp/202602/20260228/2293449093.html"
+  },
+  "extra": {
+    "warnings": [],
+    "raw_program_count": 7,
+    "html_chars": 29379,
+    "college_all_programs": [
+      {
+        "year": "2026",
+        "college": "资源与环境科学学院",
+        "college_phone": "025-84395620",
+        "code": "071300",
+        "name": "生态学",
+        "degree_type": "学术学位",
+        "planned": 17,
+        "directions": [
+          {
+            "code": "01",
+            "name": "土壤生态学",
+            "full_time": true
+          },
+          {
+            "code": "02",
+            "name": "生态系统生态学",
+            "full_time": true
+          },
+          {
+            "code": "03",
+            "name": "修复生态学",
+            "full_time": true
+          },
+          {
+            "code": "04",
+            "name": "海岸带生态学",
+            "full_time": true
+          },
+          {
+            "code": "05",
+            "name": "植物生态学",
+            "full_time": true
+          }
+        ],
+        "initial_subjects": [
+          {
+            "code": "101",
+            "name": "思想政治理论",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "201",
+            "name": "英语（一）",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "315",
+            "name": "化学（农）",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "806",
+            "name": "普通生态学",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          }
+        ],
+        "retest_subjects": [
+          {
+            "code": "0306",
+            "name": "土壤学",
+            "kind": "复试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "0313",
+            "name": "普通生物学",
+            "kind": "复试",
+            "books": "",
+            "official_url": ""
+          }
+        ],
+        "remark": "生态学是江苏省一级重点学科，并进入“省优势学科建设工程”行列。 学科师资力量雄厚，研究领域广泛，欢迎相关专业考生报考",
+        "source_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_default.aspx"
+      },
+      {
+        "year": "2026",
+        "college": "资源与环境科学学院",
+        "college_phone": "025-84395620",
+        "code": "083001",
+        "name": "环境科学",
+        "degree_type": "学术学位",
+        "planned": 16,
+        "directions": [
+          {
+            "code": "01",
+            "name": "环境过程与全球变化",
+            "full_time": true
+          },
+          {
+            "code": "02",
+            "name": "环境污染控制与生物修复",
+            "full_time": true
+          },
+          {
+            "code": "03",
+            "name": "环境质量与食品安全",
+            "full_time": true
+          },
+          {
+            "code": "04",
+            "name": "环境监测与环境影响评价",
+            "full_time": true
+          },
+          {
+            "code": "05",
+            "name": "环境生物与生态工程",
+            "full_time": true
+          }
+        ],
+        "initial_subjects": [
+          {
+            "code": "101",
+            "name": "思想政治理论",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "201",
+            "name": "英语（一）",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "302",
+            "name": "数学（二）",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "871",
+            "name": "环境学基础",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          }
+        ],
+        "retest_subjects": [
+          {
+            "code": "0310",
+            "name": "环境化学",
+            "kind": "复试",
+            "books": "",
+            "official_url": ""
+          }
+        ],
+        "remark": "环境科学是校一级重点学科。",
+        "source_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_default.aspx"
+      },
+      {
+        "year": "2026",
+        "college": "资源与环境科学学院",
+        "college_phone": "025-84395620",
+        "code": "083002",
+        "name": "环境工程",
+        "degree_type": "学术学位",
+        "planned": 21,
+        "directions": [
+          {
+            "code": "01",
+            "name": "固体废物处理处置与资源化",
+            "full_time": true
+          },
+          {
+            "code": "02",
+            "name": "水和废水处理工程",
+            "full_time": true
+          },
+          {
+            "code": "03",
+            "name": "污染土壤修复",
+            "full_time": true
+          },
+          {
+            "code": "04",
+            "name": "农业环境固碳减排",
+            "full_time": true
+          },
+          {
+            "code": "05",
+            "name": "环境工程微生物",
+            "full_time": true
+          }
+        ],
+        "initial_subjects": [
+          {
+            "code": "101",
+            "name": "思想政治理论",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "201",
+            "name": "英语（一）",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "302",
+            "name": "数学（二）",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "871",
+            "name": "环境学基础",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          }
+        ],
+        "retest_subjects": [
+          {
+            "code": "0303",
+            "name": "环境工程学",
+            "kind": "复试",
+            "books": "",
+            "official_url": ""
+          }
+        ],
+        "remark": "江苏省重点学科。",
+        "source_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_default.aspx"
+      },
+      {
+        "year": "2026",
+        "college": "资源与环境科学学院",
+        "college_phone": "025-84395620",
+        "code": "085700",
+        "name": "资源与环境",
+        "degree_type": "专业学位",
+        "planned": 60,
+        "directions": [
+          {
+            "code": "01",
+            "name": "固体废物处理与资源化工程",
+            "full_time": true
+          },
+          {
+            "code": "02",
+            "name": "水和废水处理工程",
+            "full_time": true
+          },
+          {
+            "code": "03",
+            "name": "环境污染控制与修复",
+            "full_time": true
+          },
+          {
+            "code": "04",
+            "name": "生态环境规划与管理",
+            "full_time": true
+          },
+          {
+            "code": "05",
+            "name": "生物质能源化利用工程",
+            "full_time": true
+          }
+        ],
+        "initial_subjects": [
+          {
+            "code": "101",
+            "name": "思想政治理论",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "204",
+            "name": "英语（二）",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "302",
+            "name": "数学（二）",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "871",
+            "name": "环境学基础",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          }
+        ],
+        "retest_subjects": [
+          {
+            "code": "0311",
+            "name": "污染控制工程（水污染控制工程、土壤污染控制与修复、固体废物处理处置为主）",
+            "kind": "复试",
+            "books": "",
+            "official_url": ""
+          }
+        ],
+        "remark": "",
+        "source_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_default.aspx"
+      },
+      {
+        "year": "2026",
+        "college": "资源与环境科学学院",
+        "college_phone": "025-84395620",
+        "code": "090301",
+        "name": "土壤学",
+        "degree_type": "学术学位",
+        "planned": 21,
+        "directions": [
+          {
+            "code": "01",
+            "name": "土壤固碳减排与碳中和",
+            "full_time": true
+          },
+          {
+            "code": "02",
+            "name": "土壤生物与生态",
+            "full_time": true
+          },
+          {
+            "code": "03",
+            "name": "土壤污染控制与修复",
+            "full_time": true
+          },
+          {
+            "code": "04",
+            "name": "土壤资源环境遥感及信息技术",
+            "full_time": true
+          }
+        ],
+        "initial_subjects": [
+          {
+            "code": "101",
+            "name": "思想政治理论",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "201",
+            "name": "英语（一）",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "314",
+            "name": "数学（农）",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "857",
+            "name": "农业资源环境概论",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          }
+        ],
+        "retest_subjects": [
+          {
+            "code": "0301",
+            "name": "农业资源信息系统",
+            "kind": "复试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "0305",
+            "name": "土壤农化分析",
+            "kind": "复试",
+            "books": "",
+            "official_url": ""
+          }
+        ],
+        "remark": "土壤学是国家重点学科和省优势学科，入选国家“双一流”建设学科，拥有国家和省部级平台5个以及“111”创新引智基地。",
+        "source_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_default.aspx"
+      },
+      {
+        "year": "2026",
+        "college": "资源与环境科学学院",
+        "college_phone": "025-84395620",
+        "code": "090302",
+        "name": "植物营养学",
+        "degree_type": "学术学位",
+        "planned": 57,
+        "directions": [
+          {
+            "code": "01",
+            "name": "植物营养生理学与养分管理",
+            "full_time": true
+          },
+          {
+            "code": "02",
+            "name": "植物营养遗传与抗逆",
+            "full_time": true
+          },
+          {
+            "code": "03",
+            "name": "新型肥料学与根际过程",
+            "full_time": true
+          }
+        ],
+        "initial_subjects": [
+          {
+            "code": "101",
+            "name": "思想政治理论",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "201",
+            "name": "英语（一）",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "315",
+            "name": "化学（农）",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "857",
+            "name": "农业资源环境概论",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          }
+        ],
+        "retest_subjects": [
+          {
+            "code": "0307",
+            "name": "植物营养学",
+            "kind": "复试",
+            "books": "",
+            "official_url": ""
+          }
+        ],
+        "remark": "植物营养学是国家重点学科和省优势学科，入选国家“双一流”建设学科，拥有国家和省部级平台5个以及“111”创新引智基地。",
+        "source_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_default.aspx"
+      },
+      {
+        "year": "2026",
+        "college": "资源与环境科学学院",
+        "college_phone": "025-84395620",
+        "code": "095132",
+        "name": "资源利用与植物保护",
+        "degree_type": "专业学位",
+        "planned": 88,
+        "directions": [
+          {
+            "code": "04",
+            "name": "不区分研究方向",
+            "full_time": true
+          }
+        ],
+        "initial_subjects": [
+          {
+            "code": "101",
+            "name": "思想政治理论",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "204",
+            "name": "英语（二）",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "339",
+            "name": "农业知识综合一",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          },
+          {
+            "code": "857",
+            "name": "农业资源环境概论",
+            "kind": "初试",
+            "books": "",
+            "official_url": ""
+          }
+        ],
+        "retest_subjects": [
+          {
+            "code": "0305",
+            "name": "土壤农化分析",
+            "kind": "复试",
+            "books": "",
+            "official_url": ""
+          }
+        ],
+        "remark": "资源利用与植物保护（农业资源利用）依托于农业资源与环境国家重点学科和“双一流”建设学科。",
+        "source_url": "https://yzglxt.njau.edu.cn/gts2026/zsmlgl/zsml_ss_default.aspx"
+      }
+    ],
+    "academic_count": 2
+  }
+}
