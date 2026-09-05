@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "njau-kaoyan"
+version = "0.1.0"
+description = "南京农业大学 农业资源与环境（0903 学硕）考研资料实时抓取与整理工具"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = [
+    "requests>=2.31",
+    "beautifulsoup4>=4.12",
+    "lxml>=4.9",
+    "PyYAML>=6.0",
+]
+
+[project.scripts]
+njau-kaoyan = "njau_kaoyan.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["njau_kaoyan*"]
+
+[tool.setuptools.package-data]
+njau_kaoyan = ["py.typed"]

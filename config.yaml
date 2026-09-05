@@ -1,0 +1,188 @@
+# 南京农业大学 农业资源与环境（0903 学硕）考研资料抓取配置
+# 所有字段都有默认值，可按需删改。运行 `njau-kaoyan --help` 查看命令。
+
+target:
+  school: 南京农业大学
+  school_code: "10307"
+  college: 资源与环境科学学院
+  college_code: "003"
+  # 一级学科 0903 农业资源与环境 下的学硕二级学科
+  majors:
+    - code: "090301"
+      name: 土壤学
+    - code: "090302"
+      name: 植物营养学
+
+storage:
+  db_path: data/njau_kaoyan.sqlite3
+
+http:
+  timeout: 20
+  retries: 3
+  # 请求间隔（秒），对官网友好一点
+  delay: 0.8
+  user_agent: >-
+    Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+    (KHTML, like Gecko) Chrome/124.0 Safari/537.36
+
+# 官方站点栏目（VSB 建站系统，列表页 + 详情页）
+official:
+  - id: zsgz_notice
+    name: 研究生招生网-硕士最新通知
+    url: https://zsgz.njau.edu.cn/zsxx/sszs/sszxtz.htm
+    max_pages: 2
+    # 官网通知全部保留，不做关键词过滤（filter: false）
+    filter: false
+  - id: zsgz_catalog
+    name: 研究生招生网-简章目录
+    url: https://zsgz.njau.edu.cn/zsxx/sszs/jzml.htm
+    max_pages: 1
+    filter: false
+  - id: zsgz_admit
+    name: 研究生招生网-录取公示
+    url: https://zsgz.njau.edu.cn/xxgk/lqgs.htm
+    max_pages: 1
+    filter: false
+  - id: zsgz_scores
+    name: 研究生招生网-历年复试分数
+    url: https://zsgz.njau.edu.cn/xxgk/lnfsfs.htm
+    max_pages: 1
+    filter: false
+  - id: zsgz_stats
+    name: 研究生招生网-历年报考情况
+    url: https://zsgz.njau.edu.cn/xxgk/lnbkqk.htm
+    max_pages: 1
+    filter: false
+  - id: re_notice
+    name: 资源与环境科学学院-学院通知
+    url: https://re.njau.edu.cn/tzgg/xytz.htm
+    max_pages: 2
+    # 学院通知里有很多本科/党建信息，只保留和研究生招生相关的
+    filter: true
+  - id: re_all
+    name: 资源与环境科学学院-通知公告
+    url: https://re.njau.edu.cn/tzgg.htm
+    max_pages: 2
+    filter: true
+  - id: re_zsgz
+    name: 资源与环境科学学院-研究生招生工作
+    url: https://re.njau.edu.cn/yjsjy/zsgz.htm
+    max_pages: 1
+    filter: false
+
+# 研究生院在线招生目录（ASP.NET 系统），按年份抓取 003 学院所有专业 + 参考书目
+catalog:
+  enabled: true
+  base: https://yzglxt.njau.edu.cn/gts{year}/zsmlgl/
+  # 空表示自动探测：从当前年份 +1 往前找到第一个可访问的年份
+  years: []
+  compare_previous_year: true
+
+# 全网搜索（DuckDuckGo / Bing / 搜狗微信）
+search:
+  enabled: true
+  engines: [duckduckgo, sogou_weixin, bing]
+  max_results_per_query: 10
+  # 两次搜索之间的基础间隔（秒），实际为 delay ~ 2*delay 随机；太快会被搜索引擎限流返回空页
+  delay: 3
+  queries:
+    - 南京农业大学 857 农业资源环境概论 真题
+    - 南京农业大学 857 农业资源环境概论 经验 复习
+    - 南京农业大学 土壤学 考研 经验
+    - 南京农业大学 植物营养学 考研 经验
+    - 南京农业大学 农业资源与环境 考研 复试
+    - 南京农业大学 资环学院 考研 复试线 拟录取
+    - 南京农业大学 资源与环境科学学院 硕士 报录比
+    - 南农 资环 考研 314 数学农
+    - 南农 资环 考研 315 化学农
+    - 南京农业大学 土壤学 植物营养学 复试 土壤农化分析 农业资源信息系统
+    - 南农研招 2027 硕士 招生 目录 资源与环境科学学院
+  weixin_queries:
+    - 南京农业大学 资环学院 考研
+    - 南农 857 农业资源环境概论
+    - 南京农业大学 土壤学 植物营养学 考研 复试
+
+# 相关性判定：命中越多得分越高；官方栏目不受此限制
+relevance:
+  # 至少命中 must_any 之一才算相关
+  must_any:
+    - 南京农业大学
+    - 南农
+    - 南京农大
+    - njau
+  # 命中 topic_any 之一才算与本专业相关
+  topic_any:
+    - 农业资源与环境
+    - 资源与环境
+    - 资环
+    - 土壤学
+    - 植物营养
+    - "857"
+    - 农业资源环境概论
+    - "0903"
+    - "090301"
+    - "090302"
+    - 数学（农）
+    - 数学(农)
+    - 化学（农）
+    - 化学(农)
+    - "314"
+    - "315"
+    - 土壤农化分析
+    - 农业资源信息系统
+    - 硕士
+    - 研究生
+    - 考研
+    - 复试
+    - 拟录取
+    - 调剂
+    - 分数线
+    - 招生
+  # 学院官网栏目（filter: true）只保留命中这些词的通知
+  official_topic_any:
+    - 硕士
+    - 研究生
+    - 考研
+    - 复试
+    - 拟录取
+    - 调剂
+    - 推免
+    - 免试
+    - 招生
+    - 导师
+    - 分数线
+  # 出现这些词直接过滤掉（如博士/本科/党建/学生组织）
+  exclude_any:
+    - 博士研究生
+    - 博士生
+    - 博士复试
+    - 本科生
+    - 本科
+    - 党支部
+    - 班主任
+    - 团委
+    - 学生组织
+    - 主席团
+    - 部长团
+    - 金善宝书院
+    - 实验班
+    - 大类分流
+
+report:
+  out_dir: reports
+  # 报告中“最近更新”的时间窗口（天）
+  recent_days: 45
+  max_items_per_section: 40
+
+notify:
+  # 企业微信 / 钉钉 / 飞书 群机器人 webhook，留空则不推送
+  webhook_url: ""
+  # 也可通过环境变量 NJAU_WEBHOOK_URL 覆盖
+  # 支持 wecom / dingtalk / feishu / generic
+  webhook_type: wecom
+  # 仅推送新增的官方通知（true），或推送所有新增条目（false）
+  official_only: true
+
+watch:
+  # watch 模式轮询间隔（分钟）
+  interval_minutes: 60
