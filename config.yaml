@@ -1,0 +1,65 @@
+target:
+  university: 南京农业大学
+  college_code: "003"
+  college_name: 资源与环境科学学院
+  degree_type: 学硕
+  discipline_code: "0903"
+  discipline_name: 农业资源与环境
+  majors:
+    - code: "090301"
+      name: 土壤学
+    - code: "090302"
+      name: 植物营养学
+
+sources:
+  official_admission:
+    base_url: https://zsgz.njau.edu.cn
+    news_list: https://zsgz.njau.edu.cn/zsxx/sszs/{page}.htm
+    catalog_page: https://zsgz.njau.edu.cn/zsxx/sszs/jzml.htm
+    charter_url: https://zsgz.njau.edu.cn/info/1007/1692.htm
+    reexam_policy_url: https://zsgz.njau.edu.cn/info/1007/1717.htm
+    score_history_url: https://zsgz.njau.edu.cn/xxgk/lnfsfs.htm
+    application_history_url: https://zsgz.njau.edu.cn/xxgk/lnbkqk.htm
+  catalog_system:
+    base_url: https://yzglxt.njau.edu.cn/gts2026/zsmlgl/
+    default_page: zsml_ss_default.aspx
+    subject_view: zsml_ss_view.aspx?kmdm={code}
+  college_site:
+    base_url: https://re.njau.edu.cn
+    discipline_page: /xkjs/nyzyyhj.htm
+  supplementary:
+    - name: 中国考研网
+      url: https://www.chinakaoyan.com/info/list/ClassID/43.shtml
+      search_keywords: ["南京农业大学", "857", "农业资源环境"]
+
+keywords:
+  news:
+    - 招生
+    - 复试
+    - 章程
+    - 目录
+    - 调剂
+    - 初试
+    - 推免
+    - 农业资源
+    - 资环
+    - 土壤
+    - 植物营养
+  attachments:
+    - 资源与环境
+    - "003"
+    - 复试
+    - 分数线
+    - 招生目录
+
+exam_subjects:
+  common:
+    - "101"
+    - "201"
+    - "314"
+    - "315"
+    - "857"
+  reexam:
+    - "0301"
+    - "0305"
+    - "0307"
