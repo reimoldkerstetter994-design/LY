@@ -1,0 +1,4 @@
+{
+  "name": "南农资环学硕考研资料抓取器",
+  "install": "pip install --break-system-packages -r requirements.txt"
+}
