@@ -30,10 +30,15 @@ _ATTACH_RE = re.compile(
 )
 _TITLE_RE = re.compile(r"<title>([^<]+)</title>", re.I)
 _PUBLISHED_RE = re.compile(r"发布时间[:：]\s*(\d{4}-\d{2}-\d{2})")
-_CONTENT_RE = re.compile(
-    r'(?:v_news_content|content|article|wz-article)[\s\S]{0,80}>([\s\S]{0,8000})</div>',
+_META_DESC_RE = re.compile(
+    r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)["\']',
     re.I,
 )
+_BODY_RE = re.compile(
+    r'<div[^>]+class="[^"]*v_news_content[^"]*"[^>]*>([\s\S]*?)</div>',
+    re.I,
+)
+_SCRIPT_RE = re.compile(r"<(script|style)[\s\S]*?</\1>", re.I)
 _PAGER_RE = re.compile(r"共(\d+)条")
 
 
@@ -124,12 +129,17 @@ def parse_article(html: str, url: str, source: str = "") -> Notice:
     title = _clean(_TITLE_RE.search(html).group(1) if _TITLE_RE.search(html) else "")
     title = re.sub(r"-南京农业大学.*$", "", title).strip(" -")
     published = _PUBLISHED_RE.search(html)
-    content_match = _CONTENT_RE.search(html)
-    summary = _clean(content_match.group(1) if content_match else "")[:500]
-    if not summary:
-        # Fall back to a text excerpt around the heading.
-        text = _clean(html)
-        summary = text[:500]
+    stripped = _SCRIPT_RE.sub(" ", html)
+    summary = ""
+    meta = _META_DESC_RE.search(html)
+    if meta:
+        summary = _clean(meta.group(1))
+    body = _BODY_RE.search(stripped)
+    if body:
+        body_text = _clean(body.group(1))
+        if len(body_text) > len(summary):
+            summary = body_text
+    summary = summary[:500]
     attachments = []
     for href, name_html in _ATTACH_RE.findall(html):
         name = _clean(name_html) or href
