@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>南农土肥学硕雷达 · 农业资源与环境学术型硕士</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="soil-sky">
+    <header class="mast">
+      <div class="mast-copy">
+        <p class="kicker">南京农业大学 · 资源与环境科学学院</p>
+        <h1>农业资源与环境<br /><span>学术型硕士资料雷达</span></h1>
+        <p class="lead">
+          实时抓取学校研招网、2026 招生目录系统和资环学院官网的公开信息，
+          聚焦学硕 <strong>090301 土壤学</strong> 与 <strong>090302 植物营养学</strong>。
+          不镜像培训机构付费真题，只做官方来源的详细索引。
+        </p>
+        <div class="actions">
+          <button id="crawlBtn" type="button">立即抓取最新公开页</button>
+          <a class="ghost" href="/api/export.md">导出 Markdown</a>
+          <span id="runMeta" class="run-meta">尚未抓取</span>
+        </div>
+      </div>
+      <aside class="stratum" aria-hidden="true">
+        <div class="layer leaf">枯落层 · 公开通知</div>
+        <div class="layer humus">腐殖层 · 专业目录</div>
+        <div class="layer loam">耕作层 · 参考书目</div>
+        <div class="layer clay">心土层 · 导师名录</div>
+        <div class="layer parent">母质层 · 官方附件</div>
+      </aside>
+    </header>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="overview" class="on">总览对照</button>
+    <button data-tab="exams">科目与书目</button>
+    <button data-tab="notices">官方通知</button>
+    <button data-tab="teachers">土壤 / 植营导师</button>
+    <button data-tab="discipline">学科与联系</button>
+    <button data-tab="sources">来源与边界</button>
+  </nav>
+
+  <main>
+    <section id="overview" class="panel on"></section>
+    <section id="exams" class="panel"></section>
+    <section id="notices" class="panel"></section>
+    <section id="teachers" class="panel"></section>
+    <section id="discipline" class="panel"></section>
+    <section id="sources" class="panel"></section>
+  </main>
+
+  <footer>
+    <p>资料以南京农业大学研究生招生网与资环学院官网当时发布为准。拟招生人数含推免，公开招考名额会随推免和计划调整。</p>
+  </footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>
