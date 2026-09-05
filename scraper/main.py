@@ -8,6 +8,7 @@ from typing import Any
 from .admission_news import AdmissionNewsScraper
 from .archive import build_archive_info, load_previous_snapshot, persist_archive
 from .college_site import CollegeSiteScraper
+from .grokbot_export import GROKBOT_FILENAME, write_grokbot_pack
 from .official_catalog import OfficialCatalogScraper
 from .report import write_report
 from .scheduler import run_daily
@@ -90,9 +91,16 @@ def collect_all(
     result["archive"] = archive_info
     json_path, md_path = write_report(result, out)
     persist_archive(out, archive_info)
+    grokbot_paths = write_grokbot_pack(
+        result,
+        out,
+        extra_paths=[Path(GROKBOT_FILENAME)],
+    )
     logger.info("报告已生成：%s", md_path)
     logger.info("数据已保存：%s", json_path)
     logger.info("已归档到：%s", archive_info.get("archive_dir"))
+    for path in grokbot_paths:
+        logger.info("GrokBot 资料包：%s", path)
     for change in archive_info.get("changes", []):
         logger.info("变更：%s", change)
     return result
@@ -104,8 +112,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "command",
-        choices=["scrape", "schedule"],
-        help="scrape 立即抓取一次；schedule 立即抓取一次后每天定时执行",
+        choices=["scrape", "schedule", "grokbot"],
+        help="scrape 立即抓取；schedule 每天定时抓取；grokbot 用已有数据生成可发给 GrokBot 的单文件",
     )
     parser.add_argument(
         "-c",
@@ -171,6 +179,16 @@ def main() -> None:
         config = load_config(args.config)
         at = args.at or config.get("schedule", {}).get("at", "08:00")
         run_daily(run_once, at=at, run_immediately=not args.skip_now)
+    elif args.command == "grokbot":
+        import json
+
+        json_path = Path(args.output) / "kaoyan_data.json"
+        if not json_path.exists():
+            raise SystemExit(f"找不到 {json_path}，请先运行 python3 main.py scrape")
+        data = json.loads(json_path.read_text(encoding="utf-8"))
+        paths = write_grokbot_pack(data, Path(args.output), extra_paths=[Path(GROKBOT_FILENAME)])
+        for path in paths:
+            logger.info("已生成 GrokBot 资料包：%s", path)
 
 
 if __name__ == "__main__":

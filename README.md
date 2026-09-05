@@ -29,7 +29,16 @@ python main.py scrape -o ./my_output --no-download
 
 # 立即抓取一次，之后每天 08:00 自动再抓
 python main.py schedule --at 08:00
+
+# 把已抓到的资料整合成一份可直接发给 GrokBot 的文件
+python main.py grokbot
 ```
+
+发给 GrokBot 时，只用这一个文件：
+
+- `GROKBOT_南农资环学硕考研资料包.md`
+
+整份复制或作为附件发送即可。每天抓取后会自动更新。
 
 ## 每天自动抓取
 

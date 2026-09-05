@@ -137,6 +137,7 @@ def generate_markdown_report(data: dict[str, Any]) -> str:
     lines.append("- 资源与环境科学学院：https://re.njau.edu.cn")
     lines.append("- 研招办电话：025-84395345")
     lines.append("- 资环学院招生联系人：易老师 025-84395620 / yirongfei@njau.edu.cn")
+    lines.append("- 发给 GrokBot 用这一份：GROKBOT_南农资环学硕考研资料包.md")
     lines.append("")
 
     return "\n".join(lines)
