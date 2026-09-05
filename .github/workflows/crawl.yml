@@ -1,0 +1,56 @@
+name: 定时抓取南农资环考研资料
+
+on:
+  schedule:
+    # 每 6 小时一次（UTC）；GitHub 定时任务可能延迟几分钟到几十分钟
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      with_search:
+        description: "是否同时做全网搜索（较慢）"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: 抓取并生成报告
+        env:
+          NJAU_WEBHOOK_URL: ${{ secrets.NJAU_WEBHOOK_URL }}
+          NJAU_WEBHOOK_TYPE: ${{ vars.NJAU_WEBHOOK_TYPE || 'wecom' }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.with_search }}" = "false" ]; then
+            python -m njau_kaoyan.cli run --no-search
+          else
+            python -m njau_kaoyan.cli run
+          fi
+
+      - name: 提交数据库与报告
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/njau_kaoyan.sqlite3 reports/
+          if git diff --cached --quiet; then
+            echo "没有变化"
+          else
+            git commit -m "chore: 自动抓取 $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
