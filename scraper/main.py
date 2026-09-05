@@ -6,9 +6,11 @@ from pathlib import Path
 from typing import Any
 
 from .admission_news import AdmissionNewsScraper
+from .archive import build_archive_info, load_previous_snapshot, persist_archive
 from .college_site import CollegeSiteScraper
 from .official_catalog import OfficialCatalogScraper
 from .report import write_report
+from .scheduler import run_daily
 from .supplementary import AttachmentDownloader, SupplementaryScraper
 from .utils import load_config, now_iso
 
@@ -83,9 +85,16 @@ def collect_all(
             downloader = AttachmentDownloader()
             result["downloaded_attachments"] = downloader.download_all(attachments, out)
 
+    previous = load_previous_snapshot(out)
+    archive_info = build_archive_info(out, result, previous=previous)
+    result["archive"] = archive_info
     json_path, md_path = write_report(result, out)
+    persist_archive(out, archive_info)
     logger.info("报告已生成：%s", md_path)
     logger.info("数据已保存：%s", json_path)
+    logger.info("已归档到：%s", archive_info.get("archive_dir"))
+    for change in archive_info.get("changes", []):
+        logger.info("变更：%s", change)
     return result
 
 
@@ -95,8 +104,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "command",
-        choices=["scrape"],
-        help="执行抓取任务",
+        choices=["scrape", "schedule"],
+        help="scrape 立即抓取一次；schedule 立即抓取一次后每天定时执行",
     )
     parser.add_argument(
         "-c",
@@ -127,6 +136,16 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="显示详细日志",
     )
+    parser.add_argument(
+        "--at",
+        default=None,
+        help="每日执行时间，格式 HH:MM，默认读取 config.yaml 中的 schedule.at",
+    )
+    parser.add_argument(
+        "--skip-now",
+        action="store_true",
+        help="schedule 模式不立刻抓取，等到下一次计划时间再执行",
+    )
     return parser
 
 
@@ -138,13 +157,20 @@ def main() -> None:
         format="%(asctime)s [%(levelname)s] %(message)s",
     )
 
-    if args.command == "scrape":
+    def run_once() -> None:
         collect_all(
             config_path=args.config,
             output_dir=args.output,
             max_news_pages=args.max_pages,
             download_attachments=not args.no_download,
         )
+
+    if args.command == "scrape":
+        run_once()
+    elif args.command == "schedule":
+        config = load_config(args.config)
+        at = args.at or config.get("schedule", {}).get("at", "08:00")
+        run_daily(run_once, at=at, run_immediately=not args.skip_now)
 
 
 if __name__ == "__main__":

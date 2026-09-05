@@ -52,6 +52,12 @@ keywords:
     - 分数线
     - 招生目录
 
+schedule:
+  enabled: true
+  at: "08:00"
+  timezone: Asia/Shanghai
+  archive: true
+
 exam_subjects:
   common:
     - "101"

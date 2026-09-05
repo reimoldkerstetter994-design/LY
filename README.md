@@ -10,6 +10,7 @@
 - 下载资环学院**复试细则 PDF** 等附件
 - 抓取学院官网学科介绍页面
 - 生成 `考研资料汇总.md` 与 `kaoyan_data.json`
+- **每天自动抓取**：GitHub Actions、本机常驻进程或 crontab 三选一
 
 ## 快速开始
 
@@ -25,16 +26,51 @@ python main.py scrape -v
 
 # 指定输出目录，不下载附件
 python main.py scrape -o ./my_output --no-download
+
+# 立即抓取一次，之后每天 08:00 自动再抓
+python main.py schedule --at 08:00
 ```
+
+## 每天自动抓取
+
+任选一种方式即可，默认每天 **北京时间 08:00** 执行一次。
+
+### 1. GitHub Actions（推荐，仓库合并后生效）
+
+仓库已包含 `.github/workflows/daily-scrape.yml`：
+
+- 每天 UTC 00:00（北京时间 08:00）自动运行
+- 也可在 GitHub → Actions →「每日抓取南农资环学硕考研资料」手动触发
+- 抓取结果写入 `data/`，有变化时自动提交
+
+> 定时任务只在默认分支（通常是 `main`）生效。合并本 PR 后才会开始每日自动抓取。
+
+### 2. 本机常驻进程
+
+```bash
+python3 main.py schedule --at 08:00
+```
+
+启动后会立刻抓取一次，然后每天到点再抓。适合长期开着的电脑或服务器。
+
+### 3. crontab（Linux / macOS）
+
+```bash
+# 每天 08:00
+bash scripts/install-cron.sh 8 0
+```
+
+日志写入 `output/scrape.log`。查看任务：`crontab -l`。
 
 ## 输出文件
 
 ```
-output/
-├── 考研资料汇总.md          # 人类可读的完整资料报告
+output/ 或 data/
+├── 考研资料汇总.md          # 当天最新报告
 ├── kaoyan_data.json         # 结构化原始数据
-└── attachments/             # 下载的 PDF/XLS 等附件
-    └── 003资源与环境科学学院2026年复试细则.pdf
+├── changelog.md             # 每日变更日志
+├── attachments/             # 下载的 PDF/XLS 等附件
+└── archive/YYYY-MM-DD/      # 按日期归档的历史快照
 ```
 
 ## 数据来源
@@ -89,7 +125,7 @@ output/
 
 1. **以官网为准**：所有信息以南京农业大学研究生院官网最新公布为准
 2. **合理使用**：请遵守网站 robots 协议，勿高频请求
-3. **定期更新**：招生政策每年可能调整，建议每月重新运行
+3. **每天更新**：默认每天自动抓取一次，招生政策变化会写入 `changelog.md`
 4. **联系咨询**：研招办 025-84395345；资环学院易老师 025-84395620
 
 ## 许可证

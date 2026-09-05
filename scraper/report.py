@@ -15,6 +15,7 @@ def generate_markdown_report(data: dict[str, Any]) -> str:
         f"# {target.get('university', '')}{target.get('discipline_name', '')}{target.get('degree_type', '')}考研资料汇总",
         "",
         f"> 自动生成时间：{data.get('generated_at', '')}",
+        "> 抓取频率：每天自动抓取一次，并按日期归档",
         f"> 数据来源：南京农业大学研究生院官网、官方招生目录系统、资源与环境科学学院官网",
         "",
         "---",
@@ -102,6 +103,15 @@ def generate_markdown_report(data: dict[str, Any]) -> str:
             lines.append(preview[:1500] + ("..." if len(preview) > 1500 else ""))
             lines.append("")
 
+    archive = data.get("archive", {})
+    if archive.get("changes"):
+        lines.append(_section("每日变更"))
+        lines.append(f"归档日期：{archive.get('date', '')}")
+        lines.append("")
+        for item in archive.get("changes", []):
+            lines.append(f"- {item}")
+        lines.append("")
+
     news = data.get("related_news", [])
     if news:
         lines.append(_section("六、相关招生通知索引"))
@@ -115,7 +125,7 @@ def generate_markdown_report(data: dict[str, Any]) -> str:
     )
     lines.append("2. **学硕方向**：农业资源与环境学硕下设土壤学（090301）、植物营养学（090302）等方向，初试专业课均为 857 农业资源环境概论。")
     lines.append("3. **复试准备**：土壤学方向复试可选 0301 农业资源信息系统或 0305 土壤农化分析；植物营养学方向复试为 0307 植物营养学。")
-    lines.append("4. **定期更新**：建议每月运行本工具重新抓取，关注「南农研招」微信公众号。")
+    lines.append("4. **每日更新**：本工具默认每天自动抓取一次，请关注「南农研招」微信公众号核对最新通知。")
     lines.append("5. **资料使用**：本报告仅供学习参考，不构成招生承诺。")
     lines.append("")
     lines.append("---")
