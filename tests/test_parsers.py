@@ -52,4 +52,6 @@ def test_parse_zsgz_news_list():
     assert any("2027年硕士研究生招生考试专业目录的预通知" in t for t in titles)
     assert any(i.date.startswith("2026-07-08") or i.date.startswith("2026-07") for i in items)
     assert is_relevant("南京农业大学2026年硕士研究生招生专业目录")
+    assert is_relevant("资源与环境科学学院2027年免试研究生推荐办法")
     assert not is_relevant("食堂菜谱更新通知")
+    assert not is_relevant("资环学院关于2026-2027学年本科生“瑞华春雨助学金”拟推荐名单的公示")

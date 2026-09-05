@@ -48,19 +48,23 @@ def collect(save: bool = True) -> Snapshot:
 
         target = [p for p in programs if p.is_target]
         subject_pool: list[ExamSubject] = []
-        latest_targets = [p for p in target if p.year == latest_year] or target
-        for prog in latest_targets:
+        for prog in target:
             subject_pool.extend(prog.initial_subjects)
             subject_pool.extend(prog.retest_subjects)
 
         subjects, sub_hits = enrich_subjects(fetcher, subject_pool, latest_year or "2026")
         source_hits.extend(sub_hits)
-        by_code = {s.code: s for s in subjects}
+        by_url = {s.url: s for s in subjects if s.url}
+        latest_by_code: dict[str, ExamSubject] = {}
+        for sub in subjects:
+            latest_by_code.setdefault(sub.code, sub)
         for prog in programs:
             for bucket in (prog.initial_subjects, prog.retest_subjects):
                 for i, sub in enumerate(bucket):
-                    if sub.code in by_code:
-                        filled = by_code[sub.code]
+                    filled = by_url.get(sub.url)
+                    if filled is None and prog.year == latest_year:
+                        filled = latest_by_code.get(sub.code)
+                    if filled:
                         bucket[i].books = filled.books
                         bucket[i].url = filled.url or sub.url
 
@@ -87,7 +91,7 @@ def collect(save: bool = True) -> Snapshot:
             years_available=years,
             latest_catalog_year=latest_year,
             programs=programs,
-            subjects=subjects,
+            subjects=_unique_latest_subjects(subjects),
             news=news,
             teachers=teachers,
             discipline=discipline,
@@ -101,3 +105,15 @@ def collect(save: bool = True) -> Snapshot:
         return snapshot
     finally:
         fetcher.close()
+
+
+def _unique_latest_subjects(subjects: list[ExamSubject]) -> list[ExamSubject]:
+    seen: set[tuple[str, str]] = set()
+    out: list[ExamSubject] = []
+    for sub in subjects:
+        key = (sub.kind, sub.code)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(sub)
+    return out

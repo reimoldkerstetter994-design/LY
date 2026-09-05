@@ -119,7 +119,14 @@ function renderCatalog(data) {
 }
 
 function renderExams(data) {
-  const rows = (data.subjects || []).map((s) => `
+  const seen = new Set();
+  const subjects = (data.subjects || []).filter((s) => {
+    const key = `${s.kind}-${s.code}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const rows = subjects.map((s) => `
     <tr>
       <td>${esc(s.kind)}</td>
       <td>${esc(s.code)}</td>

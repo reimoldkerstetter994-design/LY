@@ -40,7 +40,9 @@ def enrich_subjects(fetcher: Fetcher, subjects: list[ExamSubject], year: str) ->
     hits: list[SourceHit] = []
     uniq: dict[str, ExamSubject] = {}
     for sub in subjects:
-        key = f"{sub.kind}:{sub.code}"
+        if sub.code in {"101", "201", "204"}:
+            continue
+        key = sub.url or f"{sub.kind}:{sub.code}"
         if key not in uniq:
             uniq[key] = sub
     enriched: list[ExamSubject] = []

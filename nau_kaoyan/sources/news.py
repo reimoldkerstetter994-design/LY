@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
-from nau_kaoyan.config import KEYWORDS, MAX_ARTICLE_FETCH, NEWS_LISTS
+from nau_kaoyan.config import KEYWORDS, MAX_ARTICLE_FETCH, NEWS_LISTS, UNDERGRAD_NOISE
 from nau_kaoyan.http_client import Fetcher
 from nau_kaoyan.models import NewsItem, SourceHit, utc_now
 
@@ -14,6 +14,10 @@ SKIP_TITLES = {"更多", "首页", "下页", "上页", "尾页", "跳转"}
 
 def is_relevant(title: str, summary: str = "") -> bool:
     blob = f"{title} {summary}"
+    if any(k in blob for k in UNDERGRAD_NOISE) and not any(
+        k in blob for k in ("硕士", "研究生", "复试", "推免", "招生目录")
+    ):
+        return False
     return any(k in blob for k in KEYWORDS)
 
 
@@ -125,17 +129,23 @@ def scrape_news(fetcher: Fetcher) -> tuple[list[NewsItem], list[SourceHit]]:
     hits: list[SourceHit] = []
     collected: dict[str, NewsItem] = {}
     for group in NEWS_LISTS:
-        for url in group["urls"]:
+        for index, url in enumerate(group["urls"]):
             try:
                 html, status = fetcher.get_text(url)
-                ok = status == 200 and "html" in html.lower()
+                if status == 404 and index > 0:
+                    break
+                ok = status == 200 and "html" in html.lower() and "404错误" not in html[:200]
                 hits.append(SourceHit("news-list", url, utc_now(), ok, f"{group['name']} HTTP {status}"))
-                if status != 200:
-                    continue
-                for item in parse_list_page(html, url, group["name"], group["source"]):
+                if status != 200 or not ok:
+                    break
+                page_items = parse_list_page(html, url, group["name"], group["source"])
+                for item in page_items:
                     collected.setdefault(item.url, item)
+                if index == 0 and not _has_next_page(html, url):
+                    break
             except Exception as exc:  # noqa: BLE001
                 hits.append(SourceHit("news-list", url, utc_now(), False, str(exc)))
+                break
 
     ranked = sorted(
         collected.values(),
@@ -152,3 +162,11 @@ def scrape_news(fetcher: Fetcher) -> tuple[list[NewsItem], list[SourceHit]]:
         except Exception as exc:  # noqa: BLE001
             hits.append(SourceHit("news-article", item.url, utc_now(), False, str(exc)))
     return ranked, hits
+
+
+def _has_next_page(html: str, url: str) -> bool:
+    if "下页" in html or ">下一页<" in html:
+        return True
+    if url.endswith(".htm") and "/2.htm" in html:
+        return True
+    return False
