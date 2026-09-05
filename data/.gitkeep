@@ -1,0 +1,1 @@
+# 抓取缓存目录。运行 `python -m nau_kaoyan scrape` 后生成 cache.json。

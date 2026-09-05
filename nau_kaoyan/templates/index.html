@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>南农 · 农业资源与环境学硕考研资料台</title>
+  <link rel="icon" href="/static/favicon.svg" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">南农</div>
+      <div>
+        <p class="eyebrow serif-ui">公开招生信息 · 实时抓取</p>
+        <h1>农业资源与环境学硕考研资料台</h1>
+        <p class="sub">土壤学 090301 · 植物营养学 090302 · 只汇总官网公开材料</p>
+      </div>
+    </div>
+    <div class="actions serif-ui">
+      <button class="primary" id="refreshBtn" type="button">立即抓取最新</button>
+      <a class="ghost" href="/api/export.json" target="_blank" rel="noopener">导出 JSON</a>
+      <div class="status" id="status"></div>
+    </div>
+  </header>
+
+  <nav class="tabs serif-ui" id="tabs">
+    <button data-tab="overview" class="active">总览</button>
+    <button data-tab="catalog">招生目录</button>
+    <button data-tab="exams">科目与书目</button>
+    <button data-tab="news">最新通知</button>
+    <button data-tab="faculty">导师</button>
+    <button data-tab="prep">备考地图</button>
+    <button data-tab="sources">来源与快照</button>
+  </nav>
+
+  <main>
+    <section class="panel active" id="overview"></section>
+    <section class="panel" id="catalog"></section>
+    <section class="panel" id="exams"></section>
+    <section class="panel" id="news"></section>
+    <section class="panel" id="faculty"></section>
+    <section class="panel" id="prep"></section>
+    <section class="panel" id="sources"></section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
