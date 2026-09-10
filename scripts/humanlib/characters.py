@@ -20,6 +20,7 @@ Each character is a plain dict:
 ``clothes``       list of ``.mhclo`` clothing assets
 ``pose``          a pose from ``poses.MANUAL_POSES`` or ``bvh:<pose name>``
 ``environment``   lighting preset from ``scene.ENVIRONMENTS``
+``full``          optional camera tweaks for the full-body shot ``{"lens": .., "azimuth": .., "elevation": ..}``
 ``portrait``      optional camera tweaks for the head shot ``{"azimuth": .., "elevation": ..}``
 ``seat``          ``"stool"`` adds a stool under a seated character
 """

@@ -156,15 +156,15 @@ def render_character(spec, args):
 def render_group(specs, args):
     scene = fresh_scene()
     rigs = []
-    spacing = 0.95
+    spacing = 0.82
     for index, spec in enumerate(specs):
         started = time.time()
         basemesh, rig = builder.build_character(spec, subdiv_levels=max(1, args.subdiv - 1))
         # Line the characters up on a gentle arc facing the camera.
         offset = (index - (len(specs) - 1) / 2.0) * spacing
         rig.location.x += offset
-        rig.location.y += 0.12 * offset * offset
-        rig.rotation_euler.z = -0.06 * offset
+        rig.location.y += 0.035 * offset * offset
+        rig.rotation_euler.z = -0.05 * offset
         bpy.context.view_layer.update()
         add_props(scene, spec, basemesh, rig)
         rigs.append(rig)
@@ -177,16 +177,16 @@ def render_group(specs, args):
     scenelib.setup_studio(scene, (center.x, center.y, lo.z), hi.z - lo.z, "neutral")
     for obj in scene.objects:
         if obj.type == "LIGHT":
-            obj.data.energy *= 2.2
-            obj.location.x *= 1.8
-            obj.data.size *= 1.6
+            obj.data.energy *= 3.2
+            obj.location.x *= 2.2
+            obj.data.size *= 2.2
+    cam = scenelib.add_camera(scene)
+    scenelib.configure_render(scene, samples=args.samples, resolution=(2400, 1000), scale=args.scale, threads=args.threads)
+    distance = scenelib.frame_camera(scene, cam, lo, hi, lens=50.0, azimuth=0.0, elevation=4.0, margin=1.04)
     cyc = scene.objects.get("Cyclorama")
     if cyc:
-        cyc.scale = (2.0, 1.6, 1.4)
-
-    cam = scenelib.add_camera(scene)
-    scenelib.configure_render(scene, samples=args.samples, resolution=(2400, 1350), scale=args.scale, threads=args.threads)
-    scenelib.frame_camera(scene, cam, lo, hi, lens=50.0, azimuth=0.0, elevation=4.0, margin=1.08)
+        # Stretch the studio so neither the floor's front edge nor its sides enter the wide shot.
+        cyc.scale = (max(2.0, distance / 3.0), max(1.6, (distance + 3.0) / 6.0), 1.6)
     render_to(scene, os.path.join(args.out, "group.jpg"))
     if args.blend:
         os.makedirs(args.blend, exist_ok=True)

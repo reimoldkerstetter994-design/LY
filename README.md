@@ -48,7 +48,7 @@ scripts/
     poses.py            手工姿势（相对 MPFB default 骨架的欧拉角）+ BVH 姿势加载
     scene.py            渲染设置（Cycles + AgX）、影棚/户外灯光、相机构图、木凳道具
 characters/             每个角色导出的 MPFB 预设 human.<id>.json（可在 Blender 的 MPFB 面板直接载入）
-renders/                渲染结果（1080×1620 全身、1080×1350 特写、2400×1350 合影）
+renders/                渲染结果（1080×1620 全身，宽幅坐姿自动改为 1620×1080；1080×1350 特写；2400×1000 合影）
 ```
 
 ## 快速开始
