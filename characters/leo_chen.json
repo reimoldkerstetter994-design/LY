@@ -1,0 +1,74 @@
+{
+  "name": "leo_chen",
+  "display_name": "陈立奥 · 10 岁混血男孩",
+  "description": "亚欧混血的 10 岁男孩，深色短发，长袖 T 恤配牛仔裤和运动鞋。",
+  "phenotype": {
+    "gender": 1.0,
+    "age": 0.17,
+    "muscle": 0.45,
+    "weight": 0.5,
+    "proportions": 0.5,
+    "height": 0.5,
+    "race": {
+      "asian": 0.55,
+      "caucasian": 0.45,
+      "african": 0.0
+    }
+  },
+  "targets": {
+    "head-round": 0.2,
+    "l-eye-scale-incr": 0.15,
+    "r-eye-scale-incr": 0.15,
+    "l-cheek-volume-incr": 0.2,
+    "r-cheek-volume-incr": 0.2,
+    "nose-scale-vert-decr": 0.1
+  },
+  "skin": "young_asian_male.mhmat",
+  "skin_settings": {
+    "body": {
+      "Roughness": 0.4,
+      "Pore strength": 0.15,
+      "SSS strength": 0.36
+    }
+  },
+  "eye_color": "brown",
+  "eyebrows": "eyebrow001.mhclo",
+  "eyelashes": "eyelashes01.mhclo",
+  "hair": "short03.mhclo",
+  "hair_color": {
+    "hue": 0.5,
+    "saturation": 0.5,
+    "value": 0.4
+  },
+  "clothes": [
+    "male_casualsuit02.mhclo",
+    "shoes06.mhclo"
+  ],
+  "clothes_colors": {
+    "male_casualsuit02.mhclo": {
+      "hue": 0.15,
+      "saturation": 1.0,
+      "value": 1.0
+    }
+  },
+  "expression": {
+    "mouthSmileLeft": 0.5,
+    "mouthSmileRight": 0.5,
+    "cheekSquintLeft": 0.25,
+    "cheekSquintRight": 0.25,
+    "jawOpen": 0.05
+  },
+  "pose": {
+    "preset": "casual"
+  },
+  "scene": {
+    "hdri": "courtyard.exr",
+    "hdri_strength": 0.15,
+    "backdrop_color": [
+      0.26,
+      0.3,
+      0.34
+    ],
+    "key_energy": 225
+  }
+}

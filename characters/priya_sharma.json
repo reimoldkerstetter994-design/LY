@@ -1,0 +1,86 @@
+{
+  "name": "priya_sharma",
+  "display_name": "普丽娅 · 22 岁南亚女性",
+  "description": "苗条的年轻南亚女性，麻花辫，运动装，莲花坐姿（BVH 姿势）。",
+  "phenotype": {
+    "gender": 0.0,
+    "age": 0.47,
+    "muscle": 0.5,
+    "weight": 0.38,
+    "proportions": 0.7,
+    "height": 0.45,
+    "cupsize": 0.45,
+    "firmness": 0.7,
+    "race": {
+      "asian": 0.45,
+      "caucasian": 0.55,
+      "african": 0.0
+    }
+  },
+  "targets": {
+    "head-oval": 0.3,
+    "l-eye-scale-incr": 0.2,
+    "r-eye-scale-incr": 0.2,
+    "l-eye-height2-incr": 0.1,
+    "r-eye-height2-incr": 0.1,
+    "nose-scale-horiz-decr": 0.1,
+    "mouth-upperlip-volume-incr": 0.2,
+    "mouth-lowerlip-volume-incr": 0.2,
+    "chin-width-decr": 0.2,
+    "measure-waist-circ-decr": 0.2
+  },
+  "skin": "cutoff3d_indian_female_enhanced.mhmat",
+  "skin_settings": {
+    "body": {
+      "Roughness": 0.4,
+      "Clearcoat": 0.1,
+      "SSS strength": 0.28
+    }
+  },
+  "eye_color": "brown",
+  "eyebrows": "eyebrow005.mhclo",
+  "eyelashes": "eyelashes03.mhclo",
+  "hair": "braid01.mhclo",
+  "clothes": [
+    "female_sportsuit01.mhclo"
+  ],
+  "clothes_colors": {
+    "female_sportsuit01.mhclo": {
+      "hue": 0.9,
+      "saturation": 1.1,
+      "value": 1.0
+    }
+  },
+  "expression": {
+    "mouthSmileLeft": 0.3,
+    "mouthSmileRight": 0.3,
+    "eyeBlinkLeft": 0.15,
+    "eyeBlinkRight": 0.15
+  },
+  "pose": {
+    "bvh": "callharvey3d_lotus.bvh"
+  },
+  "shots": {
+    "full": {
+      "lens": 60.0,
+      "azimuth": 25.0,
+      "elevation": 12.0,
+      "margin": 1.25,
+      "width": 1600,
+      "height": 1400
+    },
+    "portrait": {
+      "elevation": 8.0
+    }
+  },
+  "scene": {
+    "hdri": "courtyard.exr",
+    "hdri_strength": 0.15,
+    "backdrop_color": [
+      0.3,
+      0.28,
+      0.26
+    ],
+    "key_energy": 240
+  }
+}

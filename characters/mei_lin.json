@@ -1,0 +1,75 @@
+{
+  "name": "mei_lin",
+  "display_name": "梅琳 · 25 岁东亚女性",
+  "description": "身材匀称的年轻东亚女性，长直发，休闲装，放松站姿。",
+  "phenotype": {
+    "gender": 0.0,
+    "age": 0.5,
+    "muscle": 0.45,
+    "weight": 0.45,
+    "proportions": 0.7,
+    "height": 0.48,
+    "cupsize": 0.5,
+    "firmness": 0.65,
+    "race": {
+      "asian": 1.0,
+      "caucasian": 0.0,
+      "african": 0.0
+    }
+  },
+  "targets": {
+    "head-oval": 0.35,
+    "chin-width-decr": 0.25,
+    "chin-prominent-decr": 0.1,
+    "l-cheek-bones-incr": 0.2,
+    "r-cheek-bones-incr": 0.2,
+    "nose-scale-horiz-decr": 0.15,
+    "nose-point-width-decr": 0.1,
+    "mouth-scale-horiz-decr": 0.1,
+    "mouth-lowerlip-volume-incr": 0.15,
+    "l-eye-scale-incr": 0.1,
+    "r-eye-scale-incr": 0.1,
+    "measure-waist-circ-decr": 0.15,
+    "measure-neck-height-incr": 0.1
+  },
+  "skin": "young_asian_female.mhmat",
+  "skin_settings": {
+    "body": {
+      "Roughness": 0.4,
+      "SSS strength": 0.3
+    }
+  },
+  "eye_color": "brown",
+  "eyebrows": "eyebrow006.mhclo",
+  "eyelashes": "eyelashes02.mhclo",
+  "hair": "long01.mhclo",
+  "hair_color": {
+    "hue": 0.5,
+    "saturation": 0.55,
+    "value": 0.35
+  },
+  "clothes": [
+    "female_casualsuit01.mhclo",
+    "shoes02.mhclo"
+  ],
+  "expression": {
+    "mouthSmileLeft": 0.35,
+    "mouthSmileRight": 0.35,
+    "cheekSquintLeft": 0.15,
+    "cheekSquintRight": 0.15,
+    "browInnerUp": 0.05
+  },
+  "pose": {
+    "preset": "relaxed"
+  },
+  "scene": {
+    "hdri": "studio.exr",
+    "hdri_strength": 0.2,
+    "backdrop_color": [
+      0.22,
+      0.22,
+      0.24
+    ],
+    "key_energy": 225
+  }
+}

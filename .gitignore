@@ -1,0 +1,9 @@
+# 生成的 Blender 工程文件体积较大，不入库；用 scripts/build_all.sh 可完整重建
+output/
+*.blend
+*.blend1
+*.glb
+*.fbx
+__pycache__/
+setup/env.sh
+renders/tests/

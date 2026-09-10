@@ -1,0 +1,116 @@
+{
+  "name": "tanaka_hiroshi",
+  "display_name": "田中浩 · 68 岁日本男性",
+  "description": "清瘦的老年日本男性，灰白短发，衬衫配牛仔裤，略微驼背的放松站姿。",
+  "phenotype": {
+    "gender": 1.0,
+    "age": 0.86,
+    "muscle": 0.4,
+    "weight": 0.36,
+    "proportions": 0.45,
+    "height": 0.4,
+    "race": {
+      "asian": 1.0,
+      "caucasian": 0.0,
+      "african": 0.0
+    }
+  },
+  "targets": {
+    "head-age-incr": 0.35,
+    "l-eye-bag-incr": 0.3,
+    "r-eye-bag-incr": 0.3,
+    "l-eye-eyefold-down": 0.2,
+    "r-eye-eyefold-down": 0.2,
+    "mouth-laugh-lines-out": 0.35,
+    "l-cheek-volume-decr": 0.3,
+    "r-cheek-volume-decr": 0.3,
+    "l-cheek-bones-incr": 0.2,
+    "r-cheek-bones-incr": 0.2,
+    "chin-prominent-incr": 0.1,
+    "neck-scale-horiz-decr": 0.15,
+    "measure-shoulder-dist-decr": 0.1
+  },
+  "skin": "old_asian_male.mhmat",
+  "skin_settings": {
+    "body": {
+      "Roughness": 0.5,
+      "Pore strength": 0.6,
+      "SSS strength": 0.3
+    }
+  },
+  "eye_color": "brown",
+  "eyebrows": "eyebrow011.mhclo",
+  "eyelashes": "eyelashes01.mhclo",
+  "hair": "short02.mhclo",
+  "hair_color": {
+    "hue": 0.5,
+    "saturation": 0.15,
+    "value": 1.3
+  },
+  "clothes": [
+    "male_casualsuit01.mhclo",
+    "shoes01.mhclo"
+  ],
+  "expression": {
+    "mouthSmileLeft": 0.2,
+    "mouthSmileRight": 0.2,
+    "cheekSquintLeft": 0.15,
+    "cheekSquintRight": 0.15,
+    "browInnerUp": 0.1
+  },
+  "pose": {
+    "preset": "relaxed",
+    "extra": [
+      [
+        "world",
+        "spine04",
+        [
+          1,
+          0,
+          0
+        ],
+        -5.0
+      ],
+      [
+        "world",
+        "spine02",
+        [
+          1,
+          0,
+          0
+        ],
+        -4.0
+      ],
+      [
+        "world",
+        "neck01",
+        [
+          1,
+          0,
+          0
+        ],
+        4.0
+      ],
+      [
+        "world",
+        "head",
+        [
+          1,
+          0,
+          0
+        ],
+        6.0
+      ]
+    ]
+  },
+  "scene": {
+    "hdri": "studio.exr",
+    "hdri_strength": 0.2,
+    "backdrop_color": [
+      0.22,
+      0.23,
+      0.25
+    ],
+    "key_energy": 225
+  }
+}

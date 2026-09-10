@@ -1,0 +1,72 @@
+{
+  "name": "henrik_lindqvist",
+  "display_name": "亨里克 · 48 岁北欧男性",
+  "description": "体格偏壮的中年北欧男性，灰褐短发，深色西装，对立式站姿。",
+  "phenotype": {
+    "gender": 1.0,
+    "age": 0.68,
+    "muscle": 0.55,
+    "weight": 0.62,
+    "proportions": 0.5,
+    "height": 0.68,
+    "race": {
+      "asian": 0.0,
+      "caucasian": 1.0,
+      "african": 0.0
+    }
+  },
+  "targets": {
+    "head-rectangular": 0.25,
+    "chin-width-incr": 0.2,
+    "chin-jaw-drop-incr": 0.1,
+    "nose-scale-vert-incr": 0.15,
+    "nose-hump-incr": 0.15,
+    "forehead-scale-vert-incr": 0.1,
+    "l-eye-bag-incr": 0.2,
+    "r-eye-bag-incr": 0.2,
+    "mouth-laugh-lines-out": 0.25,
+    "stomach-pregnant-incr": 0.1,
+    "neck-double-incr": 0.1,
+    "measure-shoulder-dist-incr": 0.2
+  },
+  "skin": "middleage_caucasian_male.mhmat",
+  "skin_settings": {
+    "body": {
+      "Roughness": 0.46,
+      "Pore strength": 0.55,
+      "SSS strength": 0.3
+    }
+  },
+  "eye_color": "lightblue",
+  "eyebrows": "eyebrow010.mhclo",
+  "eyelashes": "eyelashes01.mhclo",
+  "hair": "short02.mhclo",
+  "hair_color": {
+    "hue": 0.5,
+    "saturation": 0.6,
+    "value": 0.85
+  },
+  "clothes": [
+    "male_elegantsuit01.mhclo",
+    "shoes04.mhclo"
+  ],
+  "expression": {
+    "mouthSmileLeft": 0.12,
+    "mouthSmileRight": 0.1,
+    "browDownLeft": 0.08,
+    "browDownRight": 0.08
+  },
+  "pose": {
+    "preset": "contrapposto"
+  },
+  "scene": {
+    "hdri": "interior.exr",
+    "hdri_strength": 0.15,
+    "backdrop_color": [
+      0.18,
+      0.19,
+      0.22
+    ],
+    "key_energy": 240
+  }
+}

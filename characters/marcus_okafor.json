@@ -1,0 +1,73 @@
+{
+  "name": "marcus_okafor",
+  "display_name": "马库斯 · 32 岁西非男性",
+  "description": "运动员体型的年轻西非男性，短发，白 T 恤配牛仔裤，随意站姿。",
+  "phenotype": {
+    "gender": 1.0,
+    "age": 0.56,
+    "muscle": 0.78,
+    "weight": 0.48,
+    "proportions": 0.75,
+    "height": 0.72,
+    "race": {
+      "asian": 0.0,
+      "caucasian": 0.0,
+      "african": 1.0
+    }
+  },
+  "targets": {
+    "torso-vshape-incr": 0.35,
+    "torso-muscle-pectoral-incr": 0.3,
+    "torso-muscle-dorsi-incr": 0.3,
+    "l-upperarm-muscle-incr": 0.3,
+    "r-upperarm-muscle-incr": 0.3,
+    "measure-shoulder-dist-incr": 0.25,
+    "measure-waist-circ-decr": 0.25,
+    "chin-prominent-incr": 0.2,
+    "chin-width-incr": 0.15,
+    "nose-flaring-incr": 0.2,
+    "mouth-lowerlip-volume-incr": 0.2,
+    "l-cheek-bones-incr": 0.2,
+    "r-cheek-bones-incr": 0.2
+  },
+  "skin": "young_african_male.mhmat",
+  "skin_settings": {
+    "body": {
+      "Roughness": 0.36,
+      "Clearcoat": 0.12,
+      "SSS strength": 0.22
+    }
+  },
+  "eye_color": "brown",
+  "eyebrows": "eyebrow009.mhclo",
+  "eyelashes": "eyelashes01.mhclo",
+  "hair": "short04.mhclo",
+  "clothes": [
+    "male_casualsuit06.mhclo",
+    "shoes05.mhclo"
+  ],
+  "expression": {
+    "mouthSmileLeft": 0.25,
+    "mouthSmileRight": 0.28,
+    "cheekSquintLeft": 0.1,
+    "cheekSquintRight": 0.1
+  },
+  "pose": {
+    "preset": "casual"
+  },
+  "scene": {
+    "hdri": "studio.exr",
+    "hdri_strength": 0.2,
+    "backdrop_color": [
+      0.26,
+      0.25,
+      0.24
+    ],
+    "key_energy": 255
+  },
+  "hair_color": {
+    "hue": 0.5,
+    "saturation": 0.6,
+    "value": 0.35
+  }
+}

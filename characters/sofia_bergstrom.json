@@ -1,0 +1,79 @@
+{
+  "name": "sofia_bergstrom",
+  "display_name": "索菲亚 · 35 岁北欧女性",
+  "description": "体型丰满的北欧女性，金色波波头，T 恤配牛仔裤，随意站姿。",
+  "phenotype": {
+    "gender": 0.0,
+    "age": 0.6,
+    "muscle": 0.4,
+    "weight": 0.85,
+    "proportions": 0.5,
+    "height": 0.55,
+    "cupsize": 0.7,
+    "firmness": 0.45,
+    "race": {
+      "asian": 0.0,
+      "caucasian": 1.0,
+      "african": 0.0
+    }
+  },
+  "targets": {
+    "head-round": 0.2,
+    "neck-double-incr": 0.2,
+    "l-cheek-volume-incr": 0.25,
+    "r-cheek-volume-incr": 0.25,
+    "chin-width-incr": 0.1,
+    "nose-point-width-incr": 0.1,
+    "mouth-upperlip-volume-incr": 0.15,
+    "measure-hips-circ-incr": 0.2,
+    "l-upperarm-fat-incr": 0.3,
+    "r-upperarm-fat-incr": 0.3,
+    "l-upperleg-fat-incr": 0.25,
+    "r-upperleg-fat-incr": 0.25
+  },
+  "skin": "toigo_light_skin_female_freckles.mhmat",
+  "skin_settings": {
+    "body": {
+      "Roughness": 0.45,
+      "Pore strength": 0.4,
+      "SSS strength": 0.36,
+      "colorMixInStrength": 0.06
+    }
+  },
+  "eye_color": "blue",
+  "eyebrows": "eyebrow003.mhclo",
+  "eyelashes": "eyelashes02.mhclo",
+  "hair": "toigo_inverted_bob.mhclo",
+  "clothes": [
+    "female_casualsuit01.mhclo",
+    "shoes02.mhclo"
+  ],
+  "clothes_colors": {
+    "female_casualsuit01.mhclo": {
+      "hue": 0.32,
+      "saturation": 0.8,
+      "value": 0.9
+    }
+  },
+  "expression": {
+    "mouthSmileLeft": 0.45,
+    "mouthSmileRight": 0.42,
+    "cheekSquintLeft": 0.2,
+    "cheekSquintRight": 0.2,
+    "eyeSquintLeft": 0.1,
+    "eyeSquintRight": 0.1
+  },
+  "pose": {
+    "preset": "casual"
+  },
+  "scene": {
+    "hdri": "courtyard.exr",
+    "hdri_strength": 0.15,
+    "backdrop_color": [
+      0.28,
+      0.27,
+      0.25
+    ],
+    "key_energy": 240
+  }
+}

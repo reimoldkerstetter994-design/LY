@@ -1,0 +1,70 @@
+{
+  "name": "amara_nwosu",
+  "display_name": "阿玛拉 · 45 岁非洲女性",
+  "description": "体态丰腴的中年非洲女性，自然卷短发，条纹衬衫配裙装，双手叉腰。",
+  "phenotype": {
+    "gender": 0.0,
+    "age": 0.66,
+    "muscle": 0.45,
+    "weight": 0.66,
+    "proportions": 0.55,
+    "height": 0.55,
+    "cupsize": 0.65,
+    "firmness": 0.45,
+    "race": {
+      "asian": 0.0,
+      "caucasian": 0.0,
+      "african": 1.0
+    }
+  },
+  "targets": {
+    "head-round": 0.2,
+    "nose-flaring-incr": 0.25,
+    "nose-width2-incr": 0.15,
+    "mouth-lowerlip-volume-incr": 0.3,
+    "mouth-upperlip-volume-incr": 0.25,
+    "l-cheek-volume-incr": 0.2,
+    "r-cheek-volume-incr": 0.2,
+    "measure-hips-circ-incr": 0.25,
+    "buttocks-volume-incr": 0.3,
+    "l-upperarm-fat-incr": 0.2,
+    "r-upperarm-fat-incr": 0.2
+  },
+  "skin": "middleage_african_female.mhmat",
+  "skin_settings": {
+    "body": {
+      "Roughness": 0.36,
+      "Clearcoat": 0.12,
+      "SSS strength": 0.2
+    }
+  },
+  "eye_color": "brown",
+  "eyebrows": "eyebrow002.mhclo",
+  "eyelashes": "eyelashes03.mhclo",
+  "hair": "afro01.mhclo",
+  "clothes": [
+    "female_elegantsuit01.mhclo",
+    "shoes04.mhclo"
+  ],
+  "expression": {
+    "mouthSmileLeft": 0.45,
+    "mouthSmileRight": 0.45,
+    "cheekSquintLeft": 0.2,
+    "cheekSquintRight": 0.2,
+    "eyeSquintLeft": 0.1,
+    "eyeSquintRight": 0.1
+  },
+  "pose": {
+    "preset": "hands_on_hips"
+  },
+  "scene": {
+    "hdri": "studio.exr",
+    "hdri_strength": 0.2,
+    "backdrop_color": [
+      0.3,
+      0.27,
+      0.24
+    ],
+    "key_energy": 270
+  }
+}

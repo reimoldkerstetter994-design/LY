@@ -1,0 +1,106 @@
+{
+  "name": "margaret_holloway",
+  "display_name": "玛格丽特 · 74 岁英国女性",
+  "description": "银发波波头的老年英国女性，衬衫配裙装，放松站姿，面带微笑。",
+  "phenotype": {
+    "gender": 0.0,
+    "age": 0.9,
+    "muscle": 0.38,
+    "weight": 0.5,
+    "proportions": 0.4,
+    "height": 0.42,
+    "cupsize": 0.5,
+    "firmness": 0.25,
+    "race": {
+      "asian": 0.0,
+      "caucasian": 1.0,
+      "african": 0.0
+    }
+  },
+  "targets": {
+    "head-age-incr": 0.4,
+    "neck-double-incr": 0.2,
+    "l-eye-bag-incr": 0.35,
+    "r-eye-bag-incr": 0.35,
+    "l-eye-eyefold-down": 0.3,
+    "r-eye-eyefold-down": 0.3,
+    "mouth-laugh-lines-out": 0.4,
+    "mouth-angles-down": 0.1,
+    "chin-jaw-drop-incr": 0.25,
+    "nose-scale-vert-incr": 0.1,
+    "l-cheek-volume-decr": 0.2,
+    "r-cheek-volume-decr": 0.2,
+    "stomach-pregnant-incr": 0.12
+  },
+  "skin": "old_caucasian_female.mhmat",
+  "skin_settings": {
+    "body": {
+      "Roughness": 0.5,
+      "Pore strength": 0.55,
+      "SSS strength": 0.34
+    }
+  },
+  "eye_color": "grey",
+  "eyebrows": "eyebrow004.mhclo",
+  "eyelashes": "eyelashes01.mhclo",
+  "hair": "toigo_curled_under_bob.mhclo",
+  "clothes": [
+    "female_elegantsuit01.mhclo",
+    "shoes04.mhclo"
+  ],
+  "clothes_colors": {
+    "female_elegantsuit01.mhclo": {
+      "hue": 0.45,
+      "saturation": 0.6,
+      "value": 0.9
+    }
+  },
+  "expression": {
+    "mouthSmileLeft": 0.4,
+    "mouthSmileRight": 0.38,
+    "cheekSquintLeft": 0.25,
+    "cheekSquintRight": 0.25,
+    "eyeSquintLeft": 0.15,
+    "eyeSquintRight": 0.15
+  },
+  "pose": {
+    "preset": "relaxed",
+    "extra": [
+      [
+        "world",
+        "spine03",
+        [
+          1,
+          0,
+          0
+        ],
+        -4.0
+      ],
+      [
+        "world",
+        "head",
+        [
+          1,
+          0,
+          0
+        ],
+        3.0
+      ]
+    ]
+  },
+  "scene": {
+    "hdri": "interior.exr",
+    "hdri_strength": 0.15,
+    "backdrop_color": [
+      0.24,
+      0.24,
+      0.26
+    ],
+    "key_energy": 225
+  },
+  "hair_color": {
+    "hue": 0.5,
+    "saturation": 0.08,
+    "value": 1.35
+  }
+}

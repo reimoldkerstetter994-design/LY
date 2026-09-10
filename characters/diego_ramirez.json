@@ -1,0 +1,80 @@
+{
+  "name": "diego_ramirez",
+  "display_name": "迭戈 · 28 岁拉美男性",
+  "description": "健身教练体型（极高肌肉量）的年轻拉美男性，黑色短发，T 恤配牛仔裤，健身展示姿势。",
+  "phenotype": {
+    "gender": 1.0,
+    "age": 0.53,
+    "muscle": 0.95,
+    "weight": 0.62,
+    "proportions": 0.7,
+    "height": 0.62,
+    "race": {
+      "asian": 0.2,
+      "caucasian": 0.6,
+      "african": 0.2
+    }
+  },
+  "targets": {
+    "torso-vshape-incr": 0.6,
+    "torso-muscle-pectoral-incr": 0.5,
+    "torso-muscle-dorsi-incr": 0.5,
+    "l-upperarm-muscle-incr": 0.5,
+    "r-upperarm-muscle-incr": 0.5,
+    "l-lowerarm-muscle-incr": 0.4,
+    "r-lowerarm-muscle-incr": 0.4,
+    "l-upperarm-shoulder-muscle-incr": 0.5,
+    "r-upperarm-shoulder-muscle-incr": 0.5,
+    "l-upperleg-muscle-incr": 0.4,
+    "r-upperleg-muscle-incr": 0.4,
+    "measure-neck-circ-incr": 0.3,
+    "measure-shoulder-dist-incr": 0.35,
+    "measure-waist-circ-decr": 0.3,
+    "stomach-tone-incr": 0.5,
+    "chin-width-incr": 0.2,
+    "chin-prominent-incr": 0.15
+  },
+  "skin": "toigo_light_skin_male_bronze.mhmat",
+  "skin_settings": {
+    "body": {
+      "Roughness": 0.38,
+      "Clearcoat": 0.1,
+      "Pore strength": 0.45,
+      "SSS strength": 0.3
+    }
+  },
+  "eye_color": "brownlight",
+  "eyebrows": "eyebrow007.mhclo",
+  "eyelashes": "eyelashes01.mhclo",
+  "hair": "short01.mhclo",
+  "clothes": [
+    "male_casualsuit04.mhclo",
+    "shoes06.mhclo"
+  ],
+  "clothes_colors": {
+    "male_casualsuit04.mhclo": {
+      "hue": 0.5,
+      "saturation": 0.3,
+      "value": 0.55
+    }
+  },
+  "expression": {
+    "mouthSmileLeft": 0.2,
+    "mouthSmileRight": 0.2,
+    "browDownLeft": 0.1,
+    "browDownRight": 0.1
+  },
+  "pose": {
+    "preset": "athletic"
+  },
+  "scene": {
+    "hdri": "studio.exr",
+    "hdri_strength": 0.2,
+    "backdrop_color": [
+      0.16,
+      0.17,
+      0.19
+    ],
+    "key_energy": 270
+  }
+}
