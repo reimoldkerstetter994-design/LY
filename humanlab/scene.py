@@ -98,6 +98,12 @@ def _aim(ob, target):
     ob.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
 
 
+def _rotz(v, deg):
+    a = math.radians(deg)
+    c, s = math.cos(a), math.sin(a)
+    return (v[0] * c - v[1] * s, v[0] * s + v[1] * c, v[2])
+
+
 def _softbox(name, offset, target, size, size_y, irradiance, colour):
     """Place an area light and size its wattage for a target irradiance (W/m^2).
 
@@ -114,23 +120,34 @@ def _softbox(name, offset, target, size, size_y, irradiance, colour):
 
 
 def studio_lights(target=(0, 0, 1.0), scale=1.0, key=3.4, warm=True, rim=True,
-                  ratio=0.30, rim_gain=1.0):
-    """Large key softbox front-left, soft fill front-right, cool rim behind."""
+                  ratio=0.30, rim_gain=1.0, azimuth=0.0):
+    """Large key softbox front-left, soft fill front-right, cool rim behind.
+
+    The rig is laid out for a camera on -y and then swung about the subject by
+    `azimuth`, which must be the camera's azimuth.  A fixed rig only lights the
+    one view it was built for: shot from behind, the key ends up on the far side
+    of the figure and the frame is nothing but rim light.
+    """
     s = scale
+
+    def box(name, offset, size, size_y, irradiance, colour):
+        return _softbox(name, _rotz(offset, azimuth), target, size, size_y,
+                        irradiance, colour)
+
     lights = [
-        _softbox("key", (-1.55 * s, -1.75 * s, 0.80 * s), target, 1.5 * s, 2.0 * s,
-                 key, (1.0, 0.955, 0.90) if warm else (1, 1, 1)),
-        _softbox("fill", (2.05 * s, -1.55 * s, 0.20 * s), target, 2.2 * s, 2.4 * s,
-                 key * ratio, (0.90, 0.94, 1.0)),
-        _softbox("bounce", (0.1 * s, -1.25 * s, -0.95 * s), target, 1.8 * s, 1.8 * s,
-                 key * 0.16, (1.0, 0.95, 0.92)),
+        box("key", (-1.55 * s, -1.75 * s, 0.80 * s), 1.5 * s, 2.0 * s,
+            key, (1.0, 0.955, 0.90) if warm else (1, 1, 1)),
+        box("fill", (2.05 * s, -1.55 * s, 0.20 * s), 2.2 * s, 2.4 * s,
+            key * ratio, (0.90, 0.94, 1.0)),
+        box("bounce", (0.1 * s, -1.25 * s, -0.95 * s), 1.8 * s, 1.8 * s,
+            key * 0.16, (1.0, 0.95, 0.92)),
     ]
     if rim:
         lights += [
-            _softbox("rim", (1.40 * s, 1.85 * s, 1.15 * s), target, 0.9 * s, 1.1 * s,
-                     key * 1.15 * rim_gain, (0.86, 0.92, 1.0)),
-            _softbox("rim2", (-1.75 * s, 1.60 * s, 0.55 * s), target, 0.8 * s, 1.0 * s,
-                     key * 0.55 * rim_gain, (1.0, 0.93, 0.86)),
+            box("rim", (1.40 * s, 1.85 * s, 1.15 * s), 0.9 * s, 1.1 * s,
+                key * 1.15 * rim_gain, (0.86, 0.92, 1.0)),
+            box("rim2", (-1.75 * s, 1.60 * s, 0.55 * s), 0.8 * s, 1.0 * s,
+                key * 0.55 * rim_gain, (1.0, 0.93, 0.86)),
         ]
     return lights
 
@@ -144,7 +161,14 @@ def frame_distance(fit_height, lens, res=None):
     return fit_height * lens / sensor
 
 
-def backdrop(colour=(0.055, 0.058, 0.065), distance=1.9, size=9.0, floor=True):
+def backdrop(colour=(0.055, 0.058, 0.065), distance=1.9, size=9.0, floor=True,
+             azimuth=0.0):
+    """A wall `distance` behind the subject, as seen from a camera at `azimuth`.
+
+    Swinging the wall with the camera matters more than it sounds: leave it on
+    +y and a shot from behind puts the camera on the far side of it, so the whole
+    frame is the unlit back face of a plane and the figure never appears.
+    """
     mat = bpy.data.materials.new("backdrop")
     mat.use_nodes = True
     nt = mat.node_tree
@@ -153,10 +177,11 @@ def backdrop(colour=(0.055, 0.058, 0.065), distance=1.9, size=9.0, floor=True):
     bsdf.inputs["Roughness"].default_value = 0.72
     bsdf.inputs["Specular IOR Level"].default_value = 0.25
 
-    bpy.ops.mesh.primitive_plane_add(size=size, location=(0, distance, size * 0.45))
+    at = _rotz((0.0, distance, size * 0.45), azimuth)
+    bpy.ops.mesh.primitive_plane_add(size=size, location=at)
     wall = bpy.context.active_object
     wall.name = "backdrop"
-    wall.rotation_euler = (math.radians(90), 0, 0)
+    wall.rotation_euler = (math.radians(90), 0, math.radians(azimuth))
     wall.data.materials.append(mat)
     obs = [wall]
     if floor:

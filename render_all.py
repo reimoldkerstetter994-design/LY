@@ -14,6 +14,8 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import bpy  # noqa: E402
+
 from humanlab import bl, build, proportions, scene  # noqa: E402
 
 ORDER = [
@@ -95,13 +97,21 @@ def main():
                                   with_hair=bool(a.hair), smooth_iters=2,
                                   iris=IRIS.get(name, "brown"), blend=a.blend)
         P = ch["P"]
-        if a.backdrop:
-            scene.backdrop()
-        scene.studio_lights(target=(0, 0, 0.60 * P.height), scale=1.35, key=3.2)
         cfg_all = views_for(P, tall)
+        rig = []
 
         for v in views:
             cfg = cfg_all[v]
+            # The backdrop and the lights are rebuilt swung round to face each
+            # camera, so every angle is a proper studio shot instead of whatever
+            # a front-on rig happens to give when you walk round the subject.
+            for ob in rig:
+                bpy.data.objects.remove(ob, do_unlink=True)
+            rig = []
+            if a.backdrop:
+                rig += scene.backdrop(azimuth=cfg["az"])
+            rig += scene.studio_lights(target=(0, 0, 0.60 * P.height), scale=1.35,
+                                      key=3.2, azimuth=cfg["az"])
             res = head_res if cfg.get("dof") else body_res
             sc = scene.setup_render(res=res, samples=a.samples, denoise=True)
             del sc
