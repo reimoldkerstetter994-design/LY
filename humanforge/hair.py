@@ -310,18 +310,25 @@ def _add_fall(field: Field, h: HeadFrame, style: HairStyle, grow_xy: float) -> N
     """
     if style.fall <= 0.0:
         return
+    span = 0.34 + style.fall
     zs = np.linspace(-style.fall, 0.34, 96)
     # 0 at the bottom of the fall, 1 where it meets the shell, so the fall can
     # narrow towards its end without the taper showing as a crease at the top.
-    along = (zs + style.fall) / (0.34 + style.fall)
+    along = (zs + style.fall) / span
     width = (0.30 + 0.14 * along) * grow_xy
+    # A loft ends at its lowest station, and one whose sections are still full
+    # size there ends in a flat cap -- which on a fall of hair is a rectangular
+    # slab hanging behind the ear, the same fault as a teat on the crown and for
+    # the same reason.  Close the sections over the last of the length instead,
+    # square-rooted so the end is round rather than conical.
+    cap = np.sqrt(np.clip(along / 0.12, 0.0, 1.0))
     field.add(
         Loft(
             origin=h.origin,
             rot=h.orientation,
             heights=zs * h.height,
-            half_width=width * h.width,
-            half_depth=(0.075 + 0.045 * along) * h.depth,
+            half_width=np.maximum(width * h.width * cap, 1.0e-4),
+            half_depth=np.maximum((0.075 + 0.045 * along) * h.depth * cap, 1.0e-4),
             offset=(-0.315 - 0.055 * along) * h.depth,
             exponent=2.6,
         ),
