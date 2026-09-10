@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,7 +57,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--width", type=int, default=1080)
     parser.add_argument("--height", type=int, default=1620)
     parser.add_argument("--exposure", type=float, default=0.0)
-    parser.add_argument("--key-power", type=float, default=150.0)
+    parser.add_argument(
+        "--key-power",
+        type=float,
+        help="watts at two metres; defaults to Studio.key_power",
+    )
     parser.add_argument("--no-backdrop", action="store_true")
     parser.add_argument("--smoothing", type=int, default=4)
     parser.add_argument(
@@ -105,7 +110,9 @@ def main(argv: list[str]) -> int:
         samples=24 if args.draft else args.samples,
         exposure=args.exposure,
     )
-    studio = Studio(key_power=args.key_power, backdrop=not args.no_backdrop)
+    studio = Studio(backdrop=not args.no_backdrop)
+    if args.key_power is not None:
+        studio = replace(studio, key_power=args.key_power)
 
     for name in names:
         started = time.time()

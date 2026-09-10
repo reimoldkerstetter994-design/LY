@@ -141,10 +141,28 @@ class Studio:
     a full-length shot and a head-and-shoulders one.
     """
 
-    key_power: float = 150.0
+    key_power: float = 64.0
+    """Key light power for a subject two metres away, in watts.
+
+    Set so that lit skin lands near the middle of the AgX curve rather than the top
+    of it.  Exposed a stop and a half higher, as it was, the figures came out both
+    too light and washed out -- measurably: lit skin read (226, 211, 204) with about
+    twenty units of chroma, where a photograph of the same complexion under the same
+    rig gives something closer to (205, 180, 165) with fifty.  AgX pulls saturation
+    out of the top of its range, so overexposing skin does not merely brighten it,
+    it drains the colour, and correcting the albedo afterwards cannot put it back.
+    """
+
     fill_ratio: float = 0.16
-    rim_ratio: float = 0.55
-    bounce_ratio: float = 0.10
+    rim_ratio: float = 0.26
+    """A rim at over half the key blows out wherever it grazes a convex ridge --
+    across both acromia and under the jaw, in hard-edged white patches that look
+    like holes in the mesh and are not."""
+
+    bounce_ratio: float = 0.06
+    """The floor reflector aims upwards, so it lands square on the submental shelf
+    and the soles.  Anything stronger and the underside of the jaw is the brightest
+    thing in the frame, which no studio photograph of a person has ever been."""
 
     key_yaw: float = 38.0
     """Degrees the key light sits to the figure's left of the camera axis."""

@@ -269,9 +269,11 @@ def skin_material(name: str, look: SkinLook) -> bpy.types.Material:
     graph.feed(skin, "IOR", 1.40)
 
     # A thin sebum film over the epidermis: the crisp highlight that sits on top
-    # of the broad, soft one coming out of the skin itself.
-    graph.feed(skin, "Coat Weight", graph.math("MULTIPLY_ADD", oil, 0.22, 0.04))
-    graph.feed(skin, "Coat Roughness", 0.24 + 0.16 * look.age)
+    # of the broad, soft one coming out of the skin itself.  Kept thin and not very
+    # smooth: a glossier film reads as a sheen of sweat at best and as lacquer at
+    # worst, and it is what turns any grazing light into a clipped white patch.
+    graph.feed(skin, "Coat Weight", graph.math("MULTIPLY_ADD", oil, 0.13, 0.02))
+    graph.feed(skin, "Coat Roughness", 0.30 + 0.16 * look.age)
     graph.feed(skin, "Coat IOR", 1.45)
 
     # Vellus hair: a faint retroreflective rim, most visible on a backlit arm.
