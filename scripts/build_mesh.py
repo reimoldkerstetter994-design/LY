@@ -18,13 +18,25 @@ from humanforge.figure import build_figure
 from humanforge.polygonize import polygonize, taubin_smooth
 
 
-def write_obj(path: Path, verts, tris) -> None:
+def write_obj(path: Path, groups: dict[str, tuple]) -> None:
+    """Write several solids into one file as named objects.
+
+    Hair is a separate solid from the body and has to stay one, since it needs its
+    own material, so the export keeps them as two ``o`` groups rather than merging
+    them into a single vertex soup.
+    """
     with path.open("w") as handle:
         handle.write("# humanforge\n")
-        for v in verts:
-            handle.write(f"v {v[0]:.5f} {v[1]:.5f} {v[2]:.5f}\n")
-        for t in tris:
-            handle.write(f"f {t[0] + 1} {t[1] + 1} {t[2] + 1}\n")
+        offset = 0
+        for name, (verts, tris) in groups.items():
+            handle.write(f"o {name}\n")
+            for v in verts:
+                handle.write(f"v {v[0]:.5f} {v[1]:.5f} {v[2]:.5f}\n")
+            for t in tris:
+                handle.write(
+                    f"f {t[0] + 1 + offset} {t[1] + 1 + offset} {t[2] + 1 + offset}\n"
+                )
+            offset += len(verts)
 
 
 def main() -> int:
@@ -66,8 +78,15 @@ def main() -> int:
             target = args.obj if not args.all else args.obj.with_stem(
                 f"{args.obj.stem}_{name}"
             )
-            write_obj(target, mesh.verts, mesh.tris)
-            print(f"  wrote {target}")
+            groups = {"body": (mesh.verts, mesh.tris)}
+            if figure.hair is not None:
+                hair = taubin_smooth(
+                    polygonize(figure.hair, voxel=min(args.voxel, 0.0026)),
+                    iterations=args.smooth,
+                )
+                groups["hair"] = (hair.verts, hair.tris)
+            write_obj(target, groups)
+            print(f"  wrote {target} ({', '.join(groups)})")
     return 0
 
 

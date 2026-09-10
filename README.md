@@ -94,6 +94,26 @@ is the clearest example -- it prints where the skin is in four directions around
 each limb, and four numbers within a percent of each other mean the limb is a
 tube whatever its silhouette looks like.
 
+`probe_field.py` is the one exception, in that it finds a whole class of fault
+without a render at all. Marching tetrahedra locates the surface by interpolating
+between grid samples, so it is only accurate where the field's gradient has
+magnitude one -- where the value really is a distance. Individual primitives
+satisfy that; smooth booleans do not. Where two surfaces cross at a shallow
+angle, the blend averages two nearly opposite normals, the average is nearly
+zero, and through that band the interpolated crossing can be out by several times
+the true distance. That is what a dotted line along a jaw or around an ear
+actually is, and it reads below about 0.4 on this probe.
+
+## Getting a mesh out
+
+`scripts/build_mesh.py` builds and polygonises without Blender, which is the fast
+loop for checking geometry, and writes OBJ with the body and hair as separate
+objects:
+
+```
+python3 scripts/build_mesh.py --all --voxel 0.003 --obj /tmp/figure.obj
+```
+
 ## Things that turned out to matter
 
 Most of these were learned by getting them wrong, and they are recorded in the
@@ -140,6 +160,28 @@ fault rather than a lighting one.
 of the intuitive setting. Weighted low, most of the surface stays Lambertian and
 Lambertian skin is matte paint. Given a long radius to compensate, the
 scattering stops describing a surface and the figure goes pale and waxy.
+
+## What is still wrong
+
+Honest list, all of it visible only in close-up on the face; the figures hold up
+at full length.
+
+- The mouth is close to a flat slab. There is a philtrum and the seam is no
+  longer dead straight, but there is no cupid's bow, because the bow is on the
+  upper border of the upper lip rather than on the seam and that border is
+  currently just where an ellipsoid runs out.
+- The eye reads as a lens set into the lids rather than lids lying over a globe.
+  The aperture is cut through a dome over the eyeball, which is the right
+  construction, but the lid margins are heavier than they should be.
+- The nose has flat facets near the tip, where the superelliptical sections reach
+  an exponent above three and start to square off.
+- The hairline is a cleaner bevel than a real one, and the shell reads slightly
+  helmet-like from the front. Strand hair is out of scope, but the silhouette
+  could carry more irregularity than it does.
+- Hands and feet are correct phalanx by phalanx and still read as paddles from
+  the front, because the arches are missing.
+- `probe_field.py` still reports about 0.16 around the ear, down from 0.09. There
+  is a faint broken line there at a 1.5 mm voxel.
 
 ## Requirements
 
