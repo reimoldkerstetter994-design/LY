@@ -278,49 +278,56 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
         )
 
     # ---- nose ------------------------------------------------------------ #
-    # Nasal projection is measured forward from the mid-face plane: about 23 mm
-    # at the tip on an adult, which is much more than it looks like in a table
-    # of small offsets.  Too little and the nose vanishes into the cheeks.
+    # Nasal projection is measured forward from the mid-face plane, and the
+    # figure that has to be right is the *front of the tip*, not the centre of
+    # the ball that makes it: about 21 mm on an adult.  Add the ball's own radius
+    # to an offset already chosen for the surface and the tip lands 32 mm out,
+    # which is what turns a profile into a beak -- the giveaway being the lips
+    # measuring 14 mm behind the nose-to-chin line where 4 mm is normal, with a
+    # chin that was in the right place all along.  The alae have to trail the
+    # tip by the best part of a centimetre too; level with it, the whole nose
+    # reads as one forward-jutting wedge.
     ns = (1.0 - 0.22 * youth) * u
     base = fyp(0.372)
     f.addk(  # dorsum, from the nasion down to just above the tip
         sdf.RoundCone((0.0, fyp(0.600) + 0.005 * u, Z(0.600)),
-                      (0.0, base - 0.0150 * ns, Z(0.400)),
-                      0.0050 * ns, 0.0084 * ns),
+                      (0.0, base - 0.0092 * ns, Z(0.400)),
+                      0.0050 * ns, 0.0080 * ns),
         k=0.011 * u,
     )
-    tip = (0.0, base - 0.0224 * ns, Z(0.366))
-    f.addk(sdf.Ellipsoid(tip, (0.0092 * ns, 0.0104 * ns, 0.0086 * ns)), k=0.009 * u)
+    tip = (0.0, base - 0.0128 * ns, Z(0.366))
+    f.addk(sdf.Ellipsoid(tip, (0.0090 * ns, 0.0082 * ns, 0.0086 * ns)), k=0.009 * u)
     f.addk(  # alae
-        sdf.Ellipsoid((0.0104 * ns, base - 0.0118 * ns, Z(0.352)),
-                      (0.0078 * ns, 0.0088 * ns, 0.0066 * ns)),
+        sdf.Ellipsoid((0.0104 * ns, base - 0.0060 * ns, Z(0.352)),
+                      (0.0078 * ns, 0.0072 * ns, 0.0066 * ns)),
         k=0.0065 * u,
         mirror=True,
     )
     f.addk(  # columella between the nostrils
-        sdf.Capsule((0.0, base - 0.0175 * ns, Z(0.360)),
-                    (0.0, base - 0.0105 * ns, Z(0.344)), 0.0032 * ns),
+        sdf.Capsule((0.0, base - 0.0112 * ns, Z(0.360)),
+                    (0.0, base - 0.0068 * ns, Z(0.344)), 0.0030 * ns),
         k=0.004 * u,
     )
     f.subk(  # nostrils: they open downwards, so barely show from the front
         sdf.Transformed(
-            sdf.Ellipsoid((0.0068 * ns, base - 0.0150 * ns, Z(0.3395)),
+            sdf.Ellipsoid((0.0068 * ns, base - 0.0096 * ns, Z(0.3395)),
                           (0.0023 * ns, 0.0046 * ns, 0.0025 * ns)),
             euler=(np.deg2rad(-38.0), 0.0, 0.0),
-            pivot=(0.0068 * ns, base - 0.0150 * ns, Z(0.3395)),
+            pivot=(0.0068 * ns, base - 0.0096 * ns, Z(0.3395)),
         ),
         k=0.0022 * u,
         mirror=True,
     )
     f.subk(  # alar crease
-        sdf.Capsule((0.0146 * ns, base - 0.0086 * ns, Z(0.370)),
-                    (0.0112 * ns, base - 0.0026 * ns, Z(0.336)), 0.0034 * u),
+        sdf.Capsule((0.0146 * ns, base - 0.0055 * ns, Z(0.370)),
+                    (0.0112 * ns, base - 0.0016 * ns, Z(0.336)), 0.0034 * u),
         k=0.005 * u,
         mirror=True,
     )
-    f.subk(  # supratip break, the small dip above the tip
-        sdf.Ball((0.0, base - 0.0072 * ns, Z(0.394)), 0.0060 * u), k=0.006 * u
-    )
+    # The supratip dip is placed against the dorsum as built, since a fixed
+    # offset from `base` leaves the cutter floating clear of it doing nothing.
+    f.subk(sdf.Ball(groove(0.0, 0.394, 0.0060 * u, 0.0016 * u), 0.0060 * u),
+           k=0.005 * u)
 
     # ---- mouth ----------------------------------------------------------- #
     # A pair of wide ellipsoids with a straight slot cut across them reads as a
@@ -463,14 +470,19 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
         )
 
     # ---- ears ------------------------------------------------------------ #
-    # The auricle must be rooted a few millimetres *inside* the skull wall.  Sat
-    # entirely outside it, only the fillet holds it on and it reads as a flap
-    # stuck to the head, with the lobule trailing off as a separate drip.
-    skull_x = prof.width(Z(0.470))
-    ear_x = skull_x + 0.003 * u
+    # The auricle spans the skull wall: rooted about a centimetre inside it, so
+    # the fillet is not all that holds it on, and standing a centimetre clear of
+    # it, because a real helix rim is that far out.  Both ends are measured from
+    # the surface that actually exists here, found by marching out along +x --
+    # the temporal masses and cheekbone put the skin some 4 mm outside the skull
+    # loft, and an ear placed off the loft protrudes by less than its own union
+    # blend, so the smooth union simply absorbs it and the head comes out bald
+    # and earless.
     ear_y = 0.5 * (fy(Z(0.470)) + by(Z(0.470))) - 0.005 * u
     ear_z = Z(0.470)
     ear_h = 0.029 * u
+    lat = float(project((prof.width(ear_z), ear_y, ear_z), (1.0, 0.0, 0.0))[0])
+    ear_x = lat + 0.001 * u
     tilt = np.deg2rad(14.0)
 
     def ear_put(prim, k, sub=False):
@@ -479,44 +491,47 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
 
     ear_put(  # the shell of the auricle
         sdf.Ellipsoid((ear_x, ear_y, ear_z - ear_h * 0.05),
-                      (0.0070 * u, ear_h * 0.50, ear_h * 0.95)),
-        0.007 * u,
+                      (0.0105 * u, ear_h * 0.50, ear_h * 0.95)),
+        0.0035 * u,
     )
     # helix: emerges at the front, sweeps over the top and down the back
     ang = np.linspace(0.32, 4.55, 13)
     rim = [
-        (ear_x + 0.0030 * u,
+        (ear_x + 0.0058 * u,
          ear_y - np.cos(a) * ear_h * 0.44,
          ear_z + np.sin(a) * ear_h * 0.82)
         for a in ang
     ]
     for a, b in zip(rim[:-1], rim[1:]):
         ear_put(sdf.Capsule(a, b, 0.0032 * u), 0.0026 * u)
+    # Everything below rides on the outer face of the plate, which now stands at
+    # ear_x + 0.0105u rather than + 0.0070u, so the offsets are measured out
+    # there.  Left at the old depths they sit inside the plate and do nothing.
     ear_put(  # lobule, hanging off the end of the helix
-        sdf.Ellipsoid((ear_x + 0.0006 * u, ear_y - ear_h * 0.06, ear_z - ear_h * 0.84),
-                      (0.0044 * u, 0.0052 * u, 0.0058 * u)),
+        sdf.Ellipsoid((ear_x + 0.0045 * u, ear_y - ear_h * 0.06, ear_z - ear_h * 0.84),
+                      (0.0052 * u, 0.0052 * u, 0.0058 * u)),
         0.0040 * u,
     )
     ear_put(  # antihelix
-        sdf.Capsule((ear_x + 0.0020 * u, ear_y - ear_h * 0.08, ear_z + ear_h * 0.44),
-                    (ear_x + 0.0020 * u, ear_y - ear_h * 0.18, ear_z - ear_h * 0.30),
+        sdf.Capsule((ear_x + 0.0068 * u, ear_y - ear_h * 0.08, ear_z + ear_h * 0.44),
+                    (ear_x + 0.0068 * u, ear_y - ear_h * 0.18, ear_z - ear_h * 0.30),
                     0.0026 * u),
         0.0026 * u,
     )
     ear_put(  # tragus
-        sdf.Ellipsoid((ear_x + 0.0018 * u, ear_y - ear_h * 0.38, ear_z - ear_h * 0.20),
+        sdf.Ellipsoid((ear_x + 0.0070 * u, ear_y - ear_h * 0.38, ear_z - ear_h * 0.20),
                       (0.0026 * u, 0.0028 * u, 0.0040 * u)),
         0.0026 * u,
     )
     ear_put(  # concha
-        sdf.Ellipsoid((ear_x + 0.0044 * u, ear_y - ear_h * 0.06, ear_z - ear_h * 0.04),
-                      (0.0036 * u, ear_h * 0.20, ear_h * 0.30)),
+        sdf.Ellipsoid((ear_x + 0.0108 * u, ear_y - ear_h * 0.06, ear_z - ear_h * 0.04),
+                      (0.0040 * u, ear_h * 0.20, ear_h * 0.30)),
         0.0028 * u,
         sub=True,
     )
-    ear_put(  # crease where the auricle leaves the skull
-        sdf.Capsule((ear_x - 0.0058 * u, ear_y + 0.008 * u, ear_z + ear_h * 0.58),
-                    (ear_x - 0.0058 * u, ear_y + 0.008 * u, ear_z - ear_h * 0.50),
+    ear_put(  # sulcus where the auricle leaves the skull
+        sdf.Capsule((ear_x + 0.0005 * u, ear_y + 0.009 * u, ear_z + ear_h * 0.58),
+                    (ear_x + 0.0005 * u, ear_y + 0.009 * u, ear_z - ear_h * 0.50),
                     0.0024 * u),
         0.0030 * u,
         sub=True,
