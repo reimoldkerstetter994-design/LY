@@ -178,8 +178,12 @@ def setup_studio(scene, subject_center, subject_height, variant="neutral"):
     _add_area_light(scene, "Top", (cx, cy - 0.3, cz + h * 1.9), (cx, cy, cz), v["key"] * 0.12, 2.5, _kelvin(5600))
 
 
-def setup_outdoor(scene, subject_center, subject_height, sun_elevation=38.0, sun_rotation=-60.0):
-    """Physically based sky (Nishita) plus a sun lamp and a large textured ground."""
+def setup_outdoor(scene, subject_center, subject_height, sun_elevation=38.0, sun_azimuth=-40.0):
+    """Physically based sky (Nishita) plus a sun lamp and a large textured ground.
+
+    ``sun_azimuth`` is measured like the camera azimuth: degrees from the subject's front
+    (-Y), positive toward +X, so the default lights the face from the front-left.
+    """
     world = bpy.data.worlds.new("World")
     world.use_nodes = True
     nodes = world.node_tree.nodes
@@ -188,8 +192,13 @@ def setup_outdoor(scene, subject_center, subject_height, sun_elevation=38.0, sun
     sky = nodes.new("ShaderNodeTexSky")
     sky.sky_type = "NISHITA"
     sky.sun_disc = False
-    sky.sun_elevation = math.radians(sun_elevation)
-    sky.sun_rotation = math.radians(sun_rotation)
+    az = math.radians(sun_azimuth)
+    elev = math.radians(sun_elevation)
+    # Unit vector pointing from the subject toward the sun.
+    direction = Vector((math.sin(az) * math.cos(elev), -math.cos(az) * math.cos(elev), math.sin(elev)))
+    sky.sun_elevation = elev
+    # Blender's sky sun rotation is measured from +Y toward +X (verified empirically).
+    sky.sun_rotation = math.atan2(direction.x, direction.y)
     sky.altitude = 50
     sky.air_density = 1.2
     sky.dust_density = 1.5
@@ -204,10 +213,6 @@ def setup_outdoor(scene, subject_center, subject_height, sun_elevation=38.0, sun
     sun.color = _kelvin(5200)
     sun_obj = bpy.data.objects.new("Sun", sun)
     _link(scene, sun_obj)
-    # Blender's sky sun_rotation is measured from +Y toward -X; build a matching direction.
-    elev = math.radians(sun_elevation)
-    rot = math.radians(sun_rotation)
-    direction = Vector((-math.sin(rot) * math.cos(elev), math.cos(rot) * math.cos(elev), math.sin(elev)))
     sun_obj.rotation_euler = (-direction).to_track_quat("-Z", "Y").to_euler()
 
     bpy.ops.mesh.primitive_plane_add(size=80.0, location=(0.0, 0.0, 0.0))
@@ -253,7 +258,7 @@ ENVIRONMENTS = {
     "studio_dark": lambda scene, c, h: setup_studio(scene, c, h, "dark"),
     "studio_bright": lambda scene, c, h: setup_studio(scene, c, h, "bright"),
     "outdoor": lambda scene, c, h: setup_outdoor(scene, c, h),
-    "outdoor_evening": lambda scene, c, h: setup_outdoor(scene, c, h, sun_elevation=14.0, sun_rotation=-110.0),
+    "outdoor_evening": lambda scene, c, h: setup_outdoor(scene, c, h, sun_elevation=14.0, sun_azimuth=-70.0),
 }
 
 

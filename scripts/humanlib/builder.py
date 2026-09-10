@@ -139,15 +139,21 @@ def _tune_eyes(basemesh, spec):
         )
 
 
-def _tint_makeskin_material(obj, color, roughness=None):
-    """Tint a MakeSkin material (hair / eyebrows) by driving its diffuse mix node."""
+def _tint_makeskin_material(obj, color=None, roughness=None, specular=None, alpha_boost=None):
+    """Adjust a MakeSkin material (hair / eyebrows / eyelashes).
+
+    ``color`` drives the diffuse mix node, ``alpha_boost`` multiplies the texture alpha
+    (the stock eyebrow/eyelash textures are very sparse strands that all but vanish under
+    hashed transparency), ``specular`` lowers the plastic-looking highlights on dark hair.
+    """
     MaterialService = _svc("MaterialService")
     material = MaterialService.get_material(obj)
     if material is None or not material.node_tree:
         return
-    nodes = material.node_tree.nodes
+    tree = material.node_tree
+    nodes = tree.nodes
     mix = nodes.get("diffuseIntensity")
-    if mix is not None:
+    if mix is not None and color is not None:
         texture_is_color2 = mix.inputs["Color2"].is_linked
         tint_socket = mix.inputs["Color1"] if texture_is_color2 else mix.inputs["Color2"]
         tint_socket.default_value = _rgba(color)
@@ -159,23 +165,36 @@ def _tint_makeskin_material(obj, color, roughness=None):
         else:
             mix.blend_type = "MULTIPLY"
             mix.inputs["Fac"].default_value = 1.0
+    principled = next((n for n in nodes if n.bl_idname == "ShaderNodeBsdfPrincipled"), None)
+    if principled is None:
+        return
     if roughness is not None:
-        for node in nodes:
-            if node.bl_idname == "ShaderNodeBsdfPrincipled":
-                node.inputs["Roughness"].default_value = roughness
-                node.inputs["Specular IOR Level"].default_value = 0.25
-                node.inputs["Coat Weight"].default_value = 0.0
+        principled.inputs["Roughness"].default_value = roughness
+    if specular is not None:
+        principled.inputs["Specular IOR Level"].default_value = specular
+        principled.inputs["Coat Weight"].default_value = 0.0
+    alpha_socket = principled.inputs["Alpha"]
+    if alpha_boost and alpha_socket.is_linked:
+        link = alpha_socket.links[0]
+        source_node, source_socket = link.from_node, link.from_socket
+        tree.links.remove(link)
+        boost = nodes.new("ShaderNodeMath")
+        boost.operation = "MULTIPLY"
+        boost.use_clamp = True
+        boost.inputs[1].default_value = alpha_boost
+        tree.links.new(source_socket, boost.inputs[0])
+        tree.links.new(boost.outputs[0], alpha_socket)
 
 
 def _tune_hair(basemesh, spec):
     color = spec.get("hair_color")
     for hair in _children_of_type(basemesh, "Hair"):
-        if color:
-            _tint_makeskin_material(hair, color, roughness=0.7)
+        _tint_makeskin_material(hair, color, roughness=0.7, specular=0.2)
     brow_color = spec.get("eyebrow_color", color)
-    if brow_color:
-        for brows in _children_of_type(basemesh, "Eyebrows"):
-            _tint_makeskin_material(brows, brow_color)
+    for brows in _children_of_type(basemesh, "Eyebrows"):
+        _tint_makeskin_material(brows, brow_color, roughness=0.9, specular=0.08, alpha_boost=1.8)
+    for lashes in _children_of_type(basemesh, "Eyelashes"):
+        _tint_makeskin_material(lashes, None, roughness=0.9, specular=0.08, alpha_boost=1.8)
 
 
 def _set_render_subdivision(basemesh, levels):
