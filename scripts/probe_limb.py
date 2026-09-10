@@ -33,6 +33,8 @@ from humanforge import presets
 from humanforge.figure import build_figure
 from humanforge.sdf import normalize, surface_along
 
+SIDE = 1.0  # the figure's left; the right is its mirror
+
 # Segment, how far along it, and which measured radius to report against.
 STATIONS = (
     ("upper_arm", 0.42, "upper_arm"),
@@ -53,14 +55,16 @@ def probe(name: str) -> None:
         f"   {'spread':>7}"
     )
     for segment_name, along, radius_key in STATIONS:
-        segment = skeleton.s(segment_name, 1.0)
+        segment = skeleton.s(segment_name, SIDE)
         radius = skeleton.measures.r(radius_key)
         centre = segment.at(along)
         axis = normalize(segment.axis)
-        # The frame's columns are (medial, forward, along) -- medial, not lateral,
-        # see Segment.side; getting that backwards silently swaps two of the four
-        # numbers below and hides exactly the fault this script exists to find.
-        medial = normalize(segment.frame[:, 0])
+        # Column 0 is the frame's transverse axis, which points the same way in the
+        # world on both sides of the body; multiplying by the limb's sign is what
+        # makes it mean medial.  See Segment.side.  Getting that backwards silently
+        # swaps two of the four numbers below and hides the fault this script exists
+        # to find, so it is written out rather than assumed.
+        medial = SIDE * normalize(segment.frame[:, 0])
         forward = normalize(segment.frame[:, 1])
         del axis
 

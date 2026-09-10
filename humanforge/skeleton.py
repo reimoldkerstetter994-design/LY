@@ -70,19 +70,21 @@ class Segment:
 
     @property
     def side(self) -> Vec3:
-        """The transverse axis of the frame.
+        """The transverse axis of the frame, which is *not* mirrored between sides.
 
-        For every limb here -- both arms and both legs -- this comes out pointing
-        towards the midline, because :func:`frame_from_axis` resolves a
-        roughly downward axis the same way on either side of the body rather than
-        mirroring it.  So a positive ``side`` offset multiplied by the limb's own
-        ``side`` sign is *medial*, and a negative one is lateral.
+        :func:`frame_from_axis` resolves a roughly downward axis the same way for a
+        left limb and a right one, so this points the same way in the world on both
+        -- towards the figure's right, as it happens.  It is therefore medial on one
+        side of the body and lateral on the other, and what makes an offset mean the
+        same thing on both is multiplying it by the limb's own ``side`` sign:
+        ``side=side * x`` is medial, ``side=-side * x`` is lateral.
 
-        Worth stating because it is not what the name suggests and because getting
-        it backwards is invisible: a thigh with its vastus lateralis on the inside
-        still looks like a thigh, and an offset written without the limb's sign at
-        all puts the feature on opposite sides of the two arms, which reads as a
-        deformity long before anyone works out which side is wrong.
+        Worth spelling out because both ways of getting it wrong are near invisible.
+        Read as lateral, it puts the vastus lateralis on the inside of the thigh,
+        and a thigh with the bulge on the wrong side is still obviously a thigh.
+        Written without the sign at all, a feature lands on the outside of one limb
+        and the inside of its pair, which reads as a deformity long before anyone
+        works out which of the two is the wrong one.
         """
         return self.frame[:, 0]
 
