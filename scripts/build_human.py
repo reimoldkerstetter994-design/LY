@@ -40,7 +40,7 @@ DEFAULT_SHOTS = {
 
 # 写实皮肤的默认微调（在 MPFB “Enhanced SSS” 材质基础上）
 DEFAULT_SKIN_SETTINGS = {
-    "body": {"Roughness": 0.43, "Clearcoat": 0.06, "Clearcoat Roughness": 0.35,
+    "body": {"Roughness": 0.52, "Clearcoat": 0.04, "Clearcoat Roughness": 0.4,
              "Pore strength": 0.42, "Pore scale": 2600.0,
              "SSS strength": 0.32, "SSS radius scale": 0.12},
     "ears": {"Roughness": 0.42, "SSS strength": 0.6, "SSS radius scale": 0.2},
@@ -229,8 +229,9 @@ def tweak_materials(basemesh, spec):
                 mat.blend_method = "HASHED"
                 mat.use_backface_culling = False
                 for node in _principled_nodes(mat):
-                    node.inputs["Roughness"].default_value = max(node.inputs["Roughness"].default_value, 0.5)
-                    node.inputs["Specular IOR Level"].default_value = 0.2
+                    # 发片是一层光滑的壳，正常强度的高光会让黑发看起来像灰色塑料
+                    node.inputs["Roughness"].default_value = max(node.inputs["Roughness"].default_value, 0.8)
+                    node.inputs["Specular IOR Level"].default_value = 0.1
                 if object_type == "hair" and hair_color:
                     tint_material(mat, **hair_color)
             elif object_type == "eyes":
@@ -242,6 +243,10 @@ def tweak_materials(basemesh, spec):
                     node.inputs["Coat IOR"].default_value = 1.38
             elif object_type == "clothes":
                 mat.blend_method = "HASHED"
+                # 布料：压掉 MakeSkin 默认偏高的光泽
+                for node in _principled_nodes(mat):
+                    node.inputs["Roughness"].default_value = max(node.inputs["Roughness"].default_value, 0.65)
+                    node.inputs["Specular IOR Level"].default_value = 0.3
                 if asset_file in clothes_colors:
                     tint_material(mat, **clothes_colors[asset_file])
             elif obj is basemesh:

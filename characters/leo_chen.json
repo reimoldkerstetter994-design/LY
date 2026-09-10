@@ -26,7 +26,7 @@
   "skin": "young_asian_male.mhmat",
   "skin_settings": {
     "body": {
-      "Roughness": 0.4,
+      "Roughness": 0.5,
       "Pore strength": 0.15,
       "SSS strength": 0.36
     }

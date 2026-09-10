@@ -37,8 +37,8 @@
   "skin": "toigo_light_skin_male_bronze.mhmat",
   "skin_settings": {
     "body": {
-      "Roughness": 0.38,
-      "Clearcoat": 0.1,
+      "Roughness": 0.5,
+      "Clearcoat": 0.05,
       "Pore strength": 0.45,
       "SSS strength": 0.3
     }

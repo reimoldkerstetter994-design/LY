@@ -34,7 +34,7 @@
   "skin": "toigo_light_skin_female_freckles.mhmat",
   "skin_settings": {
     "body": {
-      "Roughness": 0.45,
+      "Roughness": 0.5,
       "Pore strength": 0.4,
       "SSS strength": 0.36,
       "colorMixInStrength": 0.06

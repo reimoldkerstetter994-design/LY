@@ -33,15 +33,15 @@
   "skin": "middleage_african_female.mhmat",
   "skin_settings": {
     "body": {
-      "Roughness": 0.36,
-      "Clearcoat": 0.12,
+      "Roughness": 0.5,
+      "Clearcoat": 0.05,
       "SSS strength": 0.2
     }
   },
   "eye_color": "brown",
   "eyebrows": "eyebrow002.mhclo",
   "eyelashes": "eyelashes03.mhclo",
-  "hair": "afro01.mhclo",
+  "hair": "culturalibre_hair_02.mhclo",
   "clothes": [
     "female_elegantsuit01.mhclo",
     "shoes04.mhclo"
@@ -66,5 +66,10 @@
       0.24
     ],
     "key_energy": 270
+  },
+  "hair_color": {
+    "hue": 0.5,
+    "saturation": 0.6,
+    "value": 0.3
   }
 }

@@ -32,8 +32,8 @@
   "skin": "cutoff3d_indian_female_enhanced.mhmat",
   "skin_settings": {
     "body": {
-      "Roughness": 0.4,
-      "Clearcoat": 0.1,
+      "Roughness": 0.5,
+      "Clearcoat": 0.05,
       "SSS strength": 0.28
     }
   },

@@ -32,7 +32,7 @@
   "skin": "middleage_caucasian_male.mhmat",
   "skin_settings": {
     "body": {
-      "Roughness": 0.46,
+      "Roughness": 0.5,
       "Pore strength": 0.55,
       "SSS strength": 0.3
     }

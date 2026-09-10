@@ -35,7 +35,7 @@
   "skin": "young_asian_female.mhmat",
   "skin_settings": {
     "body": {
-      "Roughness": 0.4,
+      "Roughness": 0.5,
       "SSS strength": 0.3
     }
   },

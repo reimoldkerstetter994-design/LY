@@ -33,8 +33,8 @@
   "skin": "young_african_male.mhmat",
   "skin_settings": {
     "body": {
-      "Roughness": 0.36,
-      "Clearcoat": 0.12,
+      "Roughness": 0.5,
+      "Clearcoat": 0.05,
       "SSS strength": 0.22
     }
   },

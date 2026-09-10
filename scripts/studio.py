@@ -138,10 +138,10 @@ def add_portrait_lighting(focus, key_energy=450.0, scale=1.0, warm=True):
                         key_energy, 1.4 * scale, key_color, "RECTANGLE", 2.0 * scale, spread_deg=95.0),
         # 补光：左前，大而弱，只是把阴影托起来
         _add_area_light("FillLight", (fx - 2.8 * scale, fy - 2.2 * scale, fz + 0.3 * scale), focus,
-                        key_energy * 0.16, 3.5 * scale, fill_color, "SQUARE", spread_deg=120.0),
+                        key_energy * 0.22, 3.5 * scale, fill_color, "SQUARE", spread_deg=120.0),
         # 轮廓光：左后上方，勾出头发和肩线；带格栅避免打亮背景
         _add_area_light("RimLight", (fx - 1.7 * scale, fy + 2.0 * scale, fz + 1.5 * scale), focus,
-                        key_energy * 1.1, 0.7 * scale, (1.0, 0.97, 0.94), "DISK", spread_deg=45.0),
+                        key_energy * 0.8, 0.7 * scale, (1.0, 0.97, 0.94), "DISK", spread_deg=45.0),
         # 发光：从右后上方给头发一点高光
         _add_area_light("HairLight", (fx + 1.0 * scale, fy + 1.4 * scale, fz + 2.4 * scale), focus,
                         key_energy * 0.35, 0.6 * scale, (1.0, 1.0, 1.0), "DISK", spread_deg=40.0),
