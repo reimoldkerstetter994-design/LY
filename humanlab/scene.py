@@ -10,13 +10,14 @@ import bpy
 
 def setup_render(res=(900, 1200), samples=128, denoise=True, threads=0, exposure=0.0,
                  time_limit=0.0):
-    """Cycles settings.  ``time_limit`` is seconds per frame, 0 for no limit.
+    """Cycles settings.  ``time_limit`` caps seconds of *sampling*, 0 for no cap.
 
-    A cap is worth setting for batch work.  Cost per frame is not predictable
-    from the geometry: the same figure at two camera angles a few degrees apart
-    can differ twenty-fold, because whether sight lines happen to graze along the
-    hair decides how many strands each ray crosses.  Frames that hit the cap are
-    still denoised and, at these sample counts, hard to tell apart.
+    Worth setting for batch work, since cost per frame is not predictable: the
+    same figure at two camera angles a few degrees apart has differed twenty-fold
+    here.  Note the cap covers sampling only -- building the BVH for a 600k-quad
+    figure plus four hair systems and then denoising costs about a minute a frame
+    on four cores whatever the cap says, so it is a floor, not a ceiling.  Frames
+    that hit the cap are still denoised and hard to tell from ones that did not.
     """
     sc = bpy.context.scene
     sc.render.engine = "CYCLES"
