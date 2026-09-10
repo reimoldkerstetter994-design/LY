@@ -1,0 +1,11 @@
+# Local Blender / add-on installs (not part of the project)
+.blender-local/
+tools/
+*.pyc
+__pycache__/
+.DS_Store
+
+# Large generated blend files stay local unless explicitly added
+output/blend/*.blend1
+output/blend/*.blend2
+output/*.log
