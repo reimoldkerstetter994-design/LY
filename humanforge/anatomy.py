@@ -147,6 +147,15 @@ LANDMARK_HEIGHTS = {
     "ankle": 0.039,
 }
 
+GLABELLA_SPAN = 0.862
+"""Fraction of the occiput-to-nose-tip span that lies behind the glabella.
+
+Head length is the glabella-to-occiput distance, so this is the factor between
+the measurement and the depth the face is actually laid out over; see
+:attr:`Measures.face_depth`.  The value is measured off the built head, so the
+two agree by construction.
+"""
+
 # Horizontal breadths, again as a fraction of stature.
 BREADTHS = {
     "biacromial": Girth(0.228, muscle=0.09),
@@ -156,9 +165,11 @@ BREADTHS = {
     "waist_depth": Girth(0.122, muscle=0.02, fat=0.75),
     "hip": Girth(0.191, muscle=0.03, fat=0.32),
     "hip_depth": Girth(0.140, muscle=0.04, fat=0.40),
-    "head": Girth(0.0950, allometry=0.35),
-    "head_depth": Girth(0.1180, allometry=0.35),
-    "head_height": Girth(0.130, allometry=0.35),
+    "head": Girth(0.0900, allometry=0.35),
+    # Glabella to occiput, which is what "head length" means; the nose sticks out
+    # past it, see Measures.face_depth.
+    "head_depth": Girth(0.1155, allometry=0.35),
+    "head_height": Girth(0.132, allometry=0.35),
     "neck": Girth(0.064, muscle=0.14, fat=0.18, allometry=0.85),
     "hand_length": Girth(0.108, allometry=0.85),
     "hand_breadth": Girth(0.049, allometry=0.85),
@@ -317,6 +328,18 @@ class Measures:
     @property
     def head_height(self) -> float:
         return self.breadths["head_height"]
+
+    @property
+    def face_depth(self) -> float:
+        """Occiput to nose tip, the span the face is laid out over.
+
+        Head length is measured to the *glabella*, and the nose projects about a
+        sixth of the head's length past it, so laying the face out over head
+        length squashes it back by that sixth.  A head built that way is short of
+        its own circumference by three centimetres and reads as flat-faced, which
+        is one of the surest tells of a procedural head.
+        """
+        return self.breadths["head_depth"] / GLABELLA_SPAN
 
     def describe(self) -> str:
         heads = self.height / self.head_height

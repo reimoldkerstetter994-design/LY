@@ -32,6 +32,7 @@ from .sdf import (
     Vec3,
     normalize,
     rotation,
+    surface_along,
     v3,
 )
 from .skeleton import LEFT, RIGHT, Skeleton, build_skeleton
@@ -54,8 +55,8 @@ TORSO_STATIONS = (
     (0.585, "hip", 0.462, "hip_depth", 0.455),
     (0.620, "waist", 0.500, "waist_depth", 0.500),
     (0.662, "waist", 0.535, "waist_depth", 0.530),
-    (0.700, "chest", 0.470, "chest_depth", 0.487),
-    (0.736, "chest", 0.500, "chest_depth", 0.500),
+    (0.700, "chest", 0.470, "chest_depth", 0.505),
+    (0.736, "chest", 0.500, "chest_depth", 0.512),
     (0.776, "chest", 0.478, "chest_depth", 0.452),
     (0.800, "chest", 0.430, "chest_depth", 0.382),
     (0.820, "chest", 0.270, "chest_depth", 0.262),
@@ -109,6 +110,7 @@ class TorsoProfile:
             # section centre sits in front of it.
             self.centre_y.append(spine_y + half_d * 0.45)
         self._skeleton = skeleton
+        self.height = m.height
 
     def width(self, z: float) -> float:
         return float(np.interp(z, self.z, self.half_w))
@@ -181,6 +183,24 @@ def build_figure(params: BodyParams) -> Figure:
 # torso
 
 
+def _on_surface(
+    body: Field, profile: TorsoProfile, x: float, z: float
+) -> Vec3:
+    """The point on the front of the body at ``(x, z)``, as built so far.
+
+    Concave details are cut relative to this rather than to the lofted profile,
+    because by the time they are added the pectorals, abdomen and glutes have
+    moved the surface by a couple of centimetres, and not by the same amount at
+    every height.
+    """
+    return surface_along(
+        body.ops,
+        v3(x, profile.centre(z), z),
+        v3(0.0, 1.0, 0.0),
+        reach=0.16 * profile.height,
+    )
+
+
 def _build_torso(body: Field, skeleton: Skeleton, profile: TorsoProfile) -> None:
     m = skeleton.measures
     p = m.params
@@ -205,7 +225,7 @@ def _build_torso(body: Field, skeleton: Skeleton, profile: TorsoProfile) -> None
     # -- pelvis and buttocks ---------------------------------------------
     glute_size = 1.0 + 0.30 * female + 0.35 * (fat - 0.4) + 0.20 * (muscle - 0.5)
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
-        z = 0.512 * H
+        z = 0.506 * H
         # Parametrised by how far the buttock stands out behind the sacrum
         # (3-6 cm on an adult) rather than by the ellipsoid's centre, which is
         # easy to place several centimetres too far back.
@@ -214,14 +234,14 @@ def _build_torso(body: Field, skeleton: Skeleton, profile: TorsoProfile) -> None
         body.add(
             Ellipsoid(
                 v3(
-                    side * m.b("hip") * 0.235,
+                    side * m.b("hip") * 0.230,
                     profile.back(z) - protrusion + depth_radius,
                     z + 0.004 * H * (1.0 - sag),
                 ),
                 v3(
-                    m.b("hip") * 0.235 * glute_size,
+                    m.b("hip") * 0.240 * glute_size,
                     depth_radius,
-                    0.060 * H * (1.0 + 0.10 * glute_size),
+                    0.048 * H * (1.0 + 0.10 * glute_size),
                 ),
                 rot=rotation((1.0, 0.0, 0.0), -8.0 + 6.0 * sag),
             ),
@@ -259,24 +279,25 @@ def _build_torso(body: Field, skeleton: Skeleton, profile: TorsoProfile) -> None
         Ellipsoid(
             v3(
                 0.0,
-                profile.front(z_belly) - m.b("waist_depth") * 0.34,
+                profile.front(z_belly) - m.b("waist_depth") * 0.405,
                 z_belly,
             ),
             v3(
                 m.b("waist") * 0.430,
-                m.b("waist_depth") * 0.360 * belly,
+                m.b("waist_depth") * 0.335 * belly,
                 0.070 * H,
             ),
         ),
         blend=0.011 * H,
         name="abdomen",
     )
+    navel_z = 0.635 * H
     body.subtract(
         Ellipsoid(
-            v3(0.0, profile.front(0.635 * H) + 0.004 * H, 0.635 * H),
-            v3(0.011 * H, 0.016 * H, 0.014 * H),
+            _on_surface(body, profile, 0.0, navel_z) + v3(0.0, 0.0135 * H, 0.0),
+            v3(0.0055 * H, 0.0155 * H, 0.0080 * H),
         ),
-        blend=0.003 * H,
+        blend=0.0022 * H,
         name="navel",
     )
     if muscle > 0.55 and fat < 0.38:
@@ -284,25 +305,34 @@ def _build_torso(body: Field, skeleton: Skeleton, profile: TorsoProfile) -> None
 
     # -- chest ------------------------------------------------------------
     z_nipple = m.h("nipple") - sag * 0.020 * H
-    pec = 0.55 + 1.10 * muscle
+    z_pec = z_nipple + 0.025 * H
+    # A pectoral is a wide, shallow form, and that combination is the hardest
+    # thing to add to an SDF: a mass that only just breaks the surface meets it
+    # at a glancing angle, and a blend comparable to the protrusion then leaves a
+    # raised ring right around the rim.  Making the protrusion explicit and the
+    # blend clearly larger than it keeps the swelling soft-edged.
+    protrusion = (0.008 + 0.011 * muscle) * H
+    depth_radius = 0.028 * H
+    surfaces = {
+        tag: _on_surface(body, profile, side * m.b("chest") * 0.270, z_pec)
+        for side, tag in ((LEFT, "l"), (RIGHT, "r"))
+    }
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
-        # Depth is set so the pectoral projects past the ribcage by 1.5 cm on an
-        # average build and 3 cm on a trained one.
         body.add(
             Ellipsoid(
                 v3(
-                    side * m.b("chest") * 0.250,
-                    profile.front(z_nipple) - 0.030 * H,
-                    z_nipple + 0.020 * H,
+                    side * m.b("chest") * 0.270,
+                    surfaces[tag][1] + protrusion - depth_radius,
+                    z_pec,
                 ),
                 v3(
-                    m.b("chest") * 0.290,
-                    (0.030 + 0.016 * muscle) * H,
-                    (0.042 - 0.008 * female) * H,
+                    m.b("chest") * 0.245,
+                    depth_radius,
+                    (0.038 - 0.007 * female) * H,
                 ),
                 rot=rotation((1.0, 0.0, 0.0), 6.0),
             ),
-            blend=0.009 * H,
+            blend=0.012 * H,
             name=f"pectoral_{tag}",
         )
         if muscle > 0.6 and female < 0.5:
@@ -326,15 +356,19 @@ def _build_torso(body: Field, skeleton: Skeleton, profile: TorsoProfile) -> None
     _build_back(body, skeleton, profile)
 
     # -- inguinal creases and pelvic front -------------------------------
+    # The crease has to be cut against the front of the *built* pelvis, not the
+    # loft it started from, or it turns into a bore hole through the groin.
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
+        medial = _on_surface(body, profile, side * m.b("hip") * 0.070, 0.487 * H)
+        lateral = _on_surface(body, profile, side * m.b("hip") * 0.330, 0.524 * H)
         body.subtract(
             RoundCone(
-                v3(side * m.b("hip") * 0.055, profile.front(0.487 * H) - 0.004 * H, 0.487 * H),
-                v3(side * m.b("hip") * 0.330, profile.front(0.520 * H) - 0.020 * H, 0.523 * H),
-                0.009 * H,
-                0.012 * H,
+                medial + v3(0.0, 0.0035 * H, 0.0),
+                lateral + v3(0.0, 0.0035 * H, 0.0),
+                0.0075 * H,
+                0.0090 * H,
             ),
-            blend=0.007 * H,
+            blend=0.004 * H,
             name=f"inguinal_{tag}",
         )
     body.add(
@@ -457,15 +491,28 @@ def _build_nipples(
         return
     z = m.h("nipple") + (0.006 * H - sag * 0.032 * H if female > 0.25 else -sag * 0.018 * H)
     across = m.b("chest") * (0.245 if female > 0.25 else 0.250)
+    # Both pieces are placed by how far they stand off the skin -- 2 mm for the
+    # areola, 4 mm for the nipple -- because the surface here has already been
+    # moved forward by the pectoral, and an offset from the loft would leave a
+    # cone sticking out of the chest.
+    spread = 0.0075 + 0.0035 * female
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
-        surface = profile.front(z)
+        surface = _on_surface(body, profile, side * across, z)[1]
         body.add(
             Ellipsoid(
-                v3(side * across, surface - 0.004 * H, z),
-                v3(0.0115 * H, 0.010 * H, 0.0115 * H),
+                v3(side * across, surface + 0.0018 - 0.0060 * H, z),
+                v3(spread * H, 0.0060 * H, spread * H),
             ),
-            blend=0.004 * H,
+            blend=0.0025 * H,
             name=f"areola_{tag}",
+        )
+        body.add(
+            Sphere(
+                v3(side * across, surface + 0.0040 - 0.0035 * H, z),
+                0.0035 * H,
+            ),
+            blend=0.0018 * H,
+            name=f"nipple_{tag}",
         )
 
 
@@ -508,16 +555,18 @@ def _build_shoulder_girdle(
             blend=0.006 * H,
             name=f"clavicle_{tag}",
         )
+        # The hollow above the clavicle: a shallow trough, about 8 mm deep, so it
+        # is cut a short way outside the surface it sits in.
+        fossa = _on_surface(
+            body, profile, side * m.b("biacromial") * 0.175, 0.824 * H
+        )
         body.subtract(
             Ellipsoid(
-                v3(
-                    side * m.b("biacromial") * 0.230,
-                    profile.front(0.812 * H) - 0.014 * H,
-                    0.822 * H,
-                ),
-                v3(0.030 * H, 0.024 * H, 0.016 * H),
+                fossa + v3(0.0, 0.0075 * H, 0.0),
+                v3(0.020 * H, 0.0105 * H, 0.0075 * H),
+                rot=rotation((0.0, 1.0, 0.0), -side * 14.0),
             ),
-            blend=0.007 * H,
+            blend=0.0035 * H,
             name=f"supraclavicular_{tag}",
         )
         # Deltoid cap, oriented down the arm.
@@ -537,17 +586,17 @@ def _build_shoulder_girdle(
         body.add(
             Ellipsoid(
                 v3(
-                    side * (profile.width(z) - 0.012 * H),
+                    side * (profile.width(z) - 0.021 * H),
                     profile.centre(z) - 0.020 * H,
                     z,
                 ),
                 v3(
-                    (0.012 + 0.011 * muscle) * H,
+                    (0.014 + 0.010 * muscle) * H,
                     m.b("chest_depth") * 0.300,
                     0.075 * H,
                 ),
             ),
-            blend=0.008 * H,
+            blend=0.011 * H,
             name=f"latissimus_{tag}",
         )
 
@@ -853,27 +902,25 @@ def _build_leg(
 
 
 def _add_eyes(
-    skeleton: Skeleton, landmarks: dict[str, Vec3], attachments: list[Attachment]
+    skeleton: Skeleton,
+    landmarks: dict[str, Vec3],
+    attachments: list[Attachment],
 ) -> None:
-    """Place the eyeballs behind the apertures carved in the lids."""
-    m = skeleton.measures
-    radius = 0.0122 * (m.height / 1.75) * (1.0 + 0.10 if m.params.age == "child" else 1.0)
-    radius = 0.0122 * (m.height / 1.75)
-    if m.params.age == "child":
-        radius *= 1.06
+    """Place the eyeballs in the sockets the lids were cut around."""
+    radius = float(landmarks["eye_radius"][0])
     head = skeleton.frames["head"]
 
     for tag in ("l", "r"):
-        centre = landmarks[f"eye_{tag}"]
-        # The globe sits slightly behind the lid surface so the cornea peeks out.
-        centre = centre - head @ v3(0.0, radius * 0.62, 0.0)
+        # The aperture was cut around this exact point, so use it rather than
+        # hunting for the lid surface: that surface is a consequence of the
+        # aperture, and deriving one from the other only moves the globe out of
+        # the hole made for it.
         attachments.append(
             Attachment(
                 kind="eye",
                 name=f"eye_{tag}",
-                centre=centre,
+                centre=landmarks[f"eyeball_{tag}"],
                 size=np.array([radius, radius, radius]),
                 frame=head,
             )
         )
-        landmarks[f"eyeball_{tag}"] = centre

@@ -197,7 +197,10 @@ def build_skeleton(params: BodyParams) -> Skeleton:
     neck_top = pts["cervicale"] + v3(0.0, 0.012 * height, 0.055 * height)
     chin_z = m.h("chin")
     head_h = m.b("head_height")
-    head_depth = m.b("head_depth")
+    # Depths below are fractions of the occiput-to-nose-tip span, the same units
+    # humanforge.head lays the face out in, so these landmarks land on the
+    # features they name rather than a sixth of a head length behind them.
+    head_depth = m.face_depth
     tilt = rotation((1.0, 0.0, 0.0), -pose.head_tilt) @ rotation(
         (0.0, 0.0, 1.0), pose.head_turn
     )
@@ -213,34 +216,34 @@ def build_skeleton(params: BodyParams) -> Skeleton:
     pts["neck_base"] = v3(neck_x, neck_y + 0.010 * height, 0.822 * height)
     pts["neck_top"] = neck_top
     pts["head_origin"] = head_origin
-    pts["skull"] = head_local(v3(0.0, -0.030 * head_depth, head_h * 0.72))
-    pts["face"] = head_local(v3(0.0, 0.150 * head_depth, head_h * 0.42))
-    pts["chin"] = head_local(v3(0.0, 0.300 * head_depth, head_h * 0.055))
-    pts["mouth"] = head_local(v3(0.0, 0.395 * head_depth, head_h * 0.235))
-    pts["nose"] = head_local(v3(0.0, 0.455 * head_depth, head_h * 0.400))
-    pts["brow"] = head_local(v3(0.0, 0.330 * head_depth, head_h * 0.560))
+    pts["skull"] = head_local(v3(0.0, -0.045 * head_depth, head_h * 0.720))
+    pts["face"] = head_local(v3(0.0, 0.175 * head_depth, head_h * 0.375))
+    pts["chin"] = head_local(v3(0.0, 0.340 * head_depth, head_h * 0.040))
+    pts["mouth"] = head_local(v3(0.0, 0.415 * head_depth, head_h * 0.156))
+    pts["nose"] = head_local(v3(0.0, 0.470 * head_depth, head_h * 0.278))
+    pts["brow"] = head_local(v3(0.0, 0.365 * head_depth, head_h * 0.556))
     pts["vertex"] = head_local(v3(0.0, 0.0, head_h))
     skeleton.segments["neck"] = _segment("neck", pts["neck_base"], neck_top)
     skeleton.frames["head"] = tilt
 
-    eye_sep = 0.315 * m.b("head")
+    eye_sep = 0.202 * m.b("head")
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
         jitter = skeleton.asym.factor(f"eye{tag}", side, 0.012)
         pts[f"eye_{tag}"] = head_local(
             v3(
                 side * eye_sep * jitter,
-                0.335 * head_depth,
-                head_h * 0.545,
+                0.360 * head_depth,
+                head_h * 0.495,
             )
         )
         pts[f"ear_{tag}"] = head_local(
-            v3(side * 0.475 * m.b("head"), -0.075 * head_depth, head_h * 0.480)
+            v3(side * 0.485 * m.b("head"), -0.070 * head_depth, head_h * 0.408)
         )
         pts[f"cheek_{tag}"] = head_local(
-            v3(side * 0.360 * m.b("head"), 0.245 * head_depth, head_h * 0.400)
+            v3(side * 0.330 * m.b("head"), 0.290 * head_depth, head_h * 0.410)
         )
         pts[f"jaw_{tag}"] = head_local(
-            v3(side * 0.395 * m.b("head"), -0.010 * head_depth, head_h * 0.230)
+            v3(side * 0.356 * m.b("head"), -0.095 * head_depth, head_h * 0.152)
         )
 
     # -- arms -------------------------------------------------------------

@@ -243,7 +243,7 @@ def _add_nail(
             centre=centre + normal * lift,
             size=np.array([width * 0.5, 0.0007, length * 0.5]),
             frame=frame,
-            curvature=0.42,
+            curvature=0.12,
         )
     )
 

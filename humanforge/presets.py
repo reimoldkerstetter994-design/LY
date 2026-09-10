@@ -39,6 +39,9 @@ PRESETS: dict[str, BodyParams] = {
         sex="male",
         muscle=0.50,
         fat=0.42,
+        # A median male's waist is very close to half his stature; the loft on
+        # its own lands a couple of centimetres under that.
+        waist=1.055,
         pose=_RELAXED,
         seed=11,
     ),
