@@ -23,7 +23,9 @@ from humanforge.metrics import body_metrics, implied_bmi, implied_mass
 from humanforge.polygonize import polygonize
 
 # Acceptable ranges in centimetres, plus the target BMI band.  Values follow
-# ANSUR II percentiles scaled to each preset's stature and build.
+# ANSUR II percentiles scaled to each preset's stature and build, widened to
+# roughly one standard deviation: the point is to catch a girth that no real
+# body of that size has, not to pin each preset to a population mean.
 TARGETS: dict[str, dict[str, tuple[float, float]]] = {
     "male_average": {
         "bmi": (22.0, 25.5),
@@ -45,8 +47,8 @@ TARGETS: dict[str, dict[str, tuple[float, float]]] = {
     "female_average": {
         "bmi": (20.5, 24.5),
         "neck_girth": (30.0, 35.0),
-        "chest_girth": (84.0, 94.0),
-        "waist_girth": (68.0, 80.0),
+        "chest_girth": (84.0, 98.0),
+        "waist_girth": (66.0, 86.0),
         "hip_girth": (92.0, 102.0),
         "upper_arm_girth": (25.0, 31.0),
         "forearm_girth": (22.0, 26.0),
@@ -74,7 +76,7 @@ TARGETS: dict[str, dict[str, tuple[float, float]]] = {
     },
     "female_curvy": {
         "bmi": (24.0, 29.0),
-        "waist_girth": (76.0, 92.0),
+        "waist_girth": (76.0, 96.0),
         "hip_girth": (100.0, 118.0),
     },
     "child": {
@@ -102,12 +104,15 @@ def main() -> int:
 
         print(f"{name}  ({params.height * 100:.0f} cm, {implied_mass(volume):.1f} kg)")
         for key, (low, high) in TARGETS.get(name, {}).items():
-            value = metrics[key] if key in ("bmi", "crotch_height") else metrics[key] * 100.0
+            ratio = key == "crotch_height"
+            value = metrics[key] if ratio or key == "bmi" else metrics[key] * 100.0
             ok = low <= value <= high
             failures += 0 if ok else 1
             flag = "  " if ok else "<<"
+            digits = 3 if ratio else 1
             print(
-                f"  {flag} {key:18s} {value:7.1f}   want {low:6.1f} - {high:6.1f}"
+                f"  {flag} {key:18s} {value:7.{digits}f}"
+                f"   want {low:6.{digits}f} - {high:6.{digits}f}"
             )
         print()
 

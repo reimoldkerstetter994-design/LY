@@ -44,21 +44,22 @@ from .skeleton import LEFT, RIGHT, Skeleton, build_skeleton
 # balloon 13 cm up into the neck, and one at the bottom would fill the crotch
 # and leave the legs fused halfway down the thigh.  The narrow end stations sit
 # inside the neck and the perineum, where the neck column and the thighs cover
-# them.
+# them; since a cap reaches its own radius past the last station, that radius is
+# what has to stay clear of the level the neck girth is measured at.
 TORSO_STATIONS = (
-    (0.462, "hip", 0.062, "hip_depth", 0.090),
-    (0.487, "hip", 0.235, "hip_depth", 0.330),
-    (0.505, "hip", 0.430, "hip_depth", 0.470),
-    (0.545, "hip", 0.500, "hip_depth", 0.500),
-    (0.585, "hip", 0.462, "hip_depth", 0.478),
+    (0.462, "hip", 0.062, "hip_depth", 0.078),
+    (0.487, "hip", 0.235, "hip_depth", 0.290),
+    (0.505, "hip", 0.430, "hip_depth", 0.418),
+    (0.545, "hip", 0.500, "hip_depth", 0.452),
+    (0.585, "hip", 0.462, "hip_depth", 0.455),
     (0.620, "waist", 0.500, "waist_depth", 0.500),
     (0.662, "waist", 0.535, "waist_depth", 0.530),
     (0.700, "chest", 0.470, "chest_depth", 0.487),
     (0.736, "chest", 0.500, "chest_depth", 0.500),
     (0.776, "chest", 0.478, "chest_depth", 0.452),
-    (0.806, "chest", 0.420, "chest_depth", 0.370),
-    (0.828, "chest", 0.215, "chest_depth", 0.240),
-    (0.845, "chest", 0.100, "chest_depth", 0.110),
+    (0.800, "chest", 0.430, "chest_depth", 0.382),
+    (0.820, "chest", 0.270, "chest_depth", 0.262),
+    (0.833, "chest", 0.090, "chest_depth", 0.095),
 )
 
 
@@ -209,7 +210,7 @@ def _build_torso(body: Field, skeleton: Skeleton, profile: TorsoProfile) -> None
         # (3-6 cm on an adult) rather than by the ellipsoid's centre, which is
         # easy to place several centimetres too far back.
         depth_radius = m.b("hip_depth") * 0.300 * glute_size
-        protrusion = H * (0.016 + 0.013 * glute_size)
+        protrusion = H * (0.010 + 0.009 * glute_size)
         body.add(
             Ellipsoid(
                 v3(
@@ -358,14 +359,14 @@ def _carve_crotch(body: Field, profile: TorsoProfile, m: Measures) -> None:
     """
     H = m.height
     y_centre = profile.centre(0.480 * H) - m.b("hip_depth") * 0.055
-    top = v3(0.0, y_centre, 0.497 * H)
-    bottom = v3(0.0, y_centre, 0.405 * H)
+    top = v3(0.0, y_centre, 0.500 * H)
+    bottom = v3(0.0, y_centre, 0.415 * H)
     body.subtract(
         RoundCone(
             top,
             bottom,
-            0.0045 * H,
-            0.0165 * H,
+            0.0075 * H,
+            0.0160 * H,
             section=(6.0, 1.0),
             frame=np.column_stack(
                 (v3(0.0, 1.0, 0.0), v3(1.0, 0.0, 0.0), v3(0.0, 0.0, -1.0))
@@ -487,13 +488,12 @@ def _build_shoulder_girdle(
         # than on the mid line, so the neck itself stays slim.
         body.add(
             RoundCone(
-                neck_base
-                + v3(side * m.b("neck") * 0.30, -0.004 * H, 0.010 * H),
+                neck_base + v3(side * m.b("neck") * 0.46, -0.004 * H, 0.0),
                 acromion + v3(-side * 0.010 * H, -0.006 * H, -0.012 * H),
-                0.021 * H * trap,
+                0.0185 * H * trap,
                 0.019 * H * trap,
             ),
-            blend=0.011 * H,
+            blend=0.007 * H,
             name=f"trapezius_{tag}",
         )
         # Clavicle ridge with the hollow above it.

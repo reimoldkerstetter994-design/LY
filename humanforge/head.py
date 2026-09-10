@@ -163,7 +163,7 @@ def _build_neck(field: Field, skeleton: Skeleton, h: HeadFrame) -> None:
     top = h.point(0.0, -0.02, 0.12)
 
     field.add(
-        RoundCone(base, top, neck_r * 1.22, neck_r * 0.94, section=(1.0, 1.08)),
+        RoundCone(base, top, neck_r * 1.18, neck_r * 0.92, section=(1.0, 1.04)),
         blend=0.008 * m.height,
         name="neck",
     )

@@ -281,7 +281,7 @@ def body_metrics(figure: Figure) -> dict[str, float]:
     # the neck is far longer than the back, so a level cut would clip the jaw.
     # The neck is measured at its narrowest, just below the larynx and above
     # the trapezius flare; a level cut lower down would include the shoulders.
-    out["neck_girth"] = _horizontal(figure, 0.862 * H, "neck", 0.055 * H).girth
+    out["neck_girth"] = _horizontal(figure, 0.862 * H, "neck", 0.090 * H).girth
 
     out["crotch_height"] = crotch_height(figure)
 
