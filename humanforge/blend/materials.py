@@ -410,6 +410,129 @@ def nail_material(name: str, tone: SkinTone) -> bpy.types.Material:
     return material
 
 
+@dataclass(frozen=True)
+class HairLook:
+    """One hair colour, as sRGB triples in 0-255."""
+
+    name: str
+    root: tuple[float, float, float]
+    """Colour at the scalp, where the hair is densest and least sun-bleached."""
+
+    tip: tuple[float, float, float]
+    grey: float = 0.0
+    """Fraction of the fibre that has lost its pigment."""
+
+    sheen: float = 0.5
+    """How glossy the fibre is; wiry hair scatters more and shines less."""
+
+
+HAIR_COLOURS: dict[str, HairLook] = {
+    "black": HairLook("black", root=(22, 18, 17), tip=(38, 30, 27), sheen=0.62),
+    "dark_brown": HairLook("dark_brown", root=(44, 30, 22), tip=(72, 50, 34)),
+    "brown": HairLook("brown", root=(74, 50, 32), tip=(112, 78, 48)),
+    "auburn": HairLook("auburn", root=(84, 44, 26), tip=(134, 70, 34), sheen=0.58),
+    "blond": HairLook("blond", root=(126, 96, 54), tip=(196, 162, 100), sheen=0.66),
+    "grey": HairLook("grey", root=(96, 92, 90), tip=(150, 148, 146), grey=0.75, sheen=0.34),
+    "white": HairLook("white", root=(168, 165, 162), tip=(206, 204, 202), grey=1.0, sheen=0.30),
+}
+
+
+def hair_material(name: str, look: HairLook) -> bpy.types.Material:
+    """A hair *shell*, shaded to read as a mass of fibres.
+
+    The shell is one surface, not a million strands, so the shading has to supply
+    what the geometry cannot.  Two things do almost all of the work.
+
+    The first is anisotropy.  Hair's defining optical property is that every fibre
+    is a cylinder, so the highlight is a *band* running across the direction of
+    growth rather than a spot, and a shell with an isotropic highlight reads as a
+    moulded plastic helmet however dark it is.  Blender's Principled BSDF can do
+    this directly once the tangent runs along the growth direction, which for a
+    scalp is roughly the vertical of the object's own generated coordinates.
+
+    The second is that the silhouette must not be a hard edge.  Real hair thins out
+    into individual strands, so a shell that ends in a clean line reads as a helmet
+    again.  Fine noise on the alpha eats the edge away where the surface turns from
+    the camera, which is where a shell's outline would otherwise be crispest.
+    """
+    material, graph = new_material(name)
+    material.use_backface_culling = False
+
+    coords = graph.add("ShaderNodeTexCoord")
+    generated = coords.outputs["Generated"]
+    across, deep, along = graph.separate(generated)
+
+    # Root to tip.  A head of hair is darker in its own depths than a diffuse
+    # surface would be, and it is that gradient rather than the base colour that
+    # says "many fibres deep" instead of "one painted shell".
+    strand = graph.ramp(
+        along,
+        (0.00, srgb(*look.root)[:3]),
+        (0.55, srgb(*look.root)[:3]),
+        (1.00, srgb(*look.tip)[:3]),
+    )
+    # Variation between neighbouring locks.  Without it the mass is a single flat
+    # value, which no real hair is -- even black hair reads as several.
+    locks = graph.noise(generated, scale=90.0, detail=4.0, roughness=0.60, name="locks")
+    colour = graph.blend("OVERLAY", 0.28, strand, graph.ramp(locks, (0.3, (0.0,) * 3), (0.7, (1.0,) * 3)))
+    if look.grey > 0.0:
+        colour = graph.blend("MIX", look.grey * 0.35, colour, (0.62, 0.61, 0.60, 1.0))
+
+    # Fibre relief: fine grooves along the growth direction, which is what breaks
+    # the highlight up into strands.  The coordinates are stretched along the growth
+    # axis so the noise is drawn out into lines rather than left as blobs.
+    fibre = graph.noise(
+        graph.combine(across, deep, graph.math("MULTIPLY", 0.05, along)),
+        scale=260.0,
+        detail=3.0,
+        roughness=0.55,
+        name="fibre",
+    )
+    normal = graph.bump(fibre, strength=0.55, distance=0.0007, name="bump_fibre")
+
+    hair = graph.principled("hair")
+    graph.feed(hair, "Base Color", colour)
+    graph.feed(hair, "Roughness", 0.24 + 0.34 * (1.0 - look.sheen))
+    graph.feed(hair, "Anisotropic", 0.85)
+    graph.feed(hair, "Anisotropic Rotation", 0.25)
+    graph.feed(hair, "IOR", 1.55)
+    graph.feed(hair, "Normal", normal)
+    # A little transmission: hair is not opaque, and the light that gets through the
+    # outer layer is what stops a dark head from going to a silhouette.
+    graph.feed(hair, "Subsurface Weight", 0.10 + 0.20 * look.grey)
+    graph.feed(hair, "Subsurface Radius", (1.0, 0.70, 0.55))
+    graph.feed(hair, "Subsurface Scale", 0.0012)
+
+    # Fray the silhouette.  Real hair thins into separate strands at its outline, so
+    # a shell that ends on a clean curve reads as a helmet no matter how it is
+    # shaded -- and the outline is exactly where a shell is crispest, because that
+    # is where the surface turns away from the camera.  Eating the alpha away with
+    # fine noise, only where the surface is near grazing, breaks the line without
+    # touching anything the camera sees face on.
+    grazing = graph.add("ShaderNodeLayerWeight", "grazing")
+    graph.feed(grazing, "Blend", 0.30)
+    fray = graph.noise(generated, scale=520.0, detail=2.0, name="fray")
+    edge = graph.clamp(
+        graph.math("MULTIPLY", 3.0, graph.math("SUBTRACT", grazing.outputs["Facing"], 0.66)),
+        0.0,
+        1.0,
+    )
+    graph.feed(
+        hair,
+        "Alpha",
+        graph.math(
+            "SUBTRACT", 1.0, graph.math("MULTIPLY", edge, graph.math("SUBTRACT", 1.0, fray))
+        ),
+    )
+
+    # The tangent is what turns an isotropic highlight into a band across the
+    # direction of growth, and growth on a scalp runs radially out from the crown.
+    tangent = graph.add("ShaderNodeTangent", "growth", direction_type="RADIAL")
+    tangent.axis = "Z"
+    graph.feed(hair, "Tangent", tangent.outputs["Tangent"])
+    return material
+
+
 def clay_material(name: str, value: float = 0.32) -> bpy.types.Material:
     """Matte grey with no colour, texture or scattering.
 

@@ -8,7 +8,7 @@ of the tones in :data:`humanforge.blend.materials.TONES`.
 
 from __future__ import annotations
 
-from .materials import IRISES, TONES, EyeLook, SkinLook
+from .materials import HAIR_COLOURS, IRISES, TONES, EyeLook, HairLook, SkinLook
 
 
 def _look(tone: str, age: float, oiliness: float = 0.5) -> SkinLook:
@@ -45,6 +45,21 @@ EYES: dict[str, EyeLook] = {
     "child": IRISES["blue"],
 }
 
+HAIR: dict[str, HairLook] = {
+    "male_average": HAIR_COLOURS["dark_brown"],
+    "male_athletic": HAIR_COLOURS["black"],
+    "male_lean": HAIR_COLOURS["blond"],
+    "male_heavy": HAIR_COLOURS["brown"],
+    "female_average": HAIR_COLOURS["black"],
+    "female_athletic": HAIR_COLOURS["brown"],
+    "female_curvy": HAIR_COLOURS["auburn"],
+    "elder_male": HAIR_COLOURS["grey"],
+    "elder_female": HAIR_COLOURS["white"],
+    "teen_female": HAIR_COLOURS["black"],
+    "teen_male": HAIR_COLOURS["black"],
+    "child": HAIR_COLOURS["blond"],
+}
+
 _DEFAULT_SKIN = _look("fair", 0.40)
 
 
@@ -54,3 +69,7 @@ def skin(name: str) -> SkinLook:
 
 def eyes(name: str) -> EyeLook:
     return EYES.get(name, IRISES["brown"])
+
+
+def hair(name: str) -> HairLook:
+    return HAIR.get(name, HAIR_COLOURS["dark_brown"])
