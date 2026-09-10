@@ -193,40 +193,46 @@ def build_torso(f: sdf.Field, P: Proportions, prof: TorsoProfile):
     zn = P.z_nipple * H
     if P.breast > 0.0:
         br = P.breast * H
-        cz = zn - 0.004 * H - P.breast_drop * H - 0.014 * H * P.sag
+        cz = zn + 0.004 * H - P.breast_drop * H - 0.014 * H * P.sag
         cx = 0.048 * H
-        # The mass has to sit *into* the chest wall: an ellipsoid parked in front
-        # of the loft surface projects like a bolted-on sphere.
-        cy = prof.front_at(cx, cz) - 0.16 * br
-        f.add(sdf.Ellipsoid((cx, cy, cz), (br * 1.02, br * 0.98, br * 1.02)),
-              k=0.090 * H, mirror=True)
+        # The mass has to sit *into* the chest wall.  Forward is -y here, so the
+        # centre goes to +y of the loft surface; put it at -y and the breast is a
+        # sphere bolted to the front of the ribcage, held on by its fillet.
+        cy = prof.front_at(cx, cz) + 0.32 * br
+        f.add(sdf.Ellipsoid((cx, cy, cz), (br * 1.04, br * 1.00, br * 0.98)),
+              k=0.075 * H, mirror=True)
         # lower pole carries most of the volume, which is what makes a teardrop
         f.add(
-            sdf.Ellipsoid((cx - 0.002 * H, cy + 0.12 * br, cz - 0.46 * br),
-                          (br * 0.84, br * 0.84, br * 0.58)),
-            k=0.060 * H,
-            mirror=True,
-        )
-        # flatten the upper pole: a breast slopes away from the collarbone
-        f.sub(
-            sdf.Ellipsoid((cx, cy - 0.62 * br, cz + 1.30 * br),
-                          (br * 1.30, br * 0.70, br * 0.80)),
+            sdf.Ellipsoid((cx - 0.002 * H, cy + 0.16 * br, cz - 0.42 * br),
+                          (br * 0.88, br * 0.86, br * 0.60)),
             k=0.055 * H,
             mirror=True,
         )
-        npt = (cx + 0.004 * H, cy - 0.90 * br, cz - 0.26 * br)
-        f.add(sdf.Ellipsoid(npt, (0.011 * H, 0.005 * H, 0.011 * H)), k=0.018 * H,
+        # The upper pole slopes away towards the collarbone.  Building that slope
+        # as its own shallow mass is safe; subtracting it instead cuts through
+        # into the chest wall behind, which perforates the ribcage.
+        f.add(
+            sdf.Ellipsoid((cx, cy + 0.52 * br, cz + 0.78 * br),
+                          (br * 1.06, br * 0.58, br * 0.62)),
+            k=0.065 * H,
+            mirror=True,
+        )
+        npt = (cx + 0.004 * H, cy - 0.92 * br, cz - 0.30 * br)
+        f.add(sdf.Ellipsoid(npt, (0.012 * H, 0.006 * H, 0.012 * H)), k=0.014 * H,
               mirror=True)   # areola
-        f.add(sdf.Ellipsoid(npt, (0.0040 * H, 0.0042 * H, 0.0040 * H)), k=0.005 * H,
+        f.add(sdf.Ellipsoid((npt[0], npt[1] - 0.0016 * H, npt[2]),
+                            (0.0042 * H, 0.0046 * H, 0.0042 * H)), k=0.005 * H,
               mirror=True)
-        # inframammary fold
+        # inframammary fold: a crease on the chest wall under the breast, so it is
+        # measured from that wall and not from the breast's own centre
+        wall = prof.front_at(cx, cz) - (0.008 - 0.0022) * H
         f.sub(
             sdf.Capsule(
-                (cx - 0.024 * H, cy - 0.40 * br, cz - 1.02 * br),
-                (cx + 0.028 * H, cy - 0.26 * br, cz - 0.94 * br),
+                (cx - 0.022 * H, wall, cz - 1.02 * br),
+                (cx + 0.026 * H, wall + 0.004 * H, cz - 0.92 * br),
                 0.008 * H,
             ),
-            k=0.030 * H,
+            k=0.012 * H,
             mirror=True,
         )
     else:

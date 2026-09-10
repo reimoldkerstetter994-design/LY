@@ -53,8 +53,11 @@ def views_for(P, tall):
                      target=(0, 0, 0.52 * tall)),
         "back": dict(az=180, el=2, fit=1.10 * tall, lens=105,
                      target=(0, 0, 0.52 * tall)),
-        "portrait": dict(az=22, el=1, fit=0.34, lens=135,
-                         target=(0, -0.012 * H, head_z), dof=True),
+        # A bust rather than a tight head shot: the face is a clean sculpt but not
+        # a photograph, and it holds up far better with the hair, neck and
+        # shoulders in frame than filled to the edges.
+        "portrait": dict(az=24, el=1, fit=0.52, lens=135,
+                         target=(0, -0.010 * H, head_z - 0.10 * H), dof=True),
         "torso": dict(az=26, el=1, fit=0.62 * H, lens=105,
                       target=(0, 0, 0.67 * H)),
     }
