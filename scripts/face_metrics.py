@@ -115,10 +115,21 @@ class Head:
         local = np.stack(np.meshgrid(xs, ys, zs, indexing="ij"), axis=-1)
         return evaluate_points(self.ops, self.origin + local @ self.basis.T) < 0.0
 
-    def section(self, z_low: float, z_high: float, half_x: float = 0.115):
-        """Inside mask on an (x, y, z) block of local metres, plus its axes."""
+    def section(
+        self, z_low: float, z_high: float, half_x: float = 0.115, y_step: float = STEP
+    ):
+        """Inside mask on an (x, y, z) block of local metres, plus its axes.
+
+        ``y_step`` is separate because the nose and the mouth are measured by how
+        far the surface stands in front of, or behind, another part of the same
+        section -- by one or two millimetres.  On the coarse grid those readings
+        come out quantised to a single step, so a threshold anywhere near one step
+        is decided by floating point rather than by the geometry.  Sampling the
+        depth axis at the fine spacing costs a few hundred thousand extra points
+        and makes the comparison mean something.
+        """
         xs = _axis(-half_x, half_x)
-        ys = _axis(-0.14, 0.14)
+        ys = _axis(-0.14, 0.14, y_step)
         zs = _axis(z_low, z_high)
         return xs, ys, zs, self._inside(xs, ys, zs)
 
@@ -154,6 +165,12 @@ def _flare(
     outside the feature), extending that line inwards and taking the outermost
     point standing ``excess`` in front of it is what a caliper on the alar bases
     measures, and it does not care where the tip is.
+
+    ``base`` has to sit immediately outboard of the wing and no further.  A cheek
+    is only straight *locally*: fitting a line over the next centimetre and a half
+    beyond that instead, where the section has begun to turn towards the ear, gives
+    a slope half again as steep, and extended back to the midline that line passes
+    in front of the nose tip -- so the nose comes out as no width at all.
     """
     front = np.full(xs.size, -np.inf)
     for i in range(xs.size):
@@ -274,14 +291,20 @@ def measure_head(figure, where: bool = False) -> dict[str, float]:
 
     # The nose and mouth are only the part of the section standing in front of the
     # face, so the cheeks behind them do not swamp the measurement.
-    xs, ys, zs, block = head.section(head.z("subnasale", -0.008), head.z("subnasale", 0.008))
+    xs, ys, zs, block = head.section(
+        head.z("subnasale", -0.008), head.z("subnasale", 0.008), y_step=FINE
+    )
     out["nose_breadth"], nose_front = _flare(xs, ys, block, (0.021, 0.034), 0.0012)
 
     xs, ys, zs, block = head.section(
-        head.z("lip_lower", -0.010), head.z("lip_upper", 0.010)
+        head.z("lip_lower", -0.010), head.z("lip_upper", 0.010), y_step=FINE
     )
+    # A couple of millimetres, which is the shallowest seam that reads as a seam
+    # rather than as the cheek sloping away between the top and the bottom of the
+    # window.  Below about a millimetre the latter wins and the mouth measures out
+    # to the ear.
     out["mouth_breadth"], mouth_front = _seam(
-        xs, ys, zs, block, head.z("lip_line"), 0.0010
+        xs, ys, zs, block, head.z("lip_line"), 0.0025
     )
 
     # Ears.  Measured against the skull's own half breadth at each height, taken
