@@ -39,7 +39,9 @@ from .sdf import (
     RoundCone,
     Sphere,
     Vec3,
+    normalize,
     rotation,
+    surface_along,
     v3,
 )
 from .skeleton import LEFT, RIGHT, Skeleton
@@ -393,14 +395,31 @@ def _build_jawline(
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
         # The hollow starts well off the midline.  Started near it, the left and
         # right cuts overlap under the chin and trench straight through the throat.
+        # Cut against the mandible's lower border as *built*, found by marching a
+        # ray down and outwards from inside the jaw.  Placed off the station table
+        # instead, the cutter ends up running nearly tangent to the skin for the
+        # whole length of the jaw -- and a boolean between two almost parallel
+        # surfaces has no definite crossing for the mesher to resolve, so it comes
+        # out as a broken dotted line along the jaw rather than as a groove.  Every
+        # radius here is read against the clearance below: the axis stands a little
+        # over half a radius outside the skin, which leaves a groove about four
+        # millimetres deep and fifteen wide, and that ratio is what makes the eye
+        # take it as a fold under a jaw instead of a slot cut in one.
+        radius = 0.042 * hh * (1.25 - 0.45 * soft)
+        out = h.orientation @ normalize(v3(side * 0.80, -0.25, -1.0))
+        ends = [
+            surface_along(
+                field.ops,
+                h.point(side * x, FACE_Y["gonion"] + 0.115, z),
+                out,
+                0.35 * hh,
+            )
+            + out * (radius * 0.56)
+            for x, z in ((0.115, 0.055), (0.300, 0.140))
+        ]
         field.subtract(
-            RoundCone(
-                h.point(side * 0.135, FACE_Y["chin"] - 0.150, -0.020),
-                h.point(side * 0.330, FACE_Y["gonion"] - 0.020, FACE_Z["gonion"] - 0.045),
-                0.052 * hh * (1.25 - 0.45 * soft),
-                0.060 * hh * (1.25 - 0.45 * soft),
-            ),
-            blend=0.030 * hh,
+            RoundCone(ends[0], ends[1], radius * 0.92, radius * 1.10),
+            blend=0.016 * hh,
             name=f"submandibular_{tag}",
         )
 

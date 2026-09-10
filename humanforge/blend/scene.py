@@ -488,8 +488,13 @@ def stage(
     # a couple of cells through and comes out lumpy.
     hair_object = None
     if figure.hair is not None:
+        # Every component is kept, unlike the body.  The eyebrows are separate
+        # solids from the scalp by construction, so taking the largest component
+        # here silently deletes them -- which is what left the faces browless while
+        # the field they were built into contained them all along.  Nothing is
+        # carved out of the hair, so there are no sealed pockets to worry about.
         hair_mesh = taubin_smooth(
-            largest_component(polygonize(figure.hair, voxel=min(voxel, 0.0026))),
+            polygonize(figure.hair, voxel=min(voxel, 0.0026)),
             iterations=smoothing,
         )
         hair_object = add_mesh(

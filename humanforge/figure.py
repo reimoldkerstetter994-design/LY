@@ -349,12 +349,22 @@ def _build_torso(body: Field, skeleton: Skeleton, profile: TorsoProfile) -> None
             name=f"pectoral_{tag}",
         )
         if muscle > 0.6 and female < 0.5:
+            # Cut against the surface as built, not against the loft.  The pectoral
+            # above has just moved the chest forward by up to 19 mm, so an axis
+            # placed off the loft sits well *behind* the skin, and a cut whose axis
+            # is behind the surface breaks through only where the surface happens to
+            # dip: what should be the lower border of the pectoral comes out as two
+            # horizontal slashes with square ends, which is what it looked like.
+            medial = _on_surface(body, profile, side * m.b("chest") * 0.100, z_nipple)
+            lateral = _on_surface(
+                body, profile, side * m.b("chest") * 0.440, z_nipple + 0.014 * H
+            )
             body.subtract(
                 RoundCone(
-                    v3(side * m.b("chest") * 0.100, profile.front(z_nipple) + 0.004 * H, z_nipple - 0.008 * H),
-                    v3(side * m.b("chest") * 0.470, profile.front(z_nipple) - 0.020 * H, z_nipple + 0.014 * H),
-                    0.007 * H,
-                    0.006 * H,
+                    medial + v3(0.0, 0.0055 * H, -0.008 * H),
+                    lateral + v3(0.0, 0.0075 * H, 0.0),
+                    0.0088 * H,
+                    0.0086 * H,
                 ),
                 blend=0.006 * H,
                 name=f"pec_border_{tag}",
@@ -372,7 +382,11 @@ def _build_torso(body: Field, skeleton: Skeleton, profile: TorsoProfile) -> None
     # The crease has to be cut against the front of the *built* pelvis, not the
     # loft it started from, or it turns into a bore hole through the groin.
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
-        medial = _on_surface(body, profile, side * m.b("hip") * 0.070, 0.487 * H)
+        # The medial end stops well short of the midline.  Run in to it, the two
+        # creases meet in a sharp V over the pubis, and a symmetrical V across the
+        # groin does not read as anatomy at all -- it reads as the waistband of
+        # something the figure is wearing.
+        medial = _on_surface(body, profile, side * m.b("hip") * 0.150, 0.483 * H)
         lateral = _on_surface(body, profile, side * m.b("hip") * 0.330, 0.524 * H)
         # Four millimetres deep, which is what an inguinal crease is.  The radii
         # have to be read together with the offset that lifts the axis clear of the
@@ -438,14 +452,22 @@ def _build_abdominal_definition(
     if depth < 0.05:
         return
 
+    # Every one of these is cut against the surface as built.  Taken off the loft
+    # instead they sit behind the abdominal mass, which has moved the belly forward
+    # by a centimetre or more, and a cut behind the surface reaches through it only
+    # in patches: the tendinous lines of a rectus come out as a row of horizontal
+    # slashes with hard square ends, which is not a subtle failure.
     for z_frac, width in ((0.664, 0.30), (0.692, 0.28), (0.716, 0.24)):
         z = z_frac * H
+        left = _on_surface(body, profile, -m.b("waist") * width, z)
+        right = _on_surface(body, profile, m.b("waist") * width, z)
+        lift = v3(0.0, 0.0058 * H, 0.0)
         body.subtract(
             RoundCone(
-                v3(-m.b("waist") * width, profile.front(z) + 0.006 * H, z),
-                v3(m.b("waist") * width, profile.front(z) + 0.006 * H, z),
-                0.006 * H * depth,
-                0.006 * H * depth,
+                left + lift,
+                right + lift,
+                0.0080 * H * depth,
+                0.0080 * H * depth,
             ),
             blend=0.005 * H,
             name="rectus_groove",
@@ -453,10 +475,10 @@ def _build_abdominal_definition(
     z0, z1 = 0.640 * H, 0.726 * H
     body.subtract(
         RoundCone(
-            v3(0.0, profile.front(z0) + 0.006 * H, z0),
-            v3(0.0, profile.front(z1) + 0.006 * H, z1),
-            0.005 * H * depth,
-            0.005 * H * depth,
+            _on_surface(body, profile, 0.0, z0) + v3(0.0, 0.0052 * H, 0.0),
+            _on_surface(body, profile, 0.0, z1) + v3(0.0, 0.0052 * H, 0.0),
+            0.0070 * H * depth,
+            0.0070 * H * depth,
         ),
         blend=0.004 * H,
         name="linea_alba",

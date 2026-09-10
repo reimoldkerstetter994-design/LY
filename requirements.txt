@@ -1,0 +1,5 @@
+numpy>=1.26
+pytest>=8.0
+
+# Rendering needs Blender 4.5, which ships its own Python; humanforge/blend is
+# imported by scripts/render.py running inside it and is not pip-installable.
