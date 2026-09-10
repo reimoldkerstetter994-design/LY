@@ -1,64 +1,148 @@
-"""Generate a studio lineup of varied, realistic adult human studies in Blender.
+"""Create four high-detail adult human studies with Blender and MB-Lab 1.8.1.
 
-Run with:
+Preparation:
+    git clone --depth 1 https://github.com/animate1978/MB-Lab.git /tmp/MB-Lab
+Run:
     blender --background --python create_human_models.py
 
-The script intentionally keeps intimate anatomy covered while concentrating on
-silhouette, proportion, skin response, facial landmarks, and body diversity.
+MB-Lab supplies anatomically modeled topology and texture maps. This script
+automates variation, presentation garments, a studio, packing, and rendering.
 """
 
 import math
 import os
+import sys
 
 import bpy
 from mathutils import Vector
 
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+MBLAB_ROOT = os.environ.get("MBLAB_ROOT", "/tmp/MB-Lab")
 OUTPUT_BLEND = os.path.join(ROOT, "realistic_human_lineup.blend")
 OUTPUT_RENDER = os.path.join(ROOT, "realistic_human_lineup.png")
+
+SPECS = [
+    {
+        "id": "m_ca01", "preset": "type_athletic", "name": "Athletic_Male",
+        "label": "ATHLETIC MALE", "x": -3.15, "age": -0.15, "mass": 0.10,
+        "tone": 0.72, "scale": 1.01, "hair": (0.012, 0.007, 0.004, 1),
+        "cloth": (0.015, 0.025, 0.07, 1),
+    },
+    {
+        "id": "f_as01", "preset": "type_hourglass01", "name": "Curvy_Female",
+        "label": "CURVY FEMALE", "x": -1.05, "age": -0.28, "mass": 0.38,
+        "tone": -0.10, "scale": 0.94, "hair": (0.025, 0.010, 0.004, 1),
+        "cloth": (0.22, 0.012, 0.045, 1),
+    },
+    {
+        "id": "f_af01", "preset": "type_slender01", "name": "Slender_Female",
+        "label": "SLENDER FEMALE", "x": 1.05, "age": -0.22, "mass": -0.40,
+        "tone": 0.28, "scale": 0.98, "hair": (0.006, 0.004, 0.003, 1),
+        "cloth": (0.09, 0.14, 0.035, 1),
+    },
+    {
+        "id": "m_la01", "preset": "type_heavybody", "name": "Mature_Male",
+        "label": "MATURE MALE", "x": 3.15, "age": 0.86, "mass": 0.43,
+        "tone": -0.32, "scale": 0.95, "hair": (0.34, 0.37, 0.40, 1),
+        "cloth": (0.025, 0.028, 0.035, 1),
+    },
+]
+
+
+def require_mblab():
+    init_file = os.path.join(MBLAB_ROOT, "__init__.py")
+    if not os.path.isfile(init_file):
+        raise RuntimeError(
+            "MB-Lab 1.8.1 not found. Clone it first:\n"
+            "git clone --depth 1 https://github.com/animate1978/MB-Lab.git "
+            + MBLAB_ROOT
+        )
+    package_path = os.path.join("/tmp", "mblab")
+    if not os.path.lexists(package_path):
+        os.symlink(MBLAB_ROOT, package_path)
+    sys.path.insert(0, "/tmp")
+    import mblab
+    mblab.register()
+    return mblab
 
 
 def clear_scene():
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
-    for datablocks in (bpy.data.materials, bpy.data.curves, bpy.data.metaballs):
-        for block in list(datablocks):
-            if block.users == 0:
-                datablocks.remove(block)
 
 
-def material(name, base, roughness=0.45, metallic=0.0, subsurface=0.0):
+def make_material(name, color, roughness=0.55, metallic=0.0):
     mat = bpy.data.materials.new(name)
-    mat.diffuse_color = (*base, 1)
+    mat.diffuse_color = color
     mat.use_nodes = True
-    bsdf = mat.node_tree.nodes.get("Principled BSDF")
-    bsdf.inputs["Base Color"].default_value = (*base, 1)
-    bsdf.inputs["Roughness"].default_value = roughness
-    bsdf.inputs["Metallic"].default_value = metallic
-    if "Subsurface Weight" in bsdf.inputs:
-        bsdf.inputs["Subsurface Weight"].default_value = subsurface
-    elif "Subsurface" in bsdf.inputs:
-        bsdf.inputs["Subsurface"].default_value = subsurface
-    if subsurface:
-        if "Subsurface Radius" in bsdf.inputs:
-            bsdf.inputs["Subsurface Radius"].default_value = (1.0, 0.45, 0.22)
-        noise = mat.node_tree.nodes.new("ShaderNodeTexNoise")
-        noise.inputs["Scale"].default_value = 38
-        noise.inputs["Detail"].default_value = 4
-        noise.inputs["Roughness"].default_value = 0.7
-        noise.inputs["Distortion"].default_value = 0.12
-        bump = mat.node_tree.nodes.new("ShaderNodeBump")
-        bump.inputs["Strength"].default_value = 0.075
-        bump.inputs["Distance"].default_value = 0.025
-        mat.node_tree.links.new(noise.outputs["Fac"], bump.inputs["Height"])
-        mat.node_tree.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
+    shader = mat.node_tree.nodes.get("Principled BSDF")
+    shader.inputs["Base Color"].default_value = color
+    shader.inputs["Roughness"].default_value = roughness
+    shader.inputs["Metallic"].default_value = metallic
     return mat
 
 
-def add_uv(name, location, scale, mat, segments=32, rings=20):
+def load_character(mblab, spec):
+    scene = bpy.context.scene
+    scene.mblab_character_name = spec["id"]
+    scene.mblab_use_eevee = True
+    scene.mblab_use_cycles = False
+    scene.mblab_use_ik = False
+    scene.mblab_use_muscle = False
+
+    # In headless mode MB-Lab has no add-on preferences entry. Its final
+    # remove-censors check raises after the complete character is initialized.
+    try:
+        mblab.start_lab_session()
+    except AttributeError as error:
+        if "preferences" not in str(error):
+            raise
+
+    human = mblab.mblab_humanoid
+    source = human.get_object()
+    if source is None or not human.has_data:
+        raise RuntimeError("MB-Lab failed to initialize " + spec["id"])
+
+    preset_path = os.path.join(
+        human.presets_path, spec["preset"] + ".json"
+    )
+    human.load_character(preset_path, mix=False)
+    for prop, value, transform in (
+        ("character_age", spec["age"], "AGE"),
+        ("character_mass", spec["mass"], "FAT"),
+        ("character_tone", spec["tone"], "MUSCLE"),
+    ):
+        setattr(source, prop, value)
+        human.calculate_transformation(transform)
+    human.update_materials()
+
+    # Bake the evaluated morph result into an independent standard Blender mesh.
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    evaluated = source.evaluated_get(depsgraph)
+    mesh = bpy.data.meshes.new_from_object(
+        evaluated, preserve_all_data_layers=True, depsgraph=depsgraph
+    )
+    result = bpy.data.objects.new(spec["name"] + "_Body", mesh)
+    bpy.context.collection.objects.link(result)
+    result.scale = (spec["scale"], spec["scale"], spec["scale"])
+    result.location = (spec["x"], 0, 0.93 * spec["scale"])
+    for polygon in mesh.polygons:
+        polygon.use_smooth = True
+
+    # Remove MB-Lab's editable source and rig before creating the next model.
+    for obj in list(bpy.data.objects):
+        if obj != result and (
+            obj == source or obj.type == "ARMATURE" or obj.name.startswith("MBLab_")
+        ):
+            bpy.data.objects.remove(obj, do_unlink=True)
+    mblab.gui_status = "NEW_SESSION"
+    return result
+
+
+def add_uv(name, location, scale, mat):
     bpy.ops.mesh.primitive_uv_sphere_add(
-        segments=segments, ring_count=rings, location=location
+        segments=48, ring_count=32, location=location
     )
     obj = bpy.context.object
     obj.name = name
@@ -66,303 +150,83 @@ def add_uv(name, location, scale, mat, segments=32, rings=20):
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     bpy.ops.object.shade_smooth()
     obj.data.materials.append(mat)
-    bevel = obj.modifiers.new("Soft anatomical transitions", "BEVEL")
-    bevel.width = 0.008
-    bevel.segments = 2
     return obj
 
 
-def add_capsule(name, a, b, radius_a, radius_b, mat):
-    a, b = Vector(a), Vector(b)
-    vec = b - a
-    length = vec.length
-    midpoint = (a + b) * 0.5
-    bpy.ops.mesh.primitive_cone_add(
-        vertices=32,
-        radius1=radius_a,
-        radius2=radius_b,
-        depth=length,
-        location=midpoint,
-    )
-    obj = bpy.context.object
-    obj.name = name
-    obj.rotation_mode = "QUATERNION"
-    obj.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(vec.normalized())
-    bpy.ops.object.shade_smooth()
-    obj.data.materials.append(mat)
-    bevel = obj.modifiers.new("Rounded muscle transition", "BEVEL")
-    bevel.width = min(radius_a, radius_b) * 0.52
-    bevel.segments = 4
-    return obj
-
-
-def add_joint(name, point, radius, mat):
-    return add_uv(name, point, (radius, radius, radius), mat, 24, 16)
-
-
-def add_eye(name, loc, scale, iris_mat, side):
-    white = add_uv(name + "_white", loc, scale, EYE_WHITE, 24, 16)
-    iris_loc = (loc[0] + side * 0.002, loc[1] - scale[1] * 0.94, loc[2])
-    iris = add_uv(name + "_iris", iris_loc, (0.012, 0.006, 0.012), iris_mat, 20, 12)
-    pupil_loc = (iris_loc[0], iris_loc[1] - 0.006, iris_loc[2])
-    add_uv(name + "_pupil", pupil_loc, (0.005, 0.003, 0.005), PUPIL, 16, 10)
-    return white, iris
-
-
-def create_human(spec):
-    """Build one adult study from overlapping, smoothly shaded anatomical forms."""
+def add_presentation_details(spec):
+    scale = spec["scale"]
     x = spec["x"]
-    h = spec["height"]
-    w = spec["build"]
-    skin = spec["skin"]
-    prefix = spec["name"]
-    female = spec["shape"] == "female"
-    elderly = spec.get("elderly", False)
-    athletic = spec.get("athletic", False)
-    sway = spec.get("sway", 0.0)
+    cloth = make_material(spec["name"] + "_Garment", spec["cloth"], 0.68)
+    hair_mat = make_material(spec["name"] + "_Hair", spec["hair"], 0.36)
 
-    foot_z = 0.08
-    pelvis_z = h * 0.50
-    shoulder_z = h * 0.80
-    head_z = h * 0.925
-    hip_half = (0.16 if female else 0.145) * w
-    shoulder_half = (0.205 if female else 0.235) * w
-    torso_depth = (0.105 if female else 0.115) * w
+    # A close-fitting neutral brief blocks intimate details without obscuring
+    # the torso/leg proportions. Two forms give a cleaner waist and leg line.
+    add_uv(
+        spec["name"] + "_Brief_Waist",
+        (x, -0.008, 0.99 * scale),
+        (0.185 * scale, 0.135 * scale, 0.105 * scale),
+        cloth,
+    )
+    add_uv(
+        spec["name"] + "_Brief_Front",
+        (x, -0.095 * scale, 0.925 * scale),
+        (0.145 * scale, 0.060 * scale, 0.105 * scale),
+        cloth,
+    )
 
-    # Feet and legs: femur angles naturally inward toward the knees.
-    feet_y = -0.025
-    for side, tag in ((-1, "L"), (1, "R")):
-        hip = (x + side * hip_half, 0, pelvis_z)
-        knee = (x + side * hip_half * 0.72, 0.01, h * 0.285)
-        ankle = (x + side * hip_half * 0.76, 0.005, h * 0.105)
-        add_capsule(prefix + "_thigh_" + tag, hip, knee, 0.092 * w, 0.068 * w, skin)
-        add_joint(prefix + "_knee_" + tag, knee, 0.071 * w, skin)
-        calf_r = 0.066 * w * (1.12 if athletic else 1.0)
-        add_capsule(prefix + "_calf_" + tag, knee, ankle, calf_r, 0.045 * w, skin)
-        add_joint(prefix + "_ankle_" + tag, ankle, 0.047 * w, skin)
-        foot = add_uv(
-            prefix + "_foot_" + tag,
-            (ankle[0], feet_y - 0.055, foot_z),
-            (0.061 * w, 0.145 * w, 0.052 * w),
-            skin,
-        )
-        foot.rotation_euler.x = math.radians(-8)
-
-    # Pelvis, abdomen, rib cage and chest form a continuous readable silhouette.
-    add_uv(
-        prefix + "_pelvis",
-        (x, 0.01, pelvis_z),
-        (hip_half * 1.16, torso_depth * 1.04, h * 0.105),
-        skin,
-    )
-    waist_w = (0.135 if female else 0.155) * w
-    add_uv(
-        prefix + "_abdomen",
-        (x + sway * 0.25, 0.002, h * 0.62),
-        (waist_w, torso_depth * 0.93, h * 0.14),
-        skin,
-    )
-    rib_w = shoulder_half * (0.79 if female else 0.83)
-    add_uv(
-        prefix + "_ribcage",
-        (x + sway * 0.55, 0, h * 0.72),
-        (rib_w, torso_depth * 1.08, h * 0.145),
-        skin,
-    )
-    add_uv(
-        prefix + "_upper_chest",
-        (x + sway, -0.003, h * 0.785),
-        (shoulder_half * 0.86, torso_depth, h * 0.095),
-        skin,
-    )
-    if female:
-        # Subtle breast volume, without explicit anatomical detail.
-        for side in (-1, 1):
-            add_uv(
-                prefix + "_chest_volume",
-                (x + side * shoulder_half * 0.38 + sway, -torso_depth * 0.78, h * 0.748),
-                (0.078 * w, 0.055 * w, 0.068 * w),
-                skin,
-            )
-    elif athletic:
-        for side in (-1, 1):
-            add_uv(
-                prefix + "_pectoral",
-                (x + side * shoulder_half * 0.38 + sway, -torso_depth * 0.72, h * 0.76),
-                (0.088 * w, 0.042 * w, 0.065 * w),
-                skin,
-            )
-
-    # Covered garment keeps the studies suitable for general presentation.
-    garment = add_uv(
-        prefix + "_shorts",
-        (x, -0.006, pelvis_z - h * 0.025),
-        (hip_half * 1.19, torso_depth * 1.08, h * 0.082),
-        spec["garment"],
-    )
-    garment.scale.z = 0.94
-
-    # Shoulder girdle and relaxed arms.
-    shoulder_drop = h * (0.011 if elderly else 0)
-    arm_pose = spec.get("arm_pose", 0.0)
-    for side, tag in ((-1, "L"), (1, "R")):
-        shoulder = (
-            x + side * shoulder_half + sway,
-            0,
-            shoulder_z - shoulder_drop,
-        )
-        elbow = (
-            x + side * (shoulder_half + 0.055 * w + arm_pose),
-            0.012,
-            h * 0.59,
-        )
-        wrist = (
-            x + side * (shoulder_half + 0.035 * w + arm_pose * 0.6),
-            -0.005,
-            h * 0.445,
-        )
-        deltoid_r = 0.085 * w * (1.12 if athletic else 1.0)
-        add_joint(prefix + "_deltoid_" + tag, shoulder, deltoid_r, skin)
-        add_capsule(prefix + "_upperarm_" + tag, shoulder, elbow, 0.068 * w, 0.051 * w, skin)
-        add_joint(prefix + "_elbow_" + tag, elbow, 0.052 * w, skin)
-        add_capsule(prefix + "_forearm_" + tag, elbow, wrist, 0.054 * w, 0.038 * w, skin)
-        add_joint(prefix + "_wrist_" + tag, wrist, 0.039 * w, skin)
-        hand = add_uv(
-            prefix + "_hand_" + tag,
-            (wrist[0], wrist[1] - 0.005, wrist[2] - 0.065 * w),
-            (0.044 * w, 0.025 * w, 0.082 * w),
-            skin,
-        )
-        hand.rotation_euler.y = math.radians(side * 4)
-
-    # Neck and face: cranium, jaw, ears, nose, eyes, brows, lips, and hair.
-    neck_x = x + sway * 1.04
-    neck_r = 0.068 * w * (1.10 if athletic else 1.0)
-    add_uv(prefix + "_neck", (neck_x, 0, h * 0.835), (neck_r, neck_r, h * 0.082), skin)
-    face_y = -0.012
-    add_uv(
-        prefix + "_cranium",
-        (neck_x, face_y, head_z),
-        (0.102 * w, 0.088 * w, h * 0.086),
-        skin,
-    )
-    add_uv(
-        prefix + "_jaw",
-        (neck_x, face_y - 0.022, h * 0.888),
-        (0.083 * w, 0.075 * w, h * 0.063),
-        skin,
-    )
-    for side, tag in ((-1, "L"), (1, "R")):
-        add_uv(
-            prefix + "_ear_" + tag,
-            (neck_x + side * 0.101 * w, face_y, h * 0.917),
-            (0.016 * w, 0.010 * w, 0.029 * w),
-            skin,
-            20,
-            12,
-        )
-    nose = add_uv(
-        prefix + "_nose",
-        (neck_x, face_y - 0.084 * w, h * 0.918),
-        (0.018 * w, 0.028 * w, 0.031 * w),
-        skin,
-        20,
-        12,
-    )
-    nose.rotation_euler.x = math.radians(-8)
-    iris = spec["iris"]
-    eye_z = h * 0.936
-    for side, tag in ((-1, "L"), (1, "R")):
-        ex = neck_x + side * 0.038 * w
-        add_eye(
-            prefix + "_eye_" + tag,
-            (ex, face_y - 0.078 * w, eye_z),
-            (0.024 * w, 0.012 * w, 0.014 * w),
-            iris,
-            side,
-        )
-        brow = add_uv(
-            prefix + "_brow_" + tag,
-            (ex, face_y - 0.091 * w, eye_z + 0.028 * w),
-            (0.030 * w, 0.004 * w, 0.005 * w),
-            spec["hair"],
-            16,
-            8,
-        )
-        brow.rotation_euler.y = math.radians(side * -6)
-    add_uv(
-        prefix + "_lips",
-        (neck_x, face_y - 0.088 * w, h * 0.891),
-        (0.032 * w, 0.007 * w, 0.009 * w),
-        spec["lips"],
-        20,
-        10,
-    )
-    hair_z = head_z + h * 0.035
+    # Restrained scalp volume; unlike the old mannequin build, the face,
+    # ears, eyes, mouth, fingers, and toes all come from the anatomical mesh.
+    head_z = (1.73 if spec["id"].startswith("m_") else 1.69) * scale
     hair = add_uv(
-        prefix + "_hair",
-        (neck_x, face_y + 0.018, hair_z),
-        (0.107 * w, 0.090 * w, h * (0.058 if elderly else 0.062)),
-        spec["hair"],
+        spec["name"] + "_Hair",
+        (x, 0.012, head_z),
+        (0.105 * scale, 0.095 * scale, 0.075 * scale),
+        hair_mat,
     )
-    hair.scale.y = 1.02
+    hair.scale.y = 1.05
 
-    # A restrained age cue: silver brows/hair, stoop, and slightly softer waist.
-    if elderly:
-        add_uv(
-            prefix + "_cheek_L",
-            (neck_x - 0.057 * w, face_y - 0.072 * w, h * 0.909),
-            (0.026 * w, 0.009 * w, 0.023 * w),
-            skin,
-            20,
-            12,
-        )
-        add_uv(
-            prefix + "_cheek_R",
-            (neck_x + 0.057 * w, face_y - 0.072 * w, h * 0.909),
-            (0.026 * w, 0.009 * w, 0.023 * w),
-            skin,
-            20,
-            12,
-        )
-
-    # Floating studio label.
-    bpy.ops.object.text_add(location=(x, 0.20, 0.012), rotation=(0, 0, 0))
+    bpy.ops.object.text_add(location=(x, -0.02, 0.012))
     label = bpy.context.object
-    label.name = prefix + "_label"
+    label.name = spec["name"] + "_Label"
     label.data.body = spec["label"]
     label.data.align_x = "CENTER"
-    label.data.size = 0.115
-    label.data.extrude = 0.003
+    label.data.size = 0.105
+    label.data.extrude = 0.002
     label.data.materials.append(LABEL_MAT)
 
 
 def look_at(obj, target):
-    direction = Vector(target) - obj.location
-    obj.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
+    obj.rotation_euler = (
+        Vector(target) - obj.location
+    ).to_track_quat("-Z", "Y").to_euler()
 
 
 def setup_studio():
     bpy.ops.mesh.primitive_plane_add(size=30, location=(0, 0, 0))
     floor = bpy.context.object
-    floor.name = "Studio floor"
+    floor.name = "Studio_Floor"
     floor.data.materials.append(FLOOR_MAT)
 
-    # Curved backdrop impression from a large vertical plane.
     bpy.ops.mesh.primitive_plane_add(
-        size=18, location=(0, 1.6, 4.0), rotation=(math.radians(90), 0, 0)
+        size=18, location=(0, 1.65, 4), rotation=(math.pi / 2, 0, 0)
     )
     backdrop = bpy.context.object
-    backdrop.name = "Neutral backdrop"
+    backdrop.name = "Studio_Backdrop"
     backdrop.data.materials.append(BACKDROP_MAT)
 
     world = bpy.context.scene.world
     world.use_nodes = True
-    world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.025, 0.035, 0.05, 1)
-    world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.22
+    world.node_tree.nodes["Background"].inputs["Color"].default_value = (
+        0.018, 0.025, 0.042, 1
+    )
+    world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.28
 
-    def area(name, loc, energy, size, color):
-        bpy.ops.object.light_add(type="AREA", location=loc)
+    for name, location, energy, size, color in (
+        ("Key_Softbox", (-4.5, -4.8, 6.0), 1750, 4.5, (1.0, 0.82, 0.70)),
+        ("Fill_Softbox", (4.2, -3.0, 4.2), 1200, 4.0, (0.70, 0.82, 1.0)),
+        ("Rim_Light", (0, 2.1, 5.2), 1450, 3.2, (0.75, 0.86, 1.0)),
+    ):
+        bpy.ops.object.light_add(type="AREA", location=location)
         lamp = bpy.context.object
         lamp.name = name
         lamp.data.energy = energy
@@ -371,88 +235,53 @@ def setup_studio():
         lamp.data.color = color
         look_at(lamp, (0, 0, 1.0))
 
-    area("Key softbox", (-4.2, -4.6, 6.2), 1500, 5.0, (1.0, 0.82, 0.70))
-    area("Fill softbox", (4.6, -2.8, 4.1), 1050, 4.0, (0.67, 0.80, 1.0))
-    area("Rim light", (0, 2.0, 5.0), 1300, 3.0, (0.78, 0.88, 1.0))
-
-    bpy.ops.object.camera_add(location=(0, -11.8, 2.25))
+    bpy.ops.object.camera_add(location=(0, -14.5, 2.35))
     camera = bpy.context.object
-    camera.name = "Lineup camera"
-    camera.data.lens = 54
-    look_at(camera, (0, 0, 0.91))
+    camera.name = "Lineup_Camera"
+    camera.data.lens = 58
+    look_at(camera, (0, 0, 0.92))
     bpy.context.scene.camera = camera
 
 
+mblab = require_mblab()
 clear_scene()
 
-# Palette uses physically plausible roughness and modest subsurface scattering.
-SKIN_1 = material("Skin warm fair", (0.63, 0.33, 0.22), 0.48, subsurface=0.12)
-SKIN_2 = material("Skin golden", (0.47, 0.23, 0.13), 0.50, subsurface=0.13)
-SKIN_3 = material("Skin deep", (0.20, 0.075, 0.038), 0.52, subsurface=0.14)
-SKIN_4 = material("Skin mature", (0.50, 0.27, 0.19), 0.58, subsurface=0.10)
-HAIR_BLACK = material("Hair black", (0.008, 0.006, 0.005), 0.28)
-HAIR_BROWN = material("Hair brown", (0.055, 0.018, 0.008), 0.32)
-HAIR_GREY = material("Hair silver", (0.32, 0.34, 0.36), 0.40, metallic=0.05)
-LIPS_1 = material("Lips rose", (0.34, 0.075, 0.065), 0.48)
-LIPS_2 = material("Lips umber", (0.18, 0.045, 0.035), 0.50)
-IRIS_BROWN = material("Iris brown", (0.055, 0.018, 0.006), 0.24)
-IRIS_BLUE = material("Iris blue", (0.025, 0.12, 0.18), 0.22)
-EYE_WHITE = material("Eye sclera", (0.78, 0.75, 0.68), 0.22)
-PUPIL = material("Pupil", (0.002, 0.002, 0.002), 0.18)
-GARMENT_NAVY = material("Garment navy", (0.015, 0.025, 0.055), 0.70)
-GARMENT_CHARCOAL = material("Garment charcoal", (0.025, 0.027, 0.03), 0.72)
-GARMENT_BURGUNDY = material("Garment burgundy", (0.12, 0.012, 0.025), 0.68)
-GARMENT_OLIVE = material("Garment olive", (0.055, 0.075, 0.025), 0.72)
-FLOOR_MAT = material("Floor", (0.055, 0.065, 0.085), 0.38, metallic=0.08)
-BACKDROP_MAT = material("Backdrop", (0.085, 0.105, 0.14), 0.72)
-LABEL_MAT = material("Labels", (0.58, 0.66, 0.78), 0.55, metallic=0.12)
+FLOOR_MAT = make_material("Studio Floor", (0.045, 0.055, 0.075, 1), 0.40, 0.05)
+BACKDROP_MAT = make_material("Studio Backdrop", (0.075, 0.095, 0.135, 1), 0.76)
+LABEL_MAT = make_material("Labels", (0.56, 0.68, 0.86, 1), 0.48, 0.12)
 
-SPECS = [
-    dict(
-        name="athletic_male", label="ATHLETIC", x=-3.0, height=1.82, build=1.08,
-        shape="male", athletic=True, skin=SKIN_2, hair=HAIR_BLACK, lips=LIPS_2,
-        iris=IRIS_BROWN, garment=GARMENT_NAVY, arm_pose=0.045,
-    ),
-    dict(
-        name="curvy_female", label="CURVY", x=-1.0, height=1.70, build=1.13,
-        shape="female", skin=SKIN_1, hair=HAIR_BROWN, lips=LIPS_1,
-        iris=IRIS_BLUE, garment=GARMENT_BURGUNDY, sway=0.018,
-    ),
-    dict(
-        name="slender_female", label="SLENDER", x=1.0, height=1.76, build=0.91,
-        shape="female", skin=SKIN_3, hair=HAIR_BLACK, lips=LIPS_2,
-        iris=IRIS_BROWN, garment=GARMENT_OLIVE, sway=-0.012, arm_pose=0.025,
-    ),
-    dict(
-        name="mature_male", label="MATURE", x=3.0, height=1.72, build=1.02,
-        shape="male", elderly=True, skin=SKIN_4, hair=HAIR_GREY, lips=LIPS_1,
-        iris=IRIS_BLUE, garment=GARMENT_CHARCOAL, sway=-0.025,
-    ),
-]
-
-for human_spec in SPECS:
-    create_human(human_spec)
+for character_spec in SPECS:
+    load_character(mblab, character_spec)
+    add_presentation_details(character_spec)
 
 setup_studio()
 
 scene = bpy.context.scene
-scene.render.engine = "BLENDER_EEVEE_NEXT" if hasattr(bpy.types, "EEVEE_NEXT") else "BLENDER_EEVEE"
-scene.render.resolution_x = 1100
-scene.render.resolution_y = 700
+scene.render.engine = "BLENDER_EEVEE"
+scene.render.resolution_x = 1200
+scene.render.resolution_y = 760
 scene.render.resolution_percentage = 100
 scene.render.image_settings.file_format = "PNG"
+scene.render.image_settings.color_mode = "RGBA"
 scene.render.filepath = OUTPUT_RENDER
 scene.render.film_transparent = False
-scene.render.image_settings.color_mode = "RGBA"
-scene.view_settings.look = "AgX - Medium High Contrast" if "AgX - Medium High Contrast" else scene.view_settings.look
-scene.render.resolution_percentage = 100
+scene.render.image_settings.color_depth = "8"
+scene.eevee.taa_render_samples = 128
+scene.eevee.use_gtao = True
+scene.eevee.gtao_distance = 3
+scene.eevee.gtao_factor = 1.3
+try:
+    scene.view_settings.look = "AgX - Medium High Contrast"
+except TypeError:
+    pass
 
-# Contact shadows and high-quality screen-space shading.
-if hasattr(scene, "eevee"):
-    scene.eevee.use_gtao = True
-    scene.eevee.gtao_distance = 3
-    scene.eevee.gtao_factor = 1.25
-    scene.eevee.taa_render_samples = 96
+# Keep texture maps inside the .blend so the result is portable.
+for image in bpy.data.images:
+    if image.source == "FILE" and image.filepath:
+        try:
+            image.pack()
+        except RuntimeError:
+            pass
 
 bpy.ops.wm.save_as_mainfile(filepath=OUTPUT_BLEND)
 bpy.ops.render.render(write_still=True)
