@@ -21,6 +21,10 @@ from .proportions import Proportions
 EYE_RADIUS = 0.0122  # metres; eyeballs barely vary with stature
 
 
+def _shift(p, dx):
+    return (p[0] + dx, p[1], p[2])
+
+
 class Profile:
     """Front/back/width interpolators for a lofted volume."""
 
@@ -31,11 +35,13 @@ class Profile:
         self.ryf = np.array([r[2] for r in s])
         self.ryb = np.array([r[3] for r in s])
         self.cy = np.array([r[4] for r in s])
+        self.ex = np.array([r[5] if len(r) > 5 else 2.2 for r in s])
         zz, rx = sdf._smooth_table(self.z, self.rx)
         _, ryf = sdf._smooth_table(self.z, self.ryf)
         _, ryb = sdf._smooth_table(self.z, self.ryb)
         _, cy = sdf._smooth_table(self.z, self.cy)
-        self.z, self.rx, self.ryf, self.ryb, self.cy = zz, rx, ryf, ryb, cy
+        _, ex = sdf._smooth_table(self.z, self.ex)
+        self.z, self.rx, self.ryf, self.ryb, self.cy, self.ex = zz, rx, ryf, ryb, cy, ex
 
     def front(self, z):
         return float(np.interp(z, self.z, self.cy - self.ryf))
@@ -46,25 +52,54 @@ class Profile:
     def width(self, z):
         return float(np.interp(z, self.z, self.rx))
 
+    def centre(self, z):
+        return float(np.interp(z, self.z, self.cy))
+
+    def face(self, x, z):
+        """Front surface y at lateral offset ``x``.
+
+        Features have to be parked against the surface they actually sit on.
+        Using the median front instead makes a cheekbone bulge tens of
+        millimetres proud of the cheek and welds the whole face into one raised
+        plate with a hard rim -- the classic "mask on a box" look.
+        """
+        rx = self.width(z)
+        e = float(np.interp(z, self.z, self.ex))
+        ryf = float(np.interp(z, self.z, self.ryf))
+        t = min(abs(x) / max(rx, 1e-6), 1.0)
+        v = (1.0 - t ** e) ** (1.0 / e)
+        return self.centre(z) - v * ryf
+
+    def nape(self, x, z):
+        """Back surface y at lateral offset ``x``."""
+        rx = self.width(z)
+        e = float(np.interp(z, self.z, self.ex))
+        ryb = float(np.interp(z, self.z, self.ryb))
+        t = min(abs(x) / max(rx, 1e-6), 1.0)
+        v = (1.0 - t ** e) ** (1.0 / e)
+        return self.centre(z) + v * ryb
+
 
 # Transverse sections of the skull: (t, half width / hw, front y / hd, back y / hd).
 # Front and back are absolute surface positions rather than radii, which is how
 # a profile is actually judged -- the facial angle falls straight out of the table.
 _SKULL = [
-    (0.020, 0.27, -0.466, 0.354),
-    (0.075, 0.44, -0.648, 0.567),
-    (0.130, 0.62, -0.688, 0.729),
-    (0.245, 0.78, -0.698, 0.830),
-    (0.350, 0.88, -0.698, 0.911),
-    (0.450, 0.94, -0.708, 0.962),
-    (0.530, 0.97, -0.719, 0.992),
-    (0.600, 0.99, -0.749, 0.992),
-    (0.680, 1.00, -0.708, 0.972),
-    (0.800, 0.95, -0.628, 0.891),
-    (0.900, 0.82, -0.506, 0.729),
-    (0.950, 0.70, -0.425, 0.617),
-    (0.985, 0.44, -0.263, 0.395),
-    (1.000, 0.16, -0.101, 0.152),
+    (0.000, 0.22, -0.42, 0.20),
+    (0.055, 0.38, -0.72, 0.42),
+    (0.115, 0.53, -0.80, 0.62),
+    (0.175, 0.63, -0.83, 0.75),
+    (0.245, 0.70, -0.86, 0.85),
+    (0.350, 0.78, -0.89, 0.93),
+    (0.440, 0.85, -0.90, 0.98),
+    (0.530, 0.90, -0.90, 1.01),
+    (0.600, 0.92, -0.91, 1.02),
+    (0.680, 0.96, -0.88, 1.01),
+    (0.750, 0.99, -0.83, 0.97),
+    (0.840, 0.96, -0.72, 0.89),
+    (0.900, 0.88, -0.61, 0.77),
+    (0.950, 0.72, -0.46, 0.59),
+    (0.980, 0.48, -0.31, 0.40),
+    (1.000, 0.18, -0.12, 0.15),
 ]
 
 
@@ -107,29 +142,60 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
     fy = prof.front
     by = prof.back
 
+    def sy(x, t):
+        """Front surface y at lateral offset ``x`` and canon height ``t``."""
+        return prof.face(x, Z(t))
+
+    def ny(x, t):
+        return prof.nape(x, Z(t))
+
+    def project(p, d):
+        """Slide ``p`` onto whatever surface the field currently has, along ``d``."""
+        p = np.asarray(p, np.float64).copy()
+        d = np.asarray(d, np.float64)
+        d = d / np.linalg.norm(d)
+        for _ in range(5):
+            p -= d * float(sdf.eval_points(f, p[None, :])[0])
+        return p
+
+    def groove(x, t, r, depth, d=(0.0, -1.0, 0.0)):
+        """Cutter centre for a radius-``r`` cutter biting ``depth`` into the face.
+
+        Two rules matter here.  The cutter has to be measured against the surface
+        that actually exists at this point in the program -- brows, cheeks, chin
+        and lips have already been fused on top of the skull loft, so the loft's
+        own surface is metres of nothing to do with the skin.  And the centre must
+        stay closer to that surface than its own radius, or it stops carving a
+        crease and hollows out a cavity under the skin instead.
+        """
+        p = project((x, sy(x, t), Z(t)), d)
+        return tuple(p + np.asarray(d, np.float64) / np.linalg.norm(d)
+                     * -max(r - depth, 0.25 * r))
+
     f.add(sdf.Loft(secs, cap_blend=0.020 * u), k=0.055 * H)
 
     # ---- brow ridge and forehead ----------------------------------------- #
     f.addk(
-        sdf.Ellipsoid((hw * 0.30, fy(Z(0.596)) + 0.010 * u, Z(0.594)),
+        sdf.Ellipsoid((hw * 0.30, sy(hw * 0.30, 0.596) + 0.004 * u, Z(0.594)),
                       (0.017 * u, (0.0090 - 0.002 * youth) * u, 0.0065 * u)),
         k=0.019 * u,
         mirror=True,
     )
     f.addk(  # tail of the ridge running out to the temple
-        sdf.Ellipsoid((hw * 0.66, fy(Z(0.585)) + 0.026 * u, Z(0.586)),
+        sdf.Ellipsoid((hw * 0.66, sy(hw * 0.66, 0.585) + 0.005 * u, Z(0.586)),
                       (0.012 * u, 0.0090 * u, 0.0055 * u)),
         k=0.018 * u,
         mirror=True,
     )
     f.subk(  # glabella
-        sdf.Ball((0.0, fy(Z(0.612)) - 0.001 * u, Z(0.612)), 0.009 * u), k=0.010 * u
+        sdf.Ball(groove(0.0, 0.612, 0.009 * u, 0.0025 * u), 0.009 * u), k=0.010 * u
     )
     if sag > 0.0:  # frontalis furrows
         for zt in (0.665, 0.700):
             f.subk(
-                sdf.Capsule((-0.028 * u, fy(Z(zt)) - 0.0015 * u, Z(zt)),
-                            (0.028 * u, fy(Z(zt)) - 0.0015 * u, Z(zt)), 0.0035 * u),
+                sdf.Capsule(_shift(groove(0.0, zt, 0.0035 * u, 0.0012 * u), -0.028 * u),
+                            _shift(groove(0.0, zt, 0.0035 * u, 0.0012 * u), 0.028 * u),
+                            0.0035 * u),
                 k=0.004 * u,
             )
 
@@ -140,7 +206,7 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
         k=0.024 * u,
     )
     f.addk(  # masseter / lower cheek plane
-        sdf.Ellipsoid((hw * 0.60, 0.5 * (fy(Z(0.230)) + by(Z(0.230))) - 0.006 * u, Z(0.240)),
+        sdf.Ellipsoid((hw * 0.60, sy(hw * 0.60, 0.230) + 0.014 * u, Z(0.240)),
                       (0.013 * u, 0.020 * u, 0.026 * u)),
         k=0.024 * u,
         mirror=True,
@@ -148,44 +214,31 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
 
     # ---- cheek bones, cheeks, temples ------------------------------------ #
     f.addk(
-        sdf.Ellipsoid((hw * 0.72, fy(Z(0.465)) + 0.012 * u, Z(0.462)),
+        sdf.Ellipsoid((hw * 0.72, sy(hw * 0.72, 0.465) + 0.004 * u, Z(0.462)),
                       (0.021 * u, 0.011 * u, 0.013 * u)),
         k=0.026 * u,
         mirror=True,
     )
     if P.softness > 0.4 or youth:
         f.addk(
-            sdf.Ellipsoid((hw * 0.62, fy(Z(0.340)) + 0.008 * u, Z(0.340 + 0.02 * youth)),
+            sdf.Ellipsoid((hw * 0.62, sy(hw * 0.62, 0.340) + 0.006 * u, Z(0.340 + 0.02 * youth)),
                           (0.020 * u * (1 + 0.2 * youth), 0.014 * u, 0.020 * u)),
             k=0.016 * u,
             mirror=True,
         )
-    if P.muscle > 0.6 and P.softness < 0.3:
-        f.subk(  # hollow under the zygomatic arch
-            sdf.Ellipsoid((hw * 0.74, fy(Z(0.395)) - 0.002 * u, Z(0.390)),
-                          (0.016 * u, 0.012 * u, 0.016 * u)),
-            k=0.014 * u,
-            mirror=True,
-        )
-    f.subk(  # temple
-        sdf.Ellipsoid((hw * 1.02, fy(Z(0.590)) + 0.026 * u, Z(0.578)),
-                      (0.010 * u, 0.013 * u, 0.016 * u)),
-        k=0.014 * u,
-        mirror=True,
-    )
 
     # ---- mandible -------------------------------------------------------- #
     jaw_pts = [
-        (hw * 0.56, by(Z(0.175)) - 0.028 * u, Z(0.170)),
-        (hw * 0.52, 0.5 * (fy(Z(0.115)) + by(Z(0.115))) - 0.004 * u, Z(0.112)),
-        (hw * 0.36, fy(Z(0.080)) + 0.022 * u, Z(0.076)),
-        (hw * 0.11, fy(Z(0.062)) + 0.008 * u, Z(0.062)),
+        (hw * 0.56, ny(hw * 0.56, 0.175) - 0.012 * u, Z(0.170)),
+        (hw * 0.52, 0.5 * (sy(hw * 0.52, 0.115) + ny(hw * 0.52, 0.115)), Z(0.112)),
+        (hw * 0.36, sy(hw * 0.36, 0.080) + 0.014 * u, Z(0.076)),
+        (hw * 0.11, sy(hw * 0.11, 0.062) + 0.008 * u, Z(0.062)),
     ]
     for a, b in zip(jaw_pts[:-1], jaw_pts[1:]):
-        f.addk(sdf.Capsule(a, b, (0.0085 - 0.002 * youth) * u), k=0.014 * u, mirror=True)
+        f.addk(sdf.Capsule(a, b, (0.0115 - 0.002 * youth) * u), k=0.016 * u, mirror=True)
     if male:  # squarer gonial angle
         f.addk(
-            sdf.Ellipsoid((hw * 0.58, by(Z(0.150)) - 0.030 * u, Z(0.140)),
+            sdf.Ellipsoid((hw * 0.58, ny(hw * 0.58, 0.150) - 0.013 * u, Z(0.140)),
                           (0.010 * u, 0.014 * u, 0.014 * u)),
             k=0.013 * u,
             mirror=True,
@@ -197,24 +250,19 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
         k=0.014 * u,
     )
     f.addk(  # submental shelf so the chin has an underside
-        sdf.Capsule((hw * 0.30, fy(Z(0.045)) + 0.020 * u, Z(0.038)),
-                    (-hw * 0.30, fy(Z(0.045)) + 0.020 * u, Z(0.038)), 0.009 * u),
+        sdf.Capsule((hw * 0.30, sy(hw * 0.30, 0.045) + 0.011 * u, Z(0.038)),
+                    (-hw * 0.30, sy(hw * 0.30, 0.045) + 0.011 * u, Z(0.038)), 0.009 * u),
         k=0.014 * u,
     )
     f.subk(  # mentolabial sulcus
-        sdf.Capsule((0.014 * u, fy(Z(0.160)) - 0.004 * u, Z(0.158)),
-                    (-0.014 * u, fy(Z(0.160)) - 0.004 * u, Z(0.158)), 0.0055 * u),
+        sdf.Capsule(_shift(groove(0.0, 0.158, 0.0055 * u, 0.0020 * u), 0.014 * u),
+                    _shift(groove(0.0, 0.158, 0.0055 * u, 0.0020 * u), -0.014 * u),
+                    0.0055 * u),
         k=0.007 * u,
-    )
-    f.subk(  # crease separating the jaw from the neck
-        sdf.Capsule((hw * 0.88, by(Z(0.145)) - 0.028 * u, Z(0.120)),
-                    (0.020 * u, fy(Z(0.045)) + 0.010 * u, Z(0.030)), 0.010 * u),
-        k=0.012 * u,
-        mirror=True,
     )
     if sag > 0.0:
         f.addk(  # jowl
-            sdf.Ellipsoid((hw * 0.76, fy(Z(0.130)) + 0.020 * u, Z(0.115)),
+            sdf.Ellipsoid((hw * 0.76, sy(hw * 0.76, 0.130) + 0.008 * u, Z(0.115)),
                           (0.013 * u, 0.014 * u, 0.014 * u)),
             k=0.014 * u,
             mirror=True,
@@ -243,13 +291,13 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
         mirror=True,
     )
     f.subk(  # alar crease
-        sdf.Capsule((0.0130 * ns, fy(Z(0.368)) - 0.002 * ns, Z(0.372)),
-                    (0.0098 * ns, fy(Z(0.340)) + 0.004 * ns, Z(0.336)), 0.0034 * u),
+        sdf.Capsule((0.0130 * ns, fy(Z(0.368)) + 0.0018 * ns, Z(0.372)),
+                    (0.0098 * ns, fy(Z(0.340)) + 0.0060 * ns, Z(0.336)), 0.0034 * u),
         k=0.005 * u,
         mirror=True,
     )
     f.subk(  # columella / septum notch
-        sdf.Ball((0.0, fy(Z(0.345)) - 0.006 * ns, Z(0.336)), 0.0030 * u), k=0.004 * u
+        sdf.Ball((0.0, fy(Z(0.345)) - 0.0035 * ns, Z(0.336)), 0.0030 * u), k=0.004 * u
     )
 
     # ---- mouth ----------------------------------------------------------- #
@@ -267,17 +315,17 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
         k=0.0065 * u,
     )
     f.subk(  # lip line
-        sdf.Ellipsoid((0.0, fy(Z(0.240)) - 0.0085 * u, Z(0.240)),
-                      (lip_w * 1.14, 0.0090 * u, 0.0015 * u)),
+        sdf.Ellipsoid(groove(0.0, 0.240, 0.0090 * u, 0.0030 * u),
+                      (lip_w * 1.14, 0.0090 * u, 0.0016 * u)),
         k=0.0030 * u,
     )
     f.subk(  # philtrum
-        sdf.Capsule((0.0, fy(Z(0.285)) + 0.0015 * u, Z(0.292)),
-                    (0.0, fy(Z(0.272)) + 0.0010 * u, Z(0.272)), 0.0028 * u),
+        sdf.Capsule(groove(0.0, 0.292, 0.0028 * u, 0.0010 * u),
+                    groove(0.0, 0.272, 0.0028 * u, 0.0012 * u), 0.0028 * u),
         k=0.0040 * u,
     )
     f.subk(  # mouth corners
-        sdf.Ball((lip_w * 1.00, fy(Z(0.246)) + 0.0055 * u, Z(0.246)), 0.0034 * u),
+        sdf.Ball(groove(lip_w, 0.246, 0.0034 * u, 0.0016 * u), 0.0034 * u),
         k=0.0060 * u,
         mirror=True,
     )
@@ -293,10 +341,10 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
     eye_r = EYE_RADIUS * (0.97 if P.sex == "c" else 1.0)
     eye_x = 0.0315 * u
     eye_z = Z(0.530)
-    eye_y = fy(eye_z) + eye_r * 0.86
-    f.subk(  # orbital hollow
-        sdf.Ellipsoid((eye_x, eye_y + 0.009 * u, eye_z + 0.001 * u),
-                      (eye_r * 1.45, eye_r * 0.80, eye_r * 1.22)),
+    eye_y = sy(eye_x, 0.530) + eye_r * 0.62
+    f.subk(  # orbital hollow, carved before the lids are laid over the globe
+        sdf.Ellipsoid((eye_x, sy(eye_x, 0.530) + 0.005 * u, eye_z + 0.001 * u),
+                      (eye_r * 1.45, eye_r * 0.95, eye_r * 1.25)),
         k=0.012 * u,
         mirror=True,
     )
@@ -337,7 +385,8 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
         )
 
     # ---- ears ------------------------------------------------------------ #
-    ear_x = prof.width(Z(0.450)) * 0.955
+    # the auricle has to clear the skull wall, or it reads as a dent
+    ear_x = prof.width(Z(0.450)) * 1.10
     ear_y = 0.5 * (fy(Z(0.450)) + by(Z(0.450))) + 0.002 * u
     ear_z = Z(0.435)
     ear_h = 0.029 * u
