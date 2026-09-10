@@ -1,0 +1,278 @@
+{
+    "clothes": [
+        "female_sportsuit01/female_sportsuit01.mhclo",
+        "shoes06/shoes06.mhclo"
+    ],
+    "color_adjustments": {
+        "0a5ec82a-0d5f-43ce-a765-8f076f95692d": {
+            "Color1": [
+                0.6399999856948853,
+                0.6399999856948853,
+                0.6399999856948853,
+                1.0
+            ],
+            "Color2": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Fac": 1.0
+        },
+        "35abc230-ebaa-48d4-8ff7-6d84168291a0": {
+            "Color1": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Color2": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Fac": 1.0
+        },
+        "52ad91a3-caad-4e50-8c38-67634e5e789c": {
+            "Color1": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Color2": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Fac": 1.0
+        },
+        "d533836f-13ad-4836-8b65-051108253cd2": {
+            "Color1": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Color2": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Fac": 1.0
+        },
+        "e38d3a5b-718f-41d5-8404-299def30b43f": {
+            "Color1": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Color2": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Fac": 1.0
+        },
+        "eb028b6d-3ff8-40c7-a2ea-4d9aa808b38d": {
+            "Color1": [
+                0.04500000178813934,
+                0.03500000014901161,
+                0.029999999329447746,
+                1.0
+            ],
+            "Color2": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Fac": 1.0
+        },
+        "eead6f99-d6c6-4f6b-b6c2-210459d7a62e": {
+            "Color1": [
+                0.04500000178813934,
+                0.03500000014901161,
+                0.029999999329447746,
+                1.0
+            ],
+            "Color2": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Fac": 1.0
+        }
+    },
+    "expressions": [],
+    "eyebrows": "eyebrow004/eyebrow004.mhclo",
+    "eyelashes": "eyelashes01/eyelashes01.mhclo",
+    "eyes": "high-poly/high-poly.mhclo",
+    "eyes_material_settings": {
+        "Clearcoat": 0.4000000059604645,
+        "Clearcoat Roughness": 0.0,
+        "EyeWhiteColor": [
+            0.9200000166893005,
+            0.8999999761581421,
+            0.8999999761581421,
+            1.0
+        ],
+        "InnerLayerRoughness": 0.05000000074505806,
+        "IrisBumpStrength": 0.25,
+        "IrisClockwiseMult": 3.5,
+        "IrisFeatureScale": 16.899999618530273,
+        "IrisMajorColor": [
+            0.25999999046325684,
+            0.12999999523162842,
+            0.05999999865889549,
+            1.0
+        ],
+        "IrisMinorColor": [
+            0.10000000149011612,
+            0.05000000074505806,
+            0.019999999552965164,
+            1.0
+        ],
+        "IrisRadialMult": 0.30000001192092896,
+        "IrisSection1End": 0.10000000149011612,
+        "IrisSection2End": 0.800000011920929,
+        "IrisSection3End": 0.8500000238418579,
+        "IrisSection4Color": [
+            0.03999999910593033,
+            0.019999999552965164,
+            0.009999999776482582,
+            1.0
+        ],
+        "IrisToEyeWhiteRelation": 0.38999998569488525,
+        "OuterLayerAlpha": 1.0,
+        "OuterLayerColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        ],
+        "OuterLayerIOR": 1.3300000429153442,
+        "OuterLayerRoughness": 0.0,
+        "OuterLayerTransmission": 1.0,
+        "PupilColor": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        ],
+        "PupilSize": 0.2800000011920929
+    },
+    "eyes_material_type": "PROCEDURAL_EYES",
+    "hair": "braid01/braid01.mhclo",
+    "makeup": [],
+    "phenotype": {
+        "age": 0.5199999809265137,
+        "cupsize": 0.5,
+        "firmness": 0.800000011920929,
+        "gender": 0.0,
+        "height": 0.6200000047683716,
+        "muscle": 0.7200000286102295,
+        "proportions": 0.699999988079071,
+        "race": {
+            "african": 1.0,
+            "asian": 0.0,
+            "caucasian": 0.0
+        },
+        "weight": 0.47999998927116394
+    },
+    "proxy": "",
+    "rig": "default",
+    "skin_material_settings": {
+        "body": {
+            "Brightness": 0.0,
+            "Clearcoat": 0.11999999731779099,
+            "Clearcoat Roughness": 0.3499999940395355,
+            "Contrast": 0.0,
+            "Pore detail": 3.0,
+            "Pore distortion": 1.0,
+            "Pore scale": 2200.0,
+            "Pore strength": 0.335999995470047,
+            "Roughness": 0.4000000059604645,
+            "SSS radius B": 0.10000000149011612,
+            "SSS radius G": 0.20000000298023224,
+            "SSS radius R": 1.0,
+            "SSS radius scale": 0.11999999731779099,
+            "SSS strength": 0.2199999988079071,
+            "colorMixIn": [
+                1.0,
+                0.20000000298023224,
+                0.20000000298023224,
+                1.0
+            ],
+            "colorMixInStrength": 0.029999999329447746
+        }
+    },
+    "skin_material_type": "ENHANCED",
+    "skin_mhmat": "young_african_female.mhmat",
+    "targets": [
+        {
+            "target": "torso-vshape-incr",
+            "value": 0.25
+        },
+        {
+            "target": "l-upperarm-muscle-incr",
+            "value": 0.30000001192092896
+        },
+        {
+            "target": "r-upperarm-muscle-incr",
+            "value": 0.30000001192092896
+        },
+        {
+            "target": "l-upperleg-muscle-incr",
+            "value": 0.30000001192092896
+        },
+        {
+            "target": "r-upperleg-muscle-incr",
+            "value": 0.30000001192092896
+        },
+        {
+            "target": "stomach-tone-incr",
+            "value": 0.5
+        },
+        {
+            "target": "nose-flaring-incr",
+            "value": 0.20000000298023224
+        },
+        {
+            "target": "mouth-upperlip-volume-incr",
+            "value": 0.30000001192092896
+        },
+        {
+            "target": "mouth-lowerlip-volume-incr",
+            "value": 0.30000001192092896
+        },
+        {
+            "target": "l-cheek-bones-incr",
+            "value": 0.30000001192092896
+        },
+        {
+            "target": "r-cheek-bones-incr",
+            "value": 0.30000001192092896
+        },
+        {
+            "target": "mouth-corner-puller",
+            "value": 0.5
+        },
+        {
+            "target": "eye-left-slit",
+            "value": 0.10000000149011612
+        },
+        {
+            "target": "eye-right-slit",
+            "value": 0.10000000149011612
+        }
+    ],
+    "teeth": "teeth_base/teeth_base.mhclo",
+    "tongue": "tongue01/tongue01.mhclo"
+}

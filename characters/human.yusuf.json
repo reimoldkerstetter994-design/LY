@@ -1,0 +1,254 @@
+{
+    "clothes": [
+        "male_worksuit01/male_worksuit01.mhclo",
+        "toigo_ankle_boots_male/toigo_ankle_boots_male.mhclo"
+    ],
+    "color_adjustments": {
+        "0a5ec82a-0d5f-43ce-a765-8f076f95692d": {
+            "Color1": [
+                0.6399999856948853,
+                0.6399999856948853,
+                0.6399999856948853,
+                1.0
+            ],
+            "Color2": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Fac": 1.0
+        },
+        "52ad91a3-caad-4e50-8c38-67634e5e789c": {
+            "Color1": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Color2": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Fac": 1.0
+        },
+        "5cd298f0-acf3-4b1d-9356-d5bb699cb1f9": {
+            "Color1": [
+                0.6399999856948853,
+                0.6399999856948853,
+                0.6399999856948853,
+                1.0
+            ],
+            "Color2": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Fac": 1.0
+        },
+        "6afd98fa-381b-456f-aa46-3dd15b27b2f0": {
+            "Color1": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Color2": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Fac": 1.0
+        },
+        "8261cde8-7ce2-47f3-a7a2-edf459c50887": {
+            "Color1": [
+                0.04500000178813934,
+                0.03500000014901161,
+                0.029999999329447746,
+                1.0
+            ],
+            "Color2": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Fac": 1.0
+        },
+        "a311babf-a7fb-4d65-a1fc-94ab99fe520f": {
+            "Color1": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Color2": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Fac": 1.0
+        },
+        "c104cd4a-1edc-43f9-8b94-f63345a44638": {
+            "Color1": [
+                0.04500000178813934,
+                0.03500000014901161,
+                0.029999999329447746,
+                1.0
+            ],
+            "Color2": [
+                0.5,
+                0.5,
+                0.5,
+                1.0
+            ],
+            "Fac": 1.0
+        }
+    },
+    "expressions": [],
+    "eyebrows": "eyebrow010/eyebrow010.mhclo",
+    "eyelashes": "eyelashes03/eyelashes03.mhclo",
+    "eyes": "high-poly/high-poly.mhclo",
+    "eyes_material_settings": {
+        "Clearcoat": 0.4000000059604645,
+        "Clearcoat Roughness": 0.0,
+        "EyeWhiteColor": [
+            0.9200000166893005,
+            0.8999999761581421,
+            0.8999999761581421,
+            1.0
+        ],
+        "InnerLayerRoughness": 0.05000000074505806,
+        "IrisBumpStrength": 0.25,
+        "IrisClockwiseMult": 3.5,
+        "IrisFeatureScale": 16.899999618530273,
+        "IrisMajorColor": [
+            0.41999998688697815,
+            0.2199999988079071,
+            0.09000000357627869,
+            1.0
+        ],
+        "IrisMinorColor": [
+            0.18000000715255737,
+            0.07999999821186066,
+            0.029999999329447746,
+            1.0
+        ],
+        "IrisRadialMult": 0.30000001192092896,
+        "IrisSection1End": 0.10000000149011612,
+        "IrisSection2End": 0.800000011920929,
+        "IrisSection3End": 0.8500000238418579,
+        "IrisSection4Color": [
+            0.05999999865889549,
+            0.029999999329447746,
+            0.009999999776482582,
+            1.0
+        ],
+        "IrisToEyeWhiteRelation": 0.38999998569488525,
+        "OuterLayerAlpha": 1.0,
+        "OuterLayerColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        ],
+        "OuterLayerIOR": 1.3300000429153442,
+        "OuterLayerRoughness": 0.0,
+        "OuterLayerTransmission": 1.0,
+        "PupilColor": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        ],
+        "PupilSize": 0.2800000011920929
+    },
+    "eyes_material_type": "PROCEDURAL_EYES",
+    "hair": "short02/short02.mhclo",
+    "makeup": [],
+    "phenotype": {
+        "age": 0.6000000238418579,
+        "cupsize": 0.5,
+        "firmness": 0.5,
+        "gender": 1.0,
+        "height": 0.5799999833106995,
+        "muscle": 0.6000000238418579,
+        "proportions": 0.5,
+        "race": {
+            "african": 0.15000000596046448,
+            "asian": 0.25,
+            "caucasian": 0.6000000238418579
+        },
+        "weight": 0.5199999809265137
+    },
+    "proxy": "",
+    "rig": "default",
+    "skin_material_settings": {
+        "body": {
+            "Brightness": 0.0,
+            "Clearcoat": 0.05999999865889549,
+            "Clearcoat Roughness": 0.3499999940395355,
+            "Contrast": 0.0,
+            "Pore detail": 3.0,
+            "Pore distortion": 1.0,
+            "Pore scale": 2200.0,
+            "Pore strength": 0.36000001430511475,
+            "Roughness": 0.5,
+            "SSS radius B": 0.10000000149011612,
+            "SSS radius G": 0.20000000298023224,
+            "SSS radius R": 1.0,
+            "SSS radius scale": 0.11999999731779099,
+            "SSS strength": 0.2720000147819519,
+            "colorMixIn": [
+                0.550000011920929,
+                0.3799999952316284,
+                0.25,
+                1.0
+            ],
+            "colorMixInStrength": 0.2199999988079071
+        }
+    },
+    "skin_material_type": "ENHANCED",
+    "skin_mhmat": "middleage_caucasian_male.mhmat",
+    "targets": [
+        {
+            "target": "nose-hump-incr",
+            "value": 0.3499999940395355
+        },
+        {
+            "target": "nose-scale-vert-incr",
+            "value": 0.20000000298023224
+        },
+        {
+            "target": "chin-prominent-incr",
+            "value": 0.15000000596046448
+        },
+        {
+            "target": "eyebrows-trans-down",
+            "value": 0.20000000298023224
+        },
+        {
+            "target": "head-rectangular",
+            "value": 0.20000000298023224
+        },
+        {
+            "target": "l-cheek-inner-decr",
+            "value": 0.20000000298023224
+        },
+        {
+            "target": "r-cheek-inner-decr",
+            "value": 0.20000000298023224
+        },
+        {
+            "target": "mouth-corner-puller",
+            "value": 0.15000000596046448
+        }
+    ],
+    "teeth": "teeth_base/teeth_base.mhclo",
+    "tongue": "tongue01/tongue01.mhclo"
+}
