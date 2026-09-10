@@ -13,7 +13,7 @@ import math
 import os
 import random
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -40,7 +40,7 @@ class CharacterSpec:
     mass: float = 0.0
     tone: float = 0.0
     seed: int = 1
-    pose: str = "standing_basic.json"
+    pose: str = "standing_symmetric.json"
     shirt: tuple[float, float, float, float] = (0.18, 0.22, 0.28, 1.0)
     shorts: tuple[float, float, float, float] = (0.10, 0.10, 0.12, 1.0)
     hair: tuple[float, float, float, float] = (0.04, 0.03, 0.02, 1.0)
@@ -219,46 +219,62 @@ def principled(mat_name: str):
 
 
 def world_bounds(obj) -> tuple[Vector, Vector]:
-    coords = [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    eval_obj = obj.evaluated_get(depsgraph)
+    coords = [eval_obj.matrix_world @ Vector(corner) for corner in eval_obj.bound_box]
     xs, ys, zs = zip(*coords)
     return Vector((min(xs), min(ys), min(zs))), Vector((max(xs), max(ys), max(zs)))
 
 
 def body_height_range(obj) -> tuple[float, float]:
-    zs = [(obj.matrix_world @ v.co).z for v in obj.data.vertices]
-    return min(zs), max(zs)
+    lo, hi = world_bounds(obj)
+    return lo.z, hi.z
 
 
 def ensure_object_mode() -> None:
-    if bpy.context.mode != "OBJECT":
+    obj = bpy.context.object
+    if obj is not None and obj.mode != "OBJECT":
         bpy.ops.object.mode_set(mode="OBJECT")
+    elif bpy.context.mode != "OBJECT":
+        try:
+            bpy.ops.object.mode_set(mode="OBJECT")
+        except Exception:
+            pass
 
 
 def deselect_all() -> None:
-    bpy.ops.object.select_all(action="DESELECT")
+    ensure_object_mode()
+    for obj in bpy.context.view_layer.objects:
+        obj.select_set(False)
 
 
 def set_active(obj) -> None:
+    ensure_object_mode()
     deselect_all()
+    obj.hide_set(False)
+    obj.hide_viewport = False
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
 
 
 def find_body_and_armature(prefix: str):
-    body = None
-    armature = None
+    meshes = []
+    armatures = []
     for obj in bpy.data.objects:
-        if obj.name.startswith(prefix) or prefix in obj.name:
-            if obj.type == "MESH" and body is None:
-                body = obj
-            elif obj.type == "ARMATURE" and armature is None:
-                armature = obj
+        if not (obj.name.startswith(prefix) or prefix in obj.name):
+            continue
+        if obj.type == "MESH":
+            meshes.append(obj)
+        elif obj.type == "ARMATURE":
+            armatures.append(obj)
+    body = max(meshes, key=lambda o: len(o.data.vertices)) if meshes else None
+    armature = armatures[0] if armatures else None
     if body is None:
-        meshes = [o for o in bpy.data.objects if o.type == "MESH"]
-        body = meshes[-1] if meshes else None
+        all_meshes = [o for o in bpy.data.objects if o.type == "MESH"]
+        body = max(all_meshes, key=lambda o: len(o.data.vertices)) if all_meshes else None
     if armature is None:
-        armatures = [o for o in bpy.data.objects if o.type == "ARMATURE"]
-        armature = armatures[-1] if armatures else None
+        all_arm = [o for o in bpy.data.objects if o.type == "ARMATURE"]
+        armature = all_arm[-1] if all_arm else None
     return body, armature
 
 
@@ -341,6 +357,7 @@ def evaluated_base_mesh(obj):
         if mod.type in {"SUBSURF", "DISPLACE", "CORRECTIVE_SMOOTH"}:
             hidden.append((mod, mod.show_viewport))
             mod.show_viewport = False
+    bpy.context.view_layer.update()
     depsgraph = bpy.context.evaluated_depsgraph_get()
     eval_obj = obj.evaluated_get(depsgraph)
     mesh = bpy.data.meshes.new_from_object(eval_obj)
@@ -349,146 +366,131 @@ def evaluated_base_mesh(obj):
     return mesh
 
 
-def add_garment(body, name: str, zmin: float, zmax: float, color, inflate: float, sleeve_limit: float | None):
+def cloth_material(name: str, color):
+    mat, bsdf = principled(name)
+    set_socket(bsdf, ("Base Color",), color)
+    set_socket(bsdf, ("Roughness",), 0.58)
+    set_socket(bsdf, ("Specular IOR Level", "Specular"), 0.16)
+    set_socket(bsdf, ("Sheen Weight", "Sheen"), 0.4)
+    set_socket(bsdf, ("Sheen Roughness",), 0.4)
+    set_socket(bsdf, ("Coat Weight", "Clearcoat"), 0.03)
+    noise = mat.node_tree.nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = 90.0
+    noise.inputs["Detail"].default_value = 6.0
+    bump = mat.node_tree.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = 0.04
+    mat.node_tree.links.new(noise.outputs["Fac"], bump.inputs["Height"])
+    if "Normal" in bsdf.inputs:
+        mat.node_tree.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
+    return mat
+
+
+def apply_object_modifiers(obj) -> None:
+    set_active(obj)
+    for mod in list(obj.modifiers):
+        try:
+            bpy.ops.object.modifier_apply(modifier=mod.name)
+        except Exception:
+            obj.modifiers.remove(mod)
+
+
+def bisect_z_slab(mesh, matrix, zmin: float, zmax: float, xmax: float | None) -> None:
     import bmesh
 
-    mesh = evaluated_base_mesh(body)
-    garment = bpy.data.objects.new(name, mesh)
-    bpy.context.collection.objects.link(garment)
-    garment.matrix_world = body.matrix_world.copy()
+    inv = matrix.inverted()
+    z_axis = (inv.to_3x3() @ Vector((0.0, 0.0, 1.0))).normalized()
+    x_axis = (inv.to_3x3() @ Vector((1.0, 0.0, 0.0))).normalized()
+    origin = matrix.translation
 
     bm = bmesh.new()
     bm.from_mesh(mesh)
-    bm.verts.ensure_lookup_table()
-    drop = []
-    for vert in bm.verts:
-        world = garment.matrix_world @ vert.co
-        if world.z < zmin or world.z > zmax:
-            drop.append(vert)
-            continue
-        if sleeve_limit is not None and abs(world.x) > sleeve_limit:
-            drop.append(vert)
-    if drop:
-        bmesh.ops.delete(bm, geom=drop, context="VERTS")
+
+    def geom():
+        return list(bm.verts) + list(bm.edges) + list(bm.faces)
+
+    bmesh.ops.bisect_plane(
+        bm,
+        geom=geom(),
+        dist=1e-4,
+        plane_co=inv @ Vector((origin.x, origin.y, zmin)),
+        plane_no=z_axis,
+        clear_inner=True,
+    )
+    bmesh.ops.bisect_plane(
+        bm,
+        geom=geom(),
+        dist=1e-4,
+        plane_co=inv @ Vector((origin.x, origin.y, zmax)),
+        plane_no=z_axis,
+        clear_outer=True,
+    )
+    if xmax is not None:
+        bmesh.ops.bisect_plane(
+            bm,
+            geom=geom(),
+            dist=1e-4,
+            plane_co=inv @ Vector((origin.x + xmax, origin.y, (zmin + zmax) * 0.5)),
+            plane_no=x_axis,
+            clear_outer=True,
+        )
+        bmesh.ops.bisect_plane(
+            bm,
+            geom=geom(),
+            dist=1e-4,
+            plane_co=inv @ Vector((origin.x - xmax, origin.y, (zmin + zmax) * 0.5)),
+            plane_no=x_axis,
+            clear_inner=True,
+        )
     loose = [v for v in bm.verts if not v.link_faces]
     if loose:
         bmesh.ops.delete(bm, geom=loose, context="VERTS")
     bm.to_mesh(mesh)
     bm.free()
 
-    disp = garment.modifiers.new("inflate", "DISPLACE")
-    disp.mid_level = 0.5
-    disp.strength = inflate
-    disp.direction = "NORMAL"
 
-    solid = garment.modifiers.new("solidify", "SOLIDIFY")
-    solid.thickness = 0.0038
-    solid.offset = 1.0
-    solid.use_quality_normals = True
+def add_garment(body, name: str, zmin: float, zmax: float, color, inflate: float, sleeve_limit: float | None):
+    # Kept for compatibility; clothing is painted onto the body mesh instead.
+    return None
 
-    smooth = garment.modifiers.new("smooth", "CORRECTIVE_SMOOTH")
-    smooth.iterations = 4
-    smooth.smooth_type = "LENGTH_WEIGHTED"
 
-    mat, bsdf = principled(name + "_mat")
-    set_socket(bsdf, ("Base Color",), color)
-    set_socket(bsdf, ("Roughness",), 0.62)
-    set_socket(bsdf, ("Specular IOR Level", "Specular"), 0.18)
-    set_socket(bsdf, ("Sheen Weight", "Sheen"), 0.35)
-    set_socket(bsdf, ("Sheen Roughness",), 0.45)
-    set_socket(bsdf, ("Coat Weight", "Clearcoat"), 0.02)
-    noise = mat.node_tree.nodes.new("ShaderNodeTexNoise")
-    noise.inputs["Scale"].default_value = 180.0
-    noise.inputs["Detail"].default_value = 8.0
-    ramp = mat.node_tree.nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].position = 0.35
-    ramp.color_ramp.elements[1].position = 0.75
-    bump = mat.node_tree.nodes.new("ShaderNodeBump")
-    bump.inputs["Strength"].default_value = 0.08
-    nt = mat.node_tree
-    nt.links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
-    nt.links.new(ramp.outputs["Color"], bump.inputs["Height"])
-    if "Normal" in bsdf.inputs:
-        nt.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
-    garment.data.materials.clear()
-    garment.data.materials.append(mat)
-    return garment
+def paint_body_clothing(body, spec: CharacterSpec):
+    """Assign athletic-wear materials on torso/pelvis faces so coverage cannot tear."""
+    zmin, zmax = body_height_range(body)
+    height = max(zmax - zmin, 0.01)
+    shorts_lo = zmin + height * 0.47
+    shorts_hi = zmin + height * 0.62
+    shirt_lo = zmin + height * 0.56
+    shirt_hi = zmin + height * 0.81
+
+    shirt_mat = cloth_material(f"{spec.key}_shirt_mat", spec.shirt)
+    shorts_mat = cloth_material(f"{spec.key}_shorts_mat", spec.shorts)
+    shirt_idx = len(body.data.materials)
+    body.data.materials.append(shirt_mat)
+    shorts_idx = len(body.data.materials)
+    body.data.materials.append(shorts_mat)
+
+    # Do not override eye / tooth / nail slots.
+    skip_names = ("eye", "iris", "sclera", "teeth", "tooth", "nail", "tongue", "lash")
+    skip = set()
+    for i, mat in enumerate(body.data.materials):
+        name = (mat.name if mat else "").lower()
+        if any(token in name for token in skip_names):
+            skip.add(i)
+
+    cx = (world_bounds(body)[0].x + world_bounds(body)[1].x) * 0.5
+    mesh = body.data
+    for poly in mesh.polygons:
+        if poly.material_index in skip:
+            continue
+        center = body.matrix_world @ poly.center
+        if shorts_lo <= center.z <= shorts_hi and abs(center.x - cx) < 0.23:
+            poly.material_index = shorts_idx
+        elif shirt_lo <= center.z <= shirt_hi and abs(center.x - cx) < 0.28:
+            poly.material_index = shirt_idx
 
 
 def add_short_hair(body, name: str, color):
-    import bmesh
-
-    vg = body.vertex_groups.get("head")
-    mesh = evaluated_base_mesh(body)
-    hair = bpy.data.objects.new(name, mesh)
-    bpy.context.collection.objects.link(hair)
-    hair.matrix_world = body.matrix_world.copy()
-
-    keep = set()
-    if vg is not None:
-        for i, _ in enumerate(body.data.vertices):
-            try:
-                w = vg.weight(i)
-            except RuntimeError:
-                w = 0.0
-            if w > 0.35:
-                keep.add(i)
-
-    zmin, zmax = body_height_range(body)
-    chin = zmin + (zmax - zmin) * 0.86
-    bm = bmesh.new()
-    bm.from_mesh(mesh)
-    bm.verts.ensure_lookup_table()
-    drop = []
-    for vert in bm.verts:
-        world = hair.matrix_world @ vert.co
-        if keep:
-            if vert.index not in keep or world.z < chin:
-                drop.append(vert)
-        elif world.z < chin:
-            drop.append(vert)
-    if drop:
-        bmesh.ops.delete(bm, geom=drop, context="VERTS")
-    bm.to_mesh(mesh)
-    bm.free()
-
-    disp = hair.modifiers.new("inflate", "DISPLACE")
-    disp.strength = 0.012
-    disp.direction = "NORMAL"
-    solid = hair.modifiers.new("solidify", "SOLIDIFY")
-    solid.thickness = 0.006
-    solid.offset = 1.0
-    smooth = hair.modifiers.new("smooth", "SMOOTH")
-    smooth.iterations = 8
-    smooth.factor = 0.6
-
-    mat, bsdf = principled(name + "_mat")
-    set_socket(bsdf, ("Base Color",), color)
-    set_socket(bsdf, ("Roughness",), 0.38)
-    set_socket(bsdf, ("Specular IOR Level", "Specular"), 0.22)
-    set_socket(bsdf, ("Anisotropic", "Anisotropic"), 0.55)
-    set_socket(bsdf, ("Coat Weight", "Clearcoat"), 0.08)
-    hair.data.materials.clear()
-    hair.data.materials.append(mat)
-    return hair
-
-
-def parent_to_armature(armature, objects: Sequence):
-    if armature is None:
-        return
-    set_active(armature)
-    for obj in objects:
-        obj.select_set(True)
-    bpy.context.view_layer.objects.active = armature
-    try:
-        bpy.ops.object.parent_set(type="ARMATURE_AUTO")
-    except Exception as exc:
-        log(f"  auto weights failed ({exc}), using armature parent")
-        for obj in objects:
-            obj.parent = armature
-            if "ARMATURE" not in {m.type for m in obj.modifiers}:
-                mod = obj.modifiers.new("armature", "ARMATURE")
-                mod.object = armature
+    return None
 
 
 def apply_pose(armature, spec: CharacterSpec):
@@ -499,49 +501,65 @@ def apply_pose(armature, spec: CharacterSpec):
     pose_dir = MBLAB_POSES / f"{spec.gender}_poses"
     pose_path = pose_dir / spec.pose
     if not pose_path.exists():
-        pose_path = pose_dir / "standing_basic.json"
+        pose_path = pose_dir / "standing_symmetric.json"
     if not pose_path.exists():
         log("  no pose file found")
         return
     set_active(armature)
     ok = MBLab.mblab_retarget.load_pose(str(pose_path), target_armature=armature, use_retarget=True)
+    bpy.context.view_layer.update()
+    ensure_object_mode()
     log(f"  pose {pose_path.name}: {ok}")
 
 
-def dress_character(body, armature, spec: CharacterSpec):
-    zmin, zmax = body_height_range(body)
-    height = max(zmax - zmin, 0.01)
-    shorts = add_garment(
-        body,
-        f"{spec.key}_shorts",
-        zmin + height * 0.46,
-        zmin + height * 0.61,
-        spec.shorts,
-        inflate=0.007,
-        sleeve_limit=None,
-    )
-    shirt = add_garment(
-        body,
-        f"{spec.key}_shirt",
-        zmin + height * 0.54,
-        zmin + height * 0.80,
-        spec.shirt,
-        inflate=0.008,
-        sleeve_limit=0.28,
-    )
-    base = add_garment(
-        body,
-        f"{spec.key}_base_layer",
-        zmin + height * 0.47,
-        zmin + height * 0.78,
-        (0.07, 0.07, 0.08, 1.0),
-        inflate=0.0045,
-        sleeve_limit=0.22,
-    )
-    hair = add_short_hair(body, f"{spec.key}_hair", spec.hair)
-    extras = [base, shorts, shirt, hair]
-    parent_to_armature(armature, extras)
-    return extras
+def dress_character(body, spec: CharacterSpec):
+    paint_body_clothing(body, spec)
+    return []
+
+
+def fix_eye_shaders() -> None:
+    """Replace missing-texture magenta in eye shaders with a brown iris."""
+    for mat in bpy.data.materials:
+        if not mat or not mat.use_nodes:
+            continue
+        name = mat.name.lower()
+        related = any(token in name for token in ("eye", "iris", "sclera", "cornea"))
+        for node in mat.node_tree.nodes:
+            for ident in ("Base Color", "Color", "Emission Color"):
+                sock = node.inputs.get(ident) if hasattr(node, "inputs") else None
+                if sock is None or not hasattr(sock, "default_value"):
+                    continue
+                try:
+                    r, g, b = sock.default_value[0], sock.default_value[1], sock.default_value[2]
+                except Exception:
+                    continue
+                magenta = r > 0.45 and b > 0.45 and g < 0.28
+                if magenta or (related and node.type in {"BSDF_PRINCIPLED", "EMISSION", "BSDF_GLASS"}):
+                    if magenta:
+                        sock.default_value = (0.20, 0.11, 0.06, 1.0)
+
+
+def nod_head_down(armature) -> None:
+    if armature is None:
+        return
+    ensure_object_mode()
+    set_active(armature)
+    try:
+        bpy.ops.object.mode_set(mode="POSE")
+        for name, degrees in (("neck", 10.0), ("head", 16.0)):
+            bone = armature.pose.bones.get(name)
+            if bone is None:
+                continue
+            bone.rotation_mode = "XYZ"
+            bone.rotation_euler[0] += math.radians(degrees)
+        bpy.ops.object.mode_set(mode="OBJECT")
+        log("  nodded head down")
+    except Exception as exc:
+        log(f"  head nod skipped: {exc}")
+        try:
+            bpy.ops.object.mode_set(mode="OBJECT")
+        except Exception:
+            pass
 
 
 def move_character(objects: Sequence, x: float):
@@ -584,12 +602,12 @@ def build_studio():
     set_socket(bsdf, ("Roughness",), 0.55)
     floor.data.materials.append(mat)
 
-    bpy.ops.mesh.primitive_plane_add(size=20, location=(0, 6.5, 4))
+    bpy.ops.mesh.primitive_plane_add(size=24, location=(0, 7.0, 4))
     backdrop = bpy.context.object
     backdrop.name = "studio_backdrop"
     backdrop.rotation_euler[0] = math.radians(90)
     mat2, bsdf2 = principled("studio_backdrop_mat")
-    set_socket(bsdf2, ("Base Color",), (0.42, 0.43, 0.45, 1.0))
+    set_socket(bsdf2, ("Base Color",), (0.55, 0.56, 0.58, 1.0))
     set_socket(bsdf2, ("Roughness",), 1.0)
     backdrop.data.materials.append(mat2)
 
@@ -602,20 +620,22 @@ def build_studio():
         lamp.data.size = size
         lamp.data.color = color
         lamp.data.shape = "RECTANGLE"
-        lamp.data.size_y = size * 0.7
+        lamp.data.size_y = size * 0.75
+        lamp.data.spread = math.radians(150)
         return lamp
 
-    add_area("key_light", (2.4, -2.8, 2.6), (math.radians(65), 0, math.radians(35)), 900, 2.4, (1.0, 0.96, 0.90))
-    add_area("fill_light", (-3.0, -1.6, 1.8), (math.radians(70), 0, math.radians(-40)), 280, 3.2, (0.82, 0.88, 1.0))
-    add_area("rim_light", (0.2, 3.2, 2.4), (math.radians(50), 0, math.radians(180)), 420, 1.6, (1.0, 0.98, 1.0))
-    add_area("hair_light", (0.0, -0.2, 3.6), (math.radians(0), 0, 0), 160, 1.2, (1.0, 0.95, 0.9))
+    # MB-Lab figures face -Y, so the camera and key light live on that side.
+    add_area("key_light", (2.2, -3.4, 2.8), (math.radians(65), 0, math.radians(35)), 4200, 2.8, (1.0, 0.97, 0.92))
+    add_area("fill_light", (-3.2, -2.6, 1.9), (math.radians(70), 0, math.radians(-40)), 1600, 3.6, (0.86, 0.91, 1.0))
+    add_area("rim_light", (-0.4, 3.4, 2.6), (math.radians(55), 0, math.radians(180)), 2200, 2.0, (1.0, 0.98, 1.0))
+    add_area("top_light", (0.0, -0.6, 4.2), (math.radians(0), 0, 0), 900, 3.0, (1.0, 0.98, 0.95))
 
     world = bpy.data.worlds.new("studio_world")
     bpy.context.scene.world = world
     world.use_nodes = True
     bg = world.node_tree.nodes["Background"]
-    bg.inputs[0].default_value = (0.08, 0.085, 0.09, 1.0)
-    bg.inputs[1].default_value = 0.35
+    bg.inputs[0].default_value = (0.22, 0.23, 0.25, 1.0)
+    bg.inputs[1].default_value = 1.15
     return floor
 
 
@@ -651,7 +671,8 @@ def configure_cycles(samples: int, preview: bool) -> None:
     scene.render.resolution_percentage = 100
     scene.render.film_transparent = False
     scene.view_settings.view_transform = "Filmic"
-    scene.view_settings.look = "Medium High Contrast"
+    scene.view_settings.look = "Medium Contrast"
+    scene.view_settings.exposure = 0.85
     try:
         scene.cycles.max_bounces = 8
         scene.cycles.diffuse_bounces = 3
@@ -726,8 +747,11 @@ def main():
     built = []
     for i, spec in enumerate(specs):
         body, armature = create_character(spec)
-        extras = dress_character(body, armature, spec)
+        extras = dress_character(body, spec)
         apply_pose(armature, spec)
+        nod_head_down(armature)
+        fix_eye_shaders()
+        ensure_object_mode()
         objs = collect_character_objects(body, armature, extras)
         x = (i - (len(specs) - 1) / 2) * CHAR_SPACING
         move_character(objs, x)
@@ -741,22 +765,25 @@ def main():
         hide_collections_except({coll.name, "studio_floor", "studio_backdrop"})
         look = character_look_at(body)
         lo, hi = world_bounds(body)
-        height = hi.z - lo.z
+        height = max(hi.z - lo.z, 0.1)
+        dist = max(2.6, height * 2.05)
         cam_full = add_camera(
             f"cam_full_{spec.key}",
-            (look.x, look.y - max(2.6, height * 1.55), look.z + 0.08),
-            look,
+            (look.x + 0.10, look.y - dist, lo.z + height * 0.52),
+            Vector((look.x, look.y, lo.z + height * 0.50)),
         )
-        cam_full.data.lens = 70
+        cam_full.data.lens = 55
+        cam_full.data.dof.use_dof = False
         render_view(RENDER_DIR / f"{spec.key}_fullbody.png", cam_full, res_full)
 
         head = Vector((look.x, look.y, hi.z - height * 0.12))
         cam_port = add_camera(
             f"cam_port_{spec.key}",
-            (head.x, head.y - 1.15, head.z + 0.02),
+            (head.x + 0.05, head.y - 1.25, head.z),
             head,
         )
         cam_port.data.lens = 85
+        cam_port.data.dof.use_dof = False
         render_view(RENDER_DIR / f"{spec.key}_portrait.png", cam_port, res_port)
 
     if len(built) > 1:
@@ -765,8 +792,8 @@ def main():
         xs = [character_look_at(b).x for b in bodies]
         zs = [world_bounds(b)[1].z for b in bodies]
         center = Vector((sum(xs) / len(xs), 0.0, max(zs) * 0.45))
-        span = max(xs) - min(xs) + 1.6
-        cam_gal = add_camera("cam_gallery", (center.x, -span * 1.05, center.z + 0.15), center)
+        span = max(xs) - min(xs) + 1.8
+        cam_gal = add_camera("cam_gallery", (center.x, -span * 1.15, center.z + 0.2), center)
         cam_gal.data.lens = 50
         render_view(RENDER_DIR / "gallery_full_lineup.png", cam_gal, res_gal)
 

@@ -26,7 +26,7 @@ Each character is exported as:
 
 A lineup render is written to `output/renders/gallery_full_lineup.png`. The generated Blender scene is saved as `output/blend/realistic_humans.blend`.
 
-Figures wear a fitted base layer, T-shirt, and shorts so the models stay suitable for a public repository while still showing realistic proportion, skin, and facial structure.
+Figures wear painted-on athletic tank tops and shorts (body-surface materials) so the models stay suitable for a public repository while still showing realistic proportion, skin, and facial structure.
 
 ## Requirements
 

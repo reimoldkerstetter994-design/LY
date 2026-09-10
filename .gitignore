@@ -6,6 +6,7 @@ __pycache__/
 .DS_Store
 
 # Large generated blend files stay local unless explicitly added
+output/blend/*.blend
 output/blend/*.blend1
 output/blend/*.blend2
 output/*.log
