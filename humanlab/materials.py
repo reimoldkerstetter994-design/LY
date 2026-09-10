@@ -280,7 +280,7 @@ def skin_material(P, lm, name="skin"):
     nt.links.new(pore_h.outputs["Result"], mix_h.inputs[2])
     nt.links.new(micro.outputs["Fac"], mix_h.inputs[3])
 
-    bump = _new(nt, "ShaderNodeBump", inputs={"Strength": 0.42, "Distance": 0.0020})
+    bump = _new(nt, "ShaderNodeBump", inputs={"Strength": 0.66, "Distance": 0.0030})
     nt.links.new(mix_h.outputs[0], bump.inputs["Height"])
 
     if P.sag > 0.0:

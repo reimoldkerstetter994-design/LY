@@ -96,6 +96,19 @@ def _sample_weighted(idx, weight, count, rng):
     return idx[rng.choice(len(idx), size=count, p=p)]
 
 
+def _scatter(p, n, rng, amount):
+    """Spread roots across the local tangent plane.
+
+    Roots taken straight from mesh vertices inherit the grid the mesh was
+    polygonised on, so short dense hair -- stubble especially -- comes out as a
+    woven cross-hatch instead of a shadow.
+    """
+    a = _normalise(np.cross(n, np.array([0.0, 0.0, 1.0]) + 1e-6))
+    b = _normalise(np.cross(n, a))
+    m = len(p)
+    return p + a * rng.normal(0, amount, (m, 1)) + b * rng.normal(0, amount, (m, 1))
+
+
 def scalp_roots(P, lm, verts, normals, count, rng):
     """Pick strand roots on the cranium, respecting a plausible hairline."""
     hw, hd, hh = lm["head_size"]
@@ -106,11 +119,14 @@ def scalp_roots(P, lm, verts, normals, count, rng):
     y = verts[:, 1]
 
     # the hairline climbs at the temples; the nape sits much lower
-    t_front = 0.760 + 0.105 * np.clip(x / hw, 0, 1) ** 2
+    # a slightly wavy front hairline; a clean arc reads as the edge of a wig
+    t_front = (0.760 + 0.105 * np.clip(x / hw, 0, 1) ** 2
+               + 0.016 * np.sin(7.3 * verts[:, 0] / max(hw, 1e-6))
+               + 0.010 * np.sin(17.0 * verts[:, 0] / max(hw, 1e-6)))
     s = np.clip((y - (ym - 0.34 * hd)) / (0.62 * hd), 0.0, 1.0)
     t_min = t_front * (1 - s) + 0.28 * s
     # a soft ramp instead of a hard threshold: the hairline stops looking cut out
-    dens = _smoothstep((t - t_min) / 0.05)
+    dens = _smoothstep((t - t_min) / 0.065)
     dens *= _smoothstep((1.04 - t) / 0.04)
     dens *= _smoothstep((normals[:, 2] + 0.35) / 0.3)
     dens *= 1.0 - 0.9 * _smoothstep((x / hw - 0.84) / 0.12) * _smoothstep(
@@ -256,25 +272,25 @@ def build_hair(P, lm, verts, normals, density=1.0, clay=False, seed=7):
     for sign in (1.0, -1.0):
         c = np.array([sign * bx * 0.98, by, bz + 0.002 * u])
         bw = 1.0 if P.sex == "m" else 0.80
-        rel = (verts - c) / np.array([0.023 * u, 0.016 * u, 0.0075 * u * bw])
+        rel = (verts - c) / np.array([0.021 * u, 0.013 * u, 0.0044 * u * bw])
         m = (np.linalg.norm(rel, axis=1) < 1.0) & (normals[:, 1] < -0.25)
         idx = np.nonzero(m)[0]
         if len(idx) == 0:
             continue
-        n_brow = max(300, int(1600 * density))
+        n_brow = max(300, int(1100 * density))
         pick = idx[rng.integers(0, len(idx), n_brow)]
-        p = verts[pick]
         nn = normals[pick]
+        p = _scatter(verts[pick], nn, rng, 0.0009 * u)
         # brows sweep outwards and slightly up
         d = _normalise(nn * 0.42 + np.array([sign * 0.90, 0.0, 0.24])
                        + rng.normal(0, 0.13, (n_brow, 3)))
-        L = 0.0065 * u * bw * (1.0 + rng.normal(0, 0.22, (n_brow, 1)))
+        L = 0.0054 * u * bw * (1.0 + rng.normal(0, 0.24, (n_brow, 1)))
         paths = np.stack([p, p + d * L * 0.45, p + d * L], axis=1)
         sel.append(paths)
     if sel:
         paths = np.concatenate(sel)
         out.append(_curves_object("hair_brows", paths,
-                                  _radii(2, 5.0e-5 * bw, 2.2e-5 * bw),
+                                  _radii(2, 2.6e-5 * bw, 1.3e-5 * bw),
                                   mat_for(brow_colour)))
 
     # ---- eyelashes --------------------------------------------------------- #
@@ -313,8 +329,8 @@ def build_hair(P, lm, verts, normals, density=1.0, clay=False, seed=7):
         # mandible out towards the ear -- so it can only have soft curved borders.
         chin = (verts - np.array([0.0, ym - 0.60 * hd, zc + 0.115 * hh])) / np.array(
             [0.62 * hw, 0.70 * hd, 0.155 * hh])
-        jaw = (verts - np.array([0.0, ym - 0.16 * hd, zc + 0.085 * hh])) / np.array(
-            [1.06 * hw, 0.92 * hd, 0.135 * hh])
+        jaw = (verts - np.array([0.0, ym - 0.20 * hd, zc + 0.170 * hh])) / np.array(
+            [1.10 * hw, 0.96 * hd, 0.210 * hh])
         dens = np.maximum(
             _smoothstep((1.0 - np.linalg.norm(chin, axis=1)) / 0.45),
             0.85 * _smoothstep((1.0 - np.linalg.norm(jaw, axis=1)) / 0.40),
@@ -334,8 +350,8 @@ def build_hair(P, lm, verts, normals, density=1.0, clay=False, seed=7):
         if len(idx) > 20:
             n_s = max(4000, int(52000 * density))
             pick = _sample_weighted(idx, dens, n_s, rng)
-            p = verts[pick]
             nn = normals[pick]
+            p = _scatter(verts[pick], nn, rng, 0.0011 * u)
             # short hairs standing straight out read as cross-hatching, so lay
             # them over towards gravity
             d = _normalise(nn * 0.45 + np.array([0.0, 0.0, -0.70])
@@ -343,6 +359,6 @@ def build_hair(P, lm, verts, normals, density=1.0, clay=False, seed=7):
             L = 0.0021 * u * (1 + rng.normal(0, 0.35, (n_s, 1)))
             out.append(
                 _curves_object("hair_stubble", np.stack([p, p + d * L], axis=1),
-                               _radii(1, 3.0e-5, 1.8e-5), mat_for(colour))
+                               _radii(1, 2.4e-5, 1.5e-5), mat_for(colour))
             )
     return out

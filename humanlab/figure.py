@@ -751,16 +751,19 @@ def build_legs(f: sdf.Field, P: Proportions, prof: TorsoProfile):
     # depth and leaves the front and back of the crotch webbed together, so the
     # gap has to be a slot that spans the whole thickness of the legs.  A wide
     # blend also rounds the concave junction away to nothing, hence the tight k.
+    # (z, half width, forward reach, exponent).  The slot has to stop short of the
+    # front at the top: reaching the whole depth there takes the genitals with it.
     gap = [
-        ((P.z_crotch + 0.006) * H, 0.0025 * H, 3.4),
-        ((P.z_crotch - 0.012) * H, 0.011 * H, 3.2),
-        (0.5 * (P.z_crotch + P.z_knee) * H, 0.022 * H, 3.0),
-        ((P.z_knee + 0.008) * H, 0.015 * H, 3.0),
-        (0.5 * (P.z_knee + P.z_ankle) * H, 0.028 * H, 3.0),
-        (-0.06 * H, 0.034 * H, 3.0),
+        ((P.z_crotch + 0.006) * H, 0.0025 * H, 0.006 * H, 3.4),
+        ((P.z_crotch - 0.012) * H, 0.011 * H, 0.012 * H, 3.2),
+        ((P.z_crotch - 0.045) * H, 0.019 * H, 0.060 * H, 3.0),
+        (0.5 * (P.z_crotch + P.z_knee) * H, 0.022 * H, 0.17 * H, 3.0),
+        ((P.z_knee + 0.008) * H, 0.015 * H, 0.17 * H, 3.0),
+        (0.5 * (P.z_knee + P.z_ankle) * H, 0.028 * H, 0.17 * H, 3.0),
+        (-0.06 * H, 0.034 * H, 0.17 * H, 3.0),
     ]
     f.sub(
-        sdf.Loft([(z, rx, 0.17 * H, 0.17 * H, cy + 0.005 * H, e) for z, rx, e in gap],
+        sdf.Loft([(z, rx, ryf, 0.17 * H, cy + 0.005 * H, e) for z, rx, ryf, e in gap],
                  cap_blend=0.004 * H),
         k=0.014 * H,
     )
