@@ -117,18 +117,19 @@ def load_character(mblab, spec):
         human.calculate_transformation(transform)
     human.update_materials()
 
-    # Bake the evaluated morph result into an independent standard Blender mesh.
-    depsgraph = bpy.context.evaluated_depsgraph_get()
-    evaluated = source.evaluated_get(depsgraph)
-    mesh = bpy.data.meshes.new_from_object(
-        evaluated, preserve_all_data_layers=True, depsgraph=depsgraph
-    )
+    # The morph result already lives in the base mesh. Copying that 18K topology
+    # keeps the file compact; baking the evaluated level-2 subdivision here
+    # would create millions of vertices per character.
+    mesh = source.data.copy()
     result = bpy.data.objects.new(spec["name"] + "_Body", mesh)
     bpy.context.collection.objects.link(result)
     result.scale = (spec["scale"], spec["scale"], spec["scale"])
-    result.location = (spec["x"], 0, 0.93 * spec["scale"])
+    result.location = (spec["x"], 0, 0)
     for polygon in mesh.polygons:
         polygon.use_smooth = True
+    subdivision = result.modifiers.new("Render subdivision", "SUBSURF")
+    subdivision.levels = 1
+    subdivision.render_levels = 1
 
     # Remove MB-Lab's editable source and rig before creating the next model.
     for obj in list(bpy.data.objects):
@@ -156,25 +157,10 @@ def add_uv(name, location, scale, mat):
 def add_presentation_details(spec):
     scale = spec["scale"]
     x = spec["x"]
-    cloth = make_material(spec["name"] + "_Garment", spec["cloth"], 0.68)
     hair_mat = make_material(spec["name"] + "_Hair", spec["hair"], 0.36)
 
-    # A close-fitting neutral brief blocks intimate details without obscuring
-    # the torso/leg proportions. Two forms give a cleaner waist and leg line.
-    add_uv(
-        spec["name"] + "_Brief_Waist",
-        (x, -0.008, 0.99 * scale),
-        (0.185 * scale, 0.135 * scale, 0.105 * scale),
-        cloth,
-    )
-    add_uv(
-        spec["name"] + "_Brief_Front",
-        (x, -0.095 * scale, 0.925 * scale),
-        (0.145 * scale, 0.060 * scale, 0.105 * scale),
-        cloth,
-    )
-
-    # Restrained scalp volume; unlike the old mannequin build, the face,
+    # MB-Lab's presentation material already masks intimate regions. Add only
+    # restrained scalp volume; unlike the old mannequin build, the face,
     # ears, eyes, mouth, fingers, and toes all come from the anatomical mesh.
     head_z = (1.73 if spec["id"].startswith("m_") else 1.69) * scale
     hair = add_uv(
@@ -278,6 +264,13 @@ except TypeError:
 # Keep texture maps inside the .blend so the result is portable.
 for image in bpy.data.images:
     if image.source == "FILE" and image.filepath:
+        # Some MB-Lab image nodes preserve the add-on install path embedded in
+        # its source library. Resolve those paths to the selected checkout.
+        local_texture = os.path.join(
+            MBLAB_ROOT, "data", "textures", os.path.basename(image.filepath)
+        )
+        if os.path.isfile(local_texture):
+            image.filepath = local_texture
         try:
             image.pack()
         except RuntimeError:
