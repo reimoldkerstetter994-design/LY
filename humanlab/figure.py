@@ -199,8 +199,19 @@ def build_torso(f: sdf.Field, P: Proportions, prof: TorsoProfile):
         # centre goes to +y of the loft surface; put it at -y and the breast is a
         # sphere bolted to the front of the ribcage, held on by its fillet.
         cy = prof.front_at(cx, cz) + 0.32 * br
+        # The fillet at the root has to stay a modest fraction of how far the
+        # mass stands off the chest.  At 0.075H the effective radius came out
+        # around 26 mm against a 43 mm projection, and the smooth union rounded
+        # the whole breast back into the ribcage: a flat chest with a nipple on
+        # it, and the inframammary crease left stranded in the open.
         f.add(sdf.Ellipsoid((cx, cy, cz), (br * 1.04, br * 1.00, br * 0.98)),
-              k=0.075 * H, mirror=True)
+              k=0.036 * H, mirror=True)
+
+        def breast_surface(x, z):
+            """Front y of the breast dome, for parking the nipple on it."""
+            t = (1.0 - ((x - cx) / (br * 1.04)) ** 2
+                 - ((z - cz) / (br * 0.98)) ** 2)
+            return cy - br * float(np.sqrt(max(t, 0.04)))
         # lower pole carries most of the volume, which is what makes a teardrop
         f.add(
             sdf.Ellipsoid((cx - 0.002 * H, cy + 0.16 * br, cz - 0.42 * br),
@@ -217,24 +228,32 @@ def build_torso(f: sdf.Field, P: Proportions, prof: TorsoProfile):
             k=0.065 * H,
             mirror=True,
         )
-        npt = (cx + 0.004 * H, cy - 0.92 * br, cz - 0.30 * br)
-        f.add(sdf.Ellipsoid(npt, (0.012 * H, 0.006 * H, 0.012 * H)), k=0.014 * H,
+        # The nipple belongs on the dome, not at a fixed depth from its centre:
+        # measured from the centre it ends up either buried or standing at the
+        # apex of a cone, depending on how much the root fillet took away.
+        nx = cx + 0.004 * H
+        nz = cz - 0.30 * br
+        nsy = breast_surface(nx, nz)
+        f.add(sdf.Ellipsoid((nx, nsy + 0.0034 * H, nz),
+                            (0.0130 * H, 0.0060 * H, 0.0130 * H)), k=0.012 * H,
               mirror=True)   # areola
-        f.add(sdf.Ellipsoid((npt[0], npt[1] - 0.0016 * H, npt[2]),
-                            (0.0042 * H, 0.0046 * H, 0.0042 * H)), k=0.005 * H,
+        f.add(sdf.Ellipsoid((nx, nsy - 0.0012 * H, nz),
+                            (0.0044 * H, 0.0048 * H, 0.0044 * H)), k=0.005 * H,
               mirror=True)
-        # inframammary fold: a crease on the chest wall under the breast, so it is
-        # measured from that wall and not from the breast's own centre
-        wall = prof.front_at(cx, cz) - (0.008 - 0.0022) * H
-        f.sub(
-            sdf.Capsule(
-                (cx - 0.022 * H, wall, cz - 1.02 * br),
-                (cx + 0.026 * H, wall + 0.004 * H, cz - 0.92 * br),
-                0.008 * H,
-            ),
-            k=0.012 * H,
-            mirror=True,
-        )
+        # Inframammary fold: a short arc following the underside of the breast.
+        # A single long capsule laid across the ribs reads as an incision, since
+        # the chest wall curves away from it along its length while the fold
+        # itself does not follow the breast at all.
+        for t in np.linspace(-0.80, 0.80, 7):
+            fx = cx + t * br * 0.78
+            fz = cz - br * (0.96 - 0.13 * t * t)
+            r = 0.0075 * H
+            f.sub(
+                sdf.Ball((fx, front_groove(prof, fz, r, 0.0034 * H,
+                                           bulge=0.0035 * H, x=fx), fz), r),
+                k=0.007 * H,
+                mirror=True,
+            )
     else:
         pz = zn + 0.019 * H - 0.012 * H * P.sag
         px = 0.046 * H
