@@ -175,13 +175,27 @@ def polygonize(
     iso: float = 0.0,
     margin: float = 0.0,
     slab_cells: int = 24,
+    region: tuple[np.ndarray, np.ndarray] | None = None,
 ) -> Mesh:
-    """Extract the ``iso`` surface of ``field`` at the given sample spacing."""
+    """Extract the ``iso`` surface of ``field`` at the given sample spacing.
+
+    ``region`` clips the sampled volume to a box.  Cost goes as the cube of the
+    resolution, so a face needs a spacing the whole body cannot afford: eyelids and
+    a lip seam are a millimetre or two of relief, and sampled at the 4 mm a full
+    figure is comfortable at they come out as stair steps.  Meshing a head alone at
+    1.3 mm costs less than the body does at 4 mm.  The surface is left open where
+    the box cuts it, so keep the cut outside the frame.
+    """
     ops = list(field.ops)
     if not ops:
         raise ValueError("cannot polygonize an empty field")
 
     lo, hi = field.bounds(margin=margin + 3.0 * voxel)
+    if region is not None:
+        lo = np.maximum(lo, np.asarray(region[0], dtype=np.float64))
+        hi = np.minimum(hi, np.asarray(region[1], dtype=np.float64))
+        if np.any(hi - lo <= 2.0 * voxel):
+            raise ValueError("region does not overlap the field")
     xs = _grid_axis(lo[0], hi[0], voxel)
     ys = _grid_axis(lo[1], hi[1], voxel)
     zs = _grid_axis(lo[2], hi[2], voxel)

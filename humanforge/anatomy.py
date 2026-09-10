@@ -26,8 +26,13 @@ Age = Literal["child", "teen", "adult", "elder"]
 class Pose:
     """Joint angles in degrees; zero is a straight, symmetric standing pose."""
 
-    arm_abduction: float = 52.0
-    """Angle of the upper arm away from the body (90 would be a T-pose)."""
+    arm_abduction: float = 36.0
+    """Angle of the upper arm away from the body (90 would be a T-pose).
+
+    A standing figure holds its arms around 10 degrees out, but that lets the
+    forearm blend into the hip and fuses the hand to the thigh, so the default is
+    the shallowest A-pose that keeps a gap all the way down.
+    """
 
     arm_forward: float = 6.0
     """How far the upper arms swing towards the front."""

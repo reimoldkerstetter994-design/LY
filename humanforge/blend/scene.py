@@ -411,11 +411,12 @@ def stage(
     studio: Studio = Studio(),
     smoothing: int = 4,
     clay: bool = False,
+    region: tuple[np.ndarray, np.ndarray] | None = None,
 ) -> Staged:
     """Polygonize ``figure``, dress it and light it."""
     scene = reset_scene()
 
-    mesh = polygonize(figure.body, voxel=voxel)
+    mesh = polygonize(figure.body, voxel=voxel, region=region)
     # Carving the eye sockets and mouth leaves sealed pockets inside the head;
     # they never show, but random-walk subsurface scattering traces real paths
     # through the volume and would find them.

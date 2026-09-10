@@ -28,6 +28,8 @@ except ImportError:  # pragma: no cover - the message is the whole point
         "  blender -b --python scripts/render.py -- --preset male_average"
     )
 
+import numpy as np
+
 from humanforge import presets
 from humanforge.blend import looks
 from humanforge.blend.render import RenderSettings, configure, render
@@ -67,8 +69,28 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="matte grey instead of skin, for judging form rather than shading",
     )
+    parser.add_argument(
+        "--crop",
+        choices=("head",),
+        help="mesh only this region, so a close-up can afford a fine voxel",
+    )
     parser.add_argument("--save-blend", action="store_true")
     return parser.parse_args(argv)
+
+
+def head_region(figure) -> tuple[np.ndarray, np.ndarray]:
+    """A box round the head, wide enough that its cut edges stay out of frame.
+
+    Meshing cost goes as the cube of the resolution, so the spacing a face needs is
+    one a whole figure cannot afford.  Restricting the volume is what makes a
+    portrait at 1.3 mm cheaper than a full figure at 4 mm.
+    """
+    centre = figure.landmarks["head_centre"]
+    reach = figure.measures.head_height * 1.35
+    return (
+        centre - np.array([reach, reach, reach * 1.9]),
+        centre + np.array([reach, reach, reach * 0.75]),
+    )
 
 
 def main(argv: list[str]) -> int:
@@ -96,6 +118,7 @@ def main(argv: list[str]) -> int:
             studio=studio,
             smoothing=args.smoothing,
             clay=args.clay,
+            region=head_region(figure) if args.crop == "head" else None,
         )
         volume = staged.mesh.volume()
         print(
