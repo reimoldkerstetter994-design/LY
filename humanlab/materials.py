@@ -320,9 +320,11 @@ def eye_material(iris="brown", name="eye"):
     nt.links.new(xz.outputs["Vector"], rad.inputs[0])
 
     iris_col = srgb(*IRIS_COLOURS[iris])
-    sclera = srgb(238, 234, 230)
+    # The white of the eye is nowhere near white: it sits in the shade of the
+    # lids and brow, and rendering it at paper value is what makes CG eyes stare.
+    sclera = srgb(196, 189, 182)
     limbus = srgb(46, 34, 28)
-    pupil = (0.006, 0.005, 0.005, 1.0)
+    pupil = (0.004, 0.0035, 0.0035, 1.0)
 
     # radial fibre detail in the iris
     fib_map = _new(nt, "ShaderNodeMapping")
@@ -337,7 +339,7 @@ def eye_material(iris="brown", name="eye"):
     ramp_in = rad.outputs["Value"]
     col = iris_mix
     # pupil
-    col = _mix_colour(nt, _falloff(nt, ramp_in, 0.0017, 0.0022), col, pupil)
+    col = _mix_colour(nt, _falloff(nt, ramp_in, 0.0022, 0.0027), col, pupil)
     # limbus ring then sclera
     lim = _new(nt, "ShaderNodeMapRange", clamp=True)
     lim.inputs["From Min"].default_value = 0.0050
@@ -363,6 +365,14 @@ def eye_material(iris="brown", name="eye"):
     vf.inputs["To Max"].default_value = 0.55
     nt.links.new(vein.outputs["Fac"], vf.inputs["Value"])
     sclera_col = _mix_colour(nt, vf.outputs["Result"], sclera, srgb(196, 122, 116))
+    # the globe darkens away from the cornea, where the lids never let light in
+    shade = _new(nt, "ShaderNodeMapRange", clamp=True)
+    shade.inputs["From Min"].default_value = 0.0070
+    shade.inputs["From Max"].default_value = 0.0115
+    shade.inputs["To Min"].default_value = 0.0
+    shade.inputs["To Max"].default_value = 0.72
+    nt.links.new(ramp_in, shade.inputs["Value"])
+    sclera_col = _mix_colour(nt, shade.outputs["Result"], sclera_col, srgb(96, 84, 78))
     col = _mix_colour(nt, scl.outputs["Result"], col, sclera_col)
 
     nt.links.new(col, bsdf.inputs["Base Color"])

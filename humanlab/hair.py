@@ -294,29 +294,39 @@ def build_hair(P, lm, verts, normals, density=1.0, clay=False, seed=7):
                                   mat_for(brow_colour)))
 
     # ---- eyelashes --------------------------------------------------------- #
+    # Lashes are only convincing when they leave the lid margin itself, so the
+    # rim is taken from the head build rather than guessed: planted from the
+    # middle of the lid they start out already buried and read as a smudge.
     ex, ey, ez = lm["eye_centre"]
     er = lm["eye_radius"]
+    slit_z, slit_h, slit_w = lm.get("fissure", (ez, er * 0.34, er * 1.13))
     lashes = []
     for sign in (1.0, -1.0):
         for upper in (True, False):
-            n_l = max(40, int((150 if upper else 70) * density))
-            a = rng.uniform(-1.15, 1.15, n_l)
-            zz = ez + (er * 0.52 if upper else -er * 0.62) * np.cos(a * 0.8)
-            xx = sign * ex + np.sin(a) * er * 1.02
-            yy = ey - er * 0.92 + np.abs(np.sin(a)) * er * 0.12
+            n_l = max(40, int((190 if upper else 90) * density))
+            # parametrise along the rim; taper the two canthi to nothing
+            a = rng.uniform(-0.93, 0.93, n_l) * (np.pi / 2)
+            rim = np.cos(a)
+            xx = sign * ex + np.sin(a) * slit_w
+            zz = slit_z + (slit_h if upper else -slit_h) * rim
+            # the margin curls forward off the globe as it leaves the corners
+            yy = ey - np.sqrt(np.maximum(er * er - (zz - ez) ** 2
+                                         - (xx - sign * ex) ** 2, 0.0)) - 0.0004 * u
             p = np.stack([xx, yy, zz], 1)
             d = np.stack([
-                np.sin(a) * 0.35 + rng.normal(0, 0.1, n_l),
-                -np.ones(n_l) * 0.9,
-                (0.85 if upper else -0.75) * np.ones(n_l) + rng.normal(0, 0.12, n_l),
+                np.sin(a) * 0.45 + rng.normal(0, 0.12, n_l),
+                -np.ones(n_l) * 1.0,
+                (1.05 if upper else -0.85) * rim + rng.normal(0, 0.10, n_l),
             ], 1)
             d = _normalise(d)
-            L = (0.0085 if upper else 0.005) * u * (1 + rng.normal(0, 0.2, (n_l, 1)))
+            L = (0.0092 if upper else 0.0048) * u * (0.45 + 0.55 * rim)[:, None] * (
+                1 + rng.normal(0, 0.20, (n_l, 1)))
             mid = p + d * L * 0.5
-            tipd = _normalise(d + np.array([0.0, -0.3, 0.55 if upper else -0.4]))
-            lashes.append(np.stack([p, mid, mid + tipd * L * 0.55], axis=1))
+            # the outward flick: lashes curve away from the eye along their length
+            tipd = _normalise(d + np.array([0.0, -0.25, 0.85 if upper else -0.45]))
+            lashes.append(np.stack([p, mid, mid + tipd * L * 0.6], axis=1))
     paths = np.concatenate(lashes)
-    out.append(_curves_object("hair_lashes", paths, _radii(2, 5.5e-5, 2.5e-5),
+    out.append(_curves_object("hair_lashes", paths, _radii(2, 6.5e-5, 2.2e-5),
                               mat_for("black" if not clay else "dark")))
 
     # ---- stubble ----------------------------------------------------------- #

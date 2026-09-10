@@ -404,7 +404,10 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
     eye_r = EYE_RADIUS * (0.97 if P.sex == "c" else 1.0)
     eye_x = 0.0315 * u
     eye_z = Z(0.530)
-    eye_y = sy(eye_x, 0.530) + eye_r * 0.62
+    # The globe is seated so only a couple of millimetres of cornea stand ahead
+    # of the surrounding face.  Push it forward and no amount of lid work saves
+    # it: it reads as a ball resting in a socket rather than an eye.
+    eye_y = sy(eye_x, 0.530) + eye_r * 0.80
     f.subk(  # orbital hollow, carved before the lids are laid over the globe
         sdf.Ellipsoid((eye_x, sy(eye_x, 0.530) + 0.005 * u, eye_z + 0.001 * u),
                       (eye_r * 1.45, eye_r * 0.95, eye_r * 1.25)),
@@ -413,27 +416,39 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
     )
     f.addk(  # lids wrapping the globe
         sdf.Ellipsoid((eye_x, eye_y + 0.0012 * u, eye_z),
-                      (eye_r * 1.50, eye_r * 1.12, eye_r * 1.14)),
+                      (eye_r * 1.46, eye_r * 1.12, eye_r * 1.16)),
         k=0.009 * u,
         mirror=True,
     )
-    slit_z = eye_z - eye_r * (0.16 + 0.10 * sag)
+    # The aperture has to come out *smaller* than the iris, because the lids
+    # overlap it top and bottom -- an 11 mm iris behind a 10 mm fissure.  Cut it
+    # any wider and the whole disc floats in white, which is the single loudest
+    # tell of a computer-generated eye.  The blend widens the hole in every
+    # direction, so it has to be counted against the radii, not added to them.
+    slit_z = eye_z - eye_r * (0.09 + 0.10 * sag)
+    slit_k = 0.0013 * u
     f.subk(  # palpebral fissure
         sdf.Ellipsoid((eye_x, eye_y - eye_r * 0.58, slit_z),
-                      (eye_r * 1.32, eye_r * 0.95, eye_r * (0.43 - 0.10 * sag))),
-        k=0.0022 * u,
+                      (eye_r * 1.13, eye_r * 0.95, eye_r * (0.335 - 0.09 * sag))),
+        k=slit_k,
         mirror=True,
     )
     f.addk(  # lower lid ridge
-        sdf.Capsule((eye_x - eye_r * 0.80, eye_y - eye_r * 0.76, eye_z - eye_r * 0.60),
-                    (eye_x + eye_r * 0.80, eye_y - eye_r * 0.66, eye_z - eye_r * 0.56),
-                    0.0020 * u),
-        k=0.0045 * u,
+        sdf.Capsule((eye_x - eye_r * 0.78, eye_y - eye_r * 0.74, eye_z - eye_r * 0.56),
+                    (eye_x + eye_r * 0.78, eye_y - eye_r * 0.64, eye_z - eye_r * 0.52),
+                    0.0022 * u),
+        k=0.0042 * u,
+        mirror=True,
+    )
+    f.addk(  # lacrimal caruncle, filling the medial corner
+        sdf.Ellipsoid((eye_x - eye_r * 1.02, eye_y - eye_r * 0.56, slit_z + eye_r * 0.04),
+                      (eye_r * 0.20, eye_r * 0.16, eye_r * 0.20)),
+        k=0.0022 * u,
         mirror=True,
     )
     f.subk(  # crease above the lid
-        sdf.Capsule((eye_x - eye_r * 0.70, eye_y - eye_r * 0.70, eye_z + eye_r * 0.78),
-                    (eye_x + eye_r * 0.80, eye_y - eye_r * 0.55, eye_z + eye_r * 0.72),
+        sdf.Capsule((eye_x - eye_r * 0.70, eye_y - eye_r * 0.70, eye_z + eye_r * 0.80),
+                    (eye_x + eye_r * 0.80, eye_y - eye_r * 0.55, eye_z + eye_r * 0.74),
                     0.0022 * u),
         k=0.0032 * u,
         mirror=True,
@@ -510,6 +525,9 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
     return {
         "eye_centre": (eye_x, eye_y, eye_z),
         "eye_radius": eye_r,
+        # Where the lid margins actually ended up, so lashes can be planted on
+        # the rim rather than somewhere in the middle of the lid.
+        "fissure": (slit_z, eye_r * (0.335 - 0.09 * sag) + slit_k, eye_r * 1.13 + slit_k),
         "head_centre": (0.0, 0.5 * (fy(Z(0.6)) + by(Z(0.6))), Z(0.60)),
         "head_size": (hw, hd, hh),
         "head_profile": prof,
