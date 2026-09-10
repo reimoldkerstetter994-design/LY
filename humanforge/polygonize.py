@@ -318,6 +318,40 @@ def _outward_reference(
     return (centre_out - centre_in) * voxel
 
 
+def largest_component(mesh: Mesh) -> Mesh:
+    """Keep only the biggest connected shell.
+
+    Carving the eye sockets and the mouth leaves small closed pockets inside the
+    head that never show, but they are not free: subsurface scattering traces
+    real paths through the volume, so a stray shell floating behind an eye
+    darkens it.  Connectivity is resolved by repeatedly relabelling each
+    triangle with the smallest label among its three corners, which converges in
+    a number of passes proportional to the graph diameter rather than to the
+    vertex count.
+    """
+    if mesh.n_tris == 0:
+        return mesh
+
+    label = np.arange(mesh.n_verts, dtype=np.int64)
+    while True:
+        corner = label[mesh.tris]
+        lowest = corner.min(axis=1)
+        updated = label.copy()
+        np.minimum.at(updated, mesh.tris.reshape(-1), np.repeat(lowest, 3))
+        # Collapse chains so a long thin shell does not need one pass per edge.
+        updated = updated[updated]
+        if np.array_equal(updated, label):
+            break
+        label = updated
+
+    keep = np.bincount(label[mesh.tris[:, 0]]).argmax()
+    tris = mesh.tris[label[mesh.tris[:, 0]] == keep]
+    used = np.unique(tris)
+    remap = np.full(mesh.n_verts, -1, dtype=np.int32)
+    remap[used] = np.arange(used.size, dtype=np.int32)
+    return Mesh(mesh.verts[used], remap[tris].astype(np.int32))
+
+
 def _vertex_neighbours(mesh: Mesh) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     edges = np.concatenate(
         [mesh.tris[:, [0, 1]], mesh.tris[:, [1, 2]], mesh.tris[:, [2, 0]]]

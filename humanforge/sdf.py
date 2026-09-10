@@ -326,6 +326,31 @@ class RoundBox(Primitive):
 
 
 @dataclass
+class Intersection(Primitive):
+    """The region common to several primitives, treated as a single shape.
+
+    Needed wherever a cut has to be confined to a shell.  Opening the eyelids,
+    for instance, means removing the tissue that lies inside the lens shaped
+    aperture *and* close to the eyeball; neither condition describes it alone,
+    and a cut of fixed depth cannot satisfy both, because the tissue in front of
+    the globe is a few millimetres thick at the middle of the aperture and over
+    a centimetre at its corners.
+    """
+
+    parts: Sequence[Primitive]
+
+    def bounds(self) -> tuple[Vec3, Vec3]:
+        los, his = zip(*(part.bounds() for part in self.parts))
+        return np.maximum.reduce(los), np.minimum.reduce(his)
+
+    def distance(self, xs: np.ndarray, ys: np.ndarray, zs: np.ndarray) -> np.ndarray:
+        return np.maximum.reduce([part.distance(xs, ys, zs) for part in self.parts])
+
+    def distance_points(self, points: np.ndarray) -> np.ndarray:
+        return np.maximum.reduce([part.distance_points(points) for part in self.parts])
+
+
+@dataclass
 class HalfSpace(Primitive):
     """Everything on the negative side of a plane; unbounded on purpose."""
 
@@ -421,6 +446,47 @@ def evaluate_points(ops: Iterable[Op], points: np.ndarray) -> np.ndarray:
         else:  # pragma: no cover
             raise ValueError(f"unknown op mode {op.mode!r}")
     return field
+
+
+def surface_along(
+    ops: Iterable[Op],
+    inside: Vec3,
+    direction: Vec3,
+    reach: float,
+    steps: int = 32,
+    refine: int = 24,
+) -> Vec3:
+    """Where the surface of ``ops`` lies from ``inside`` along ``direction``.
+
+    Small concave features -- a navel, an inguinal crease, the hollow above a
+    clavicle -- have to be cut relative to the surface they sit in, and that
+    surface is not the lofted trunk: every muscle mass added on top of the loft
+    has already moved it, by a centimetre or two, differently at every height.
+    Placing such a feature by offsetting from the loft is what turns a shallow
+    crease into a bored hole, so the actual surface is found by marching out from
+    a point known to be inside and bisecting the crossing.
+    """
+    ops = list(ops)
+    origin = as_v3(inside)
+    step = normalize(direction)
+    samples = origin[None, :] + np.linspace(0.0, reach, steps)[:, None] * step[None, :]
+    values = evaluate_points(ops, samples)
+
+    outside = np.flatnonzero(values > 0.0)
+    if outside.size == 0:
+        return origin + step * reach
+    index = int(outside[0])
+    if index == 0:
+        return origin
+
+    low, high = float(index - 1) / (steps - 1) * reach, float(index) / (steps - 1) * reach
+    for _ in range(refine):
+        middle = 0.5 * (low + high)
+        if float(evaluate_points(ops, origin + step * middle)) > 0.0:
+            high = middle
+        else:
+            low = middle
+    return origin + step * (0.5 * (low + high))
 
 
 def evaluate(
