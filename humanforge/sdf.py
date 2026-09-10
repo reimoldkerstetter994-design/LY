@@ -293,6 +293,92 @@ class RoundCone(Primitive):
 
 
 @dataclass
+class Loft(Primitive):
+    """A stack of horizontal elliptical sections: one solid, not a chain of them.
+
+    This is how a head or a trunk is actually described -- a table of sections at
+    stated heights -- and building it out of :class:`RoundCone` segments instead
+    goes wrong in two compounding ways.
+
+    A round cone is the convex hull of two balls, so the ball at its wider end
+    bulges out past its own station and sets the width of every section within a
+    radius below it.  On a head whose widest section is 60 mm across, that ball
+    reaches a full 60 mm down towards the chin, and the section at the jaw comes
+    out 9 mm wider than the table asks for.  Narrowing the table does not help,
+    because the number was never coming from that station.
+
+    Truncating the segments to flat ends fixes the width and breaks something
+    else: the ends are perpendicular to each segment's own axis, and a head's
+    centre line leans back by up to 30 degrees where the skull overhangs the neck,
+    so consecutive segments meet along a wedge rather than a shared plane and the
+    surface tears open at the joint.
+
+    Interpolating the profile directly avoids both.  The sections stay horizontal
+    and stay exactly as wide as the table says, there are no joints to crease or
+    tear, and the whole loft is a single op, so the feature masses blend against
+    one smooth surface instead of against whichever segment they happen to land on.
+
+    The distance returned is the exact distance to the surface *along the radial
+    ray*, capped at the ends the way an extrusion is.  That is not the true
+    distance where the surface is steeply inclined, but it has the right zero set
+    and is close to metric near the surface, which is what the blends need.
+    """
+
+    origin: Vec3
+    rot: np.ndarray
+    """Columns are (lateral, depth, stacking axis)."""
+    heights: np.ndarray
+    half_width: np.ndarray
+    half_depth: np.ndarray
+    offset: np.ndarray
+    """Where each section's centre sits along the depth axis."""
+
+    def __post_init__(self) -> None:
+        self._z = np.asarray(self.heights, dtype=np.float64)
+        self._w = np.asarray(self.half_width, dtype=np.float64)
+        self._d = np.asarray(self.half_depth, dtype=np.float64)
+        self._o = np.asarray(self.offset, dtype=np.float64)
+        if not (self._z.size == self._w.size == self._d.size == self._o.size):
+            raise ValueError("loft profile arrays must be the same length")
+        if self._z.size < 2 or np.any(np.diff(self._z) <= 0.0):
+            raise ValueError("loft heights must be ascending")
+
+    def bounds(self) -> tuple[Vec3, Vec3]:
+        reach = max(self._w.max(), np.abs(self._o).max() + self._d.max())
+        half = v3(reach, reach, 0.5 * (self._z[-1] - self._z[0]))
+        centre = as_v3(self.origin) + np.asarray(self.rot) @ v3(
+            0.0, 0.0, 0.5 * (self._z[0] + self._z[-1])
+        )
+        return self._rotated_bounds(centre, half, np.asarray(self.rot))
+
+    def _origin(self) -> Vec3:
+        return as_v3(self.origin)
+
+    def _orientation(self) -> np.ndarray | None:
+        return np.asarray(self.rot, dtype=np.float64)
+
+    def _shape(self, lx, ly, lz):
+        low, high = self._z[0], self._z[-1]
+        level = np.clip(lz, low, high)
+        w = np.interp(level, self._z, self._w)
+        d = np.interp(level, self._z, self._d)
+        dy = ly - np.interp(level, self._z, self._o)
+
+        # Normalised elliptical radius: 1 exactly on the surface.
+        scaled = np.sqrt((lx / w) ** 2 + (dy / d) ** 2)
+        # Dividing the true radius by it gives the ellipse's own radius along the
+        # same ray, which turns the normalised figure back into millimetres.
+        true = np.sqrt(lx * lx + dy * dy)
+        ray = np.where(scaled > _EPS, true / np.maximum(scaled, _EPS), np.minimum(w, d))
+        radial = (scaled - 1.0) * ray
+
+        axial = np.maximum(low - lz, lz - high)
+        return np.minimum(np.maximum(radial, axial), 0.0) + np.sqrt(
+            np.maximum(radial, 0.0) ** 2 + np.maximum(axial, 0.0) ** 2
+        )
+
+
+@dataclass
 class RoundBox(Primitive):
     """Box with rounded corners; used for palms, soles and nails."""
 
