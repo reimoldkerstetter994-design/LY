@@ -155,23 +155,13 @@ def add_uv(name, location, scale, mat):
 
 
 def add_presentation_details(spec):
-    scale = spec["scale"]
     x = spec["x"]
-    hair_mat = make_material(spec["name"] + "_Hair", spec["hair"], 0.36)
 
-    # MB-Lab's presentation material already masks intimate regions. Add only
-    # restrained scalp volume; unlike the old mannequin build, the face,
-    # ears, eyes, mouth, fingers, and toes all come from the anatomical mesh.
-    head_z = (1.73 if spec["id"].startswith("m_") else 1.69) * scale
-    hair = add_uv(
-        spec["name"] + "_Hair",
-        (x, 0.012, head_z),
-        (0.105 * scale, 0.095 * scale, 0.075 * scale),
-        hair_mat,
+    # MB-Lab's presentation material masks intimate regions. The face, ears,
+    # eyes, mouth, fingers, and toes all come from the anatomical mesh.
+    bpy.ops.object.text_add(
+        location=(x, 0.32, 0.075), rotation=(math.pi / 2, 0, 0)
     )
-    hair.scale.y = 1.05
-
-    bpy.ops.object.text_add(location=(x, -0.02, 0.012))
     label = bpy.context.object
     label.name = spec["name"] + "_Label"
     label.data.body = spec["label"]
