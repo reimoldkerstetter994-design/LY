@@ -306,18 +306,21 @@ def build_hair(P, lm, verts, normals, density=1.0, clay=False, seed=7):
     # ---- stubble ----------------------------------------------------------- #
     if P.sex == "m" and P.hair != "bald" and density > 0.25:
         zc = lm["chin_z"]
-        t = (verts[:, 2] - zc) / hh
         ym = lm["head_centre"][1]
-        x = np.abs(verts[:, 0])
-        # beard density: full on the chin and jaw, fading up the cheek, with a
-        # sideburn strip in front of the ear and nothing on the lips or nose
-        dens = _smoothstep((0.32 - t) / 0.10) * _smoothstep((t + 0.015) / 0.05)
-        dens *= _smoothstep((ym + 0.20 * hd - verts[:, 1]) / (0.25 * hd))
-        dens *= 1.0 - 0.85 * _smoothstep((t - 0.20) / 0.12) * _smoothstep(
-            (0.62 * hw - x) / (0.25 * hw))
-        side = _smoothstep((x - 0.72 * hw) / (0.18 * hw)) * _smoothstep((0.52 - t) / 0.12) \
-            * _smoothstep((t - 0.20) / 0.10)
-        dens = np.maximum(dens, side * 0.9)
+        # A band in z and a plane in y gave the beard straight edges, which read
+        # as a rectangle painted on the face.  Instead the region is the union of
+        # two rounded lobes -- one over the chin and moustache, one following the
+        # mandible out towards the ear -- so it can only have soft curved borders.
+        chin = (verts - np.array([0.0, ym - 0.60 * hd, zc + 0.115 * hh])) / np.array(
+            [0.62 * hw, 0.70 * hd, 0.155 * hh])
+        jaw = (verts - np.array([0.0, ym - 0.16 * hd, zc + 0.085 * hh])) / np.array(
+            [1.06 * hw, 0.92 * hd, 0.135 * hh])
+        dens = np.maximum(
+            _smoothstep((1.0 - np.linalg.norm(chin, axis=1)) / 0.45),
+            0.85 * _smoothstep((1.0 - np.linalg.norm(jaw, axis=1)) / 0.40),
+        )
+        # nothing behind the ears, on the lips or on the nose
+        dens *= _smoothstep((ym + 0.30 * hd - verts[:, 1]) / (0.55 * hd))
         lx, ly, lz = lm["lip"]
         rel = (verts - np.array([lx, ly - 0.004 * u, lz])) / np.array(
             [0.030 * u, 0.016 * u, 0.0085 * u])
@@ -326,21 +329,20 @@ def build_hair(P, lm, verts, normals, density=1.0, clay=False, seed=7):
         rel = (verts - np.array([nx, ny + 0.008 * u, nz])) / np.array(
             [0.020 * u, 0.020 * u, 0.026 * u])
         dens *= _smoothstep((np.linalg.norm(rel, axis=1) - 0.9) / 0.4)
-        dens *= _smoothstep((normals[:, 2] + 0.75) / 0.4)
-        idx = np.nonzero(dens > 0.01)[0]
+        dens *= _smoothstep((normals[:, 2] + 0.70) / 0.45)
+        idx = np.nonzero(dens > 0.02)[0]
         if len(idx) > 20:
-            n_s = max(3000, int(38000 * density))
+            n_s = max(4000, int(52000 * density))
             pick = _sample_weighted(idx, dens, n_s, rng)
             p = verts[pick]
             nn = normals[pick]
             # short hairs standing straight out read as cross-hatching, so lay
             # them over towards gravity
-            d = _normalise(nn * 0.55 + np.array([0.0, 0.0, -0.55])
-                           + rng.normal(0, 0.42, (n_s, 3)))
-            L = 0.0026 * u * (1 + rng.normal(0, 0.32, (n_s, 1)))
+            d = _normalise(nn * 0.45 + np.array([0.0, 0.0, -0.70])
+                           + rng.normal(0, 0.50, (n_s, 3)))
+            L = 0.0021 * u * (1 + rng.normal(0, 0.35, (n_s, 1)))
             out.append(
                 _curves_object("hair_stubble", np.stack([p, p + d * L], axis=1),
-                               _radii(1, 4.2e-5, 2.8e-5),
-                               mat_for("black" if colour in ("dark", "black") else colour))
+                               _radii(1, 3.0e-5, 1.8e-5), mat_for(colour))
             )
     return out

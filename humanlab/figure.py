@@ -29,18 +29,19 @@ def _rotx(prim, angle, pivot):
     return sdf.Transformed(prim, euler=(angle, 0.0, 0.0), pivot=pivot)
 
 
-def front_groove(prof, z, r, depth, bulge=0.0):
+def front_groove(prof, z, r, depth, bulge=0.0, x=0.0):
     """Centre y for a cutter of radius r that leaves a groove `depth` deep.
 
     The centre must stay closer to the skin than its own radius, otherwise the
     cutter carves a sealed cavity and leaves a paper-thin wall behind.  `bulge`
-    accounts for muscle volume fused in front of the lofted torso.
+    accounts for muscle volume fused in front of the lofted torso, and `x` for
+    how far the torso has already curved away at that lateral offset.
     """
-    return prof.front(z) - bulge + max(r - depth, 0.15 * r)
+    return prof.front_at(x, z) - bulge + max(r - depth, 0.15 * r)
 
 
-def back_groove(prof, z, r, depth, bulge=0.0):
-    return prof.back(z) + bulge - max(r - depth, 0.15 * r)
+def back_groove(prof, z, r, depth, bulge=0.0, x=0.0):
+    return prof.back_at(x, z) + bulge - max(r - depth, 0.15 * r)
 
 
 class TorsoProfile:
@@ -53,11 +54,13 @@ class TorsoProfile:
         self.ryf = np.array([r[2] for r in s])
         self.ryb = np.array([r[3] for r in s])
         self.cy = np.array([r[4] for r in s])
+        self.ex = np.array([r[5] for r in s])
         zz, rx = sdf._smooth_table(self.z, self.rx)
         _, ryf = sdf._smooth_table(self.z, self.ryf)
         _, ryb = sdf._smooth_table(self.z, self.ryb)
         _, cy = sdf._smooth_table(self.z, self.cy)
-        self.z, self.rx, self.ryf, self.ryb, self.cy = zz, rx, ryf, ryb, cy
+        _, ex = sdf._smooth_table(self.z, self.ex)
+        self.z, self.rx, self.ryf, self.ryb, self.cy, self.ex = zz, rx, ryf, ryb, cy, ex
 
     def front(self, z):
         return float(np.interp(z, self.z, self.cy - self.ryf))
@@ -70,6 +73,26 @@ class TorsoProfile:
 
     def centre(self, z):
         return float(np.interp(z, self.z, self.cy))
+
+    def _lateral(self, x, z):
+        rx = self.half_width(z)
+        e = float(np.interp(z, self.z, self.ex))
+        t = min(abs(float(x)) / max(rx, 1e-6), 1.0)
+        return (1.0 - t ** e) ** (1.0 / e)
+
+    def front_at(self, x, z):
+        """Front surface y at lateral offset `x`.
+
+        A pectoral or a rectus pad parked at the median front pokes right out
+        of the skin once it is mirrored out to the side, which is what turns it
+        into a raised plate with a hard rim instead of a muscle under skin.
+        """
+        return self.centre(z) - self._lateral(x, z) * float(
+            np.interp(z, self.z, self.ryf))
+
+    def back_at(self, x, z):
+        return self.centre(z) + self._lateral(x, z) * float(
+            np.interp(z, self.z, self.ryb))
 
 
 # --------------------------------------------------------------------------- #
@@ -89,9 +112,15 @@ def torso_sections(P: Proportions):
          0.5 * (P.ribs_f + P.chest_f) + 0.001, 0.5 * (P.ribs_b + P.chest_b),
          -0.0035 * sway, P.torso_exp + 0.15),
         (P.z_nipple + 0.012, P.chest_w, P.chest_f, P.chest_b, -0.004 * sway, P.torso_exp + 0.2),
-        (P.z_armpit + 0.012, P.chest_w - 0.003, P.chest_f - 0.008, P.chest_b + 0.001,
+        # The ribcage must not narrow again on its way to the shoulders: any dip
+        # here shows up as a horizontal groove ringing the whole chest.
+        (P.z_armpit + 0.012, P.chest_w + 0.002, P.chest_f - 0.005, P.chest_b + 0.001,
          -0.002 * sway, P.torso_exp + 0.1),
         (P.z_acromion - 0.004, P.girdle_w, P.girdle_f, P.girdle_b, 0.0015 * sway, P.torso_exp),
+        # eased shoulder-to-neck step, otherwise the loft overshoots and leaves a
+        # collar-shaped ridge across the top of the chest
+        (0.5 * (P.z_acromion + P.z_neck), P.girdle_w * 0.87, P.girdle_f * 0.88,
+         P.girdle_b * 0.95, 0.003 * sway, P.torso_exp - 0.1),
         (P.z_neck + 0.004, P.girdle_w * 0.70, P.girdle_f * 0.72, P.girdle_b * 0.86,
          0.004 * sway, P.torso_exp - 0.2),
     ]
@@ -164,7 +193,7 @@ def build_torso(f: sdf.Field, P: Proportions, prof: TorsoProfile):
         cx = 0.048 * H
         # The mass has to sit *into* the chest wall: an ellipsoid parked in front
         # of the loft surface projects like a bolted-on sphere.
-        cy = prof.front(cz) - 0.16 * br
+        cy = prof.front_at(cx, cz) - 0.16 * br
         f.add(sdf.Ellipsoid((cx, cy, cz), (br * 1.02, br * 0.98, br * 1.02)),
               k=0.090 * H, mirror=True)
         # lower pole carries most of the volume, which is what makes a teardrop
@@ -198,15 +227,20 @@ def build_torso(f: sdf.Field, P: Proportions, prof: TorsoProfile):
         )
     else:
         pz = zn + 0.019 * H - 0.012 * H * P.sag
+        px = 0.046 * H
+        # A thin pancake fused onto the ribcage meets it at too steep an angle
+        # and leaves a rim like a breastplate.  A fatter ellipsoid sunk into the
+        # chest shows only its crown, so the pectoral emerges as a soft dome.
         f.add(
             sdf.Ellipsoid(
-                (0.046 * H, prof.front(pz) + 0.006 * H, pz),
-                (0.050 * H, (0.010 + 0.004 * mus) * H, (0.027 + 0.003 * mus) * H),
+                (px, prof.front_at(px, pz) + (0.013 + 0.004 * mus) * H, pz),
+                ((0.056 + 0.004 * mus) * H, (0.021 + 0.008 * mus) * H,
+                 (0.033 + 0.005 * mus) * H),
             ),
-            k=(0.062 - 0.024 * mus) * H,
+            k=(0.070 - 0.024 * mus) * H,
             mirror=True,
         )
-        f.add(sdf.Ellipsoid((0.048 * H, prof.front(zn) - 0.006 * H, zn),
+        f.add(sdf.Ellipsoid((0.048 * H, prof.front_at(0.048 * H, zn) - 0.004 * H, zn),
                             (0.0055 * H, 0.0035 * H, 0.0055 * H)), k=0.008 * H, mirror=True)
         if mus > 0.45:
             # sternal furrow between the pectorals
@@ -214,22 +248,26 @@ def build_torso(f: sdf.Field, P: Proportions, prof: TorsoProfile):
                 sdf.Capsule(
                     (0.0, front_groove(prof, zn, 0.010 * H, 0.004 * H, 0.006 * H),
                      (P.z_nipple - 0.022) * H),
-                    (0.0, front_groove(prof, zn, 0.010 * H, 0.004 * H, 0.006 * H),
+                    (0.0, front_groove(prof, (P.z_armpit + 0.004) * H,
+                                       0.010 * H, 0.004 * H, 0.006 * H),
                      (P.z_armpit + 0.004) * H),
                     0.010 * H,
                 ),
-                k=0.030 * H,
+                k=0.036 * H,
             )
-            # lower border of the pectoral
+            # lower border of the pectoral: a hint, not an engraved line
+            za, zb = (P.z_nipple - 0.030) * H, (P.z_nipple - 0.014) * H
             f.sub(
                 sdf.Capsule(
-                    (0.022 * H, front_groove(prof, zn, 0.007 * H, 0.004 * H, 0.006 * H),
-                     (P.z_nipple - 0.030) * H),
-                    (0.078 * H, front_groove(prof, zn, 0.007 * H, 0.004 * H, 0.002 * H),
-                     (P.z_nipple - 0.014) * H),
-                    0.007 * H,
+                    (0.022 * H,
+                     front_groove(prof, za, 0.009 * H, 0.0025 * H, 0.012 * H, x=0.022 * H),
+                     za),
+                    (0.078 * H,
+                     front_groove(prof, zb, 0.009 * H, 0.0020 * H, 0.004 * H, x=0.078 * H),
+                     zb),
+                    0.009 * H,
                 ),
-                k=0.026 * H,
+                k=0.034 * H,
                 mirror=True,
             )
 
@@ -241,11 +279,11 @@ def build_torso(f: sdf.Field, P: Proportions, prof: TorsoProfile):
         rows = np.linspace(P.z_iliac - 0.020, P.z_ribs - 0.004, 4)
         for i, zt in enumerate(rows):
             zz = zt * H
-            w = (0.0195 - 0.0012 * i) * H
+            w = (0.0215 - 0.0012 * i) * H
             f.add(
-                sdf.Ellipsoid((0.0205 * H, prof.front(zz) + 0.011 * H, zz),
-                              (w, 0.0145 * H, 0.0125 * H)),
-                k=(0.030 - 0.010 * mus) * H,
+                sdf.Ellipsoid((0.0205 * H, prof.front_at(0.0205 * H, zz) + 0.019 * H, zz),
+                              (w, 0.0225 * H, 0.0150 * H)),
+                k=(0.034 - 0.010 * mus) * H,
                 mirror=True,
             )
         # external oblique wrapping onto the flank
@@ -680,16 +718,23 @@ def build_legs(f: sdf.Field, P: Proportions, prof: TorsoProfile):
     f.add(sdf.Ellipsoid((A[0] - P.ankle_r * 0.62 * H, A[1] - 0.001 * H, A[2] + 0.013 * H),
                         (0.005 * H, 0.007 * H, 0.008 * H)), k=0.010 * H, mirror=True)
 
+    # Daylight between the legs.  A round cutter only reaches the middle of the
+    # depth and leaves the front and back of the crotch webbed together, so the
+    # gap has to be a slot that spans the whole thickness of the legs.  A wide
+    # blend also rounds the concave junction away to nothing, hence the tight k.
     gap = [
-        ((P.z_crotch - 0.004) * H, 0.004 * H),
-        (0.5 * (P.z_crotch + P.z_knee) * H, 0.016 * H),
-        ((P.z_knee + 0.010) * H, 0.010 * H),
-        (0.5 * (P.z_knee + P.z_ankle) * H, 0.026 * H),
-        ((P.z_ankle + 0.010) * H, 0.030 * H),
+        ((P.z_crotch + 0.006) * H, 0.0025 * H, 3.4),
+        ((P.z_crotch - 0.012) * H, 0.011 * H, 3.2),
+        (0.5 * (P.z_crotch + P.z_knee) * H, 0.022 * H, 3.0),
+        ((P.z_knee + 0.008) * H, 0.015 * H, 3.0),
+        (0.5 * (P.z_knee + P.z_ankle) * H, 0.028 * H, 3.0),
+        (-0.06 * H, 0.034 * H, 3.0),
     ]
-    for (za, ra), (zb, rb) in zip(gap[:-1], gap[1:]):
-        f.sub(sdf.RoundCone((0.0, cy + 0.004 * H, za), (0.0, cy + 0.006 * H, zb), ra, rb),
-              k=0.030 * H)
+    f.sub(
+        sdf.Loft([(z, rx, 0.17 * H, 0.17 * H, cy + 0.005 * H, e) for z, rx, e in gap],
+                 cap_blend=0.004 * H),
+        k=0.014 * H,
+    )
 
     build_foot(f, P, A)
 

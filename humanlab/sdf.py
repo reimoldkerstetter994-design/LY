@@ -415,14 +415,22 @@ _OFFS = np.array(
 
 
 def _eval_block(field, X, Y, Z, box_lo, box_hi):
-    """Evaluate the CSG program on one open grid block, culling by AABB."""
+    """Evaluate the CSG program on one open grid block, culling by AABB.
+
+    The culling window must depend only on the world position of a grid point,
+    never on where the slab boundary happens to fall: an operation applied on
+    one side of a boundary and skipped on the other shifts the vertices there by
+    a fraction of a millimetre, which shows up as a crease ringing the model.
+    Hence the margin is taken in world space and the bounds are half-open on
+    exactly the grid coordinates, with no index-space fudge.
+    """
     shape = (X.size, Y.size, Z.size)
     d = np.full(shape, FAR, np.float32)
     xs, ys, zs = np.ravel(X), np.ravel(Y), np.ravel(Z)
     for prim, mode, k in field.ops:
         lo = np.asarray(prim.aabb[0], np.float64)
         hi = np.asarray(prim.aabb[1], np.float64)
-        m = k + 0.012
+        m = 2.0 * k + 0.02
         lo = lo - m
         hi = hi + m
         if np.any(hi < box_lo) or np.any(lo > box_hi):
@@ -430,15 +438,12 @@ def _eval_block(field, X, Y, Z, box_lo, box_hi):
         if mode == "isect":
             d = smax(d, prim.eval(X, Y, Z), k).astype(np.float32, copy=False)
             continue
-        i0, i1 = np.searchsorted(xs, [lo[0], hi[0]])
-        j0, j1 = np.searchsorted(ys, [lo[1], hi[1]])
-        k0, k1 = np.searchsorted(zs, [lo[2], hi[2]])
-        i0 = max(i0 - 1, 0)
-        j0 = max(j0 - 1, 0)
-        k0 = max(k0 - 1, 0)
-        i1 = min(i1 + 1, shape[0])
-        j1 = min(j1 + 1, shape[1])
-        k1 = min(k1 + 1, shape[2])
+        i0 = int(np.searchsorted(xs, lo[0], side="left"))
+        i1 = int(np.searchsorted(xs, hi[0], side="right"))
+        j0 = int(np.searchsorted(ys, lo[1], side="left"))
+        j1 = int(np.searchsorted(ys, hi[1], side="right"))
+        k0 = int(np.searchsorted(zs, lo[2], side="left"))
+        k1 = int(np.searchsorted(zs, hi[2], side="right"))
         if i0 >= i1 or j0 >= j1 or k0 >= k1:
             continue
         sub = (slice(i0, i1), slice(j0, j1), slice(k0, k1))
