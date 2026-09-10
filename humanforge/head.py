@@ -39,9 +39,7 @@ from .sdf import (
     RoundCone,
     Sphere,
     Vec3,
-    normalize,
     rotation,
-    surface_along,
     v3,
 )
 from .skeleton import LEFT, RIGHT, Skeleton
@@ -395,31 +393,14 @@ def _build_jawline(
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
         # The hollow starts well off the midline.  Started near it, the left and
         # right cuts overlap under the chin and trench straight through the throat.
-        # Cut against the mandible's lower border as *built*, found by marching a
-        # ray down and outwards from inside the jaw.  Placed off the station table
-        # instead, the cutter ends up running nearly tangent to the skin for the
-        # whole length of the jaw -- and a boolean between two almost parallel
-        # surfaces has no definite crossing for the mesher to resolve, so it comes
-        # out as a broken dotted line along the jaw rather than as a groove.  Every
-        # radius here is read against the clearance below: the axis stands a little
-        # over half a radius outside the skin, which leaves a groove about four
-        # millimetres deep and fifteen wide, and that ratio is what makes the eye
-        # take it as a fold under a jaw instead of a slot cut in one.
-        radius = 0.042 * hh * (1.25 - 0.45 * soft)
-        out = h.orientation @ normalize(v3(side * 0.80, -0.25, -1.0))
-        ends = [
-            surface_along(
-                field.ops,
-                h.point(side * x, FACE_Y["gonion"] + 0.115, z),
-                out,
-                0.35 * hh,
-            )
-            + out * (radius * 0.56)
-            for x, z in ((0.115, 0.055), (0.300, 0.140))
-        ]
         field.subtract(
-            RoundCone(ends[0], ends[1], radius * 0.92, radius * 1.10),
-            blend=0.016 * hh,
+            RoundCone(
+                h.point(side * 0.135, FACE_Y["chin"] - 0.150, -0.020),
+                h.point(side * 0.330, FACE_Y["gonion"] - 0.020, FACE_Z["gonion"] - 0.045),
+                0.052 * hh * (1.25 - 0.45 * soft),
+                0.060 * hh * (1.25 - 0.45 * soft),
+            ),
+            blend=0.030 * hh,
             name=f"submandibular_{tag}",
         )
 
@@ -701,22 +682,46 @@ def _build_mouth(field: Field, h: HeadFrame, female: float) -> None:
     # it, and a 7 mm ball opens a 13 mm gash: the mouth ends up as a hole between
     # the lips rather than a line.  Squashing the section vertically keeps the depth
     # and gives back the thinness.
+    # Three stations a side rather than one straight run, so the seam can rise a
+    # little outboard of the midline and fall again at the corner.  A dead straight
+    # seam is the single thing that most makes a mouth read as a slot: real ones are
+    # never level, because the upper lip is thicker either side of the philtrum than
+    # it is under it.
+    stations = (
+        (0.00, 0.043, 0.0000),
+        (0.36, 0.033, 0.0060),
+        (0.78, 0.010, -0.0035),
+    )
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
-        field.subtract(
-            RoundCone(
-                h.point(0.0, FACE_Y["lip"] + 0.043, FACE_Z["lip_line"]),
-                h.point(
-                    side * half * 0.75,
-                    FACE_Y["lip"] + 0.012,
-                    FACE_Z["lip_line"] + 0.004,
+        for index in range(len(stations) - 1):
+            (xa, ya, za), (xb, yb, zb) = stations[index], stations[index + 1]
+            field.subtract(
+                RoundCone(
+                    h.point(side * half * xa, FACE_Y["lip"] + ya, FACE_Z["lip_line"] + za),
+                    h.point(side * half * xb, FACE_Y["lip"] + yb, FACE_Z["lip_line"] + zb),
+                    0.034 * hh,
+                    0.034 * hh,
+                    section=(0.38, 1.0),
                 ),
-                0.034 * hh,
-                0.034 * hh,
-                section=(0.38, 1.0),
-            ),
-            blend=0.0035 * hh,
-            name=f"lip_seam_{tag}",
-        )
+                blend=0.0035 * hh,
+                name=f"lip_seam_{tag}_{index}",
+            )
+
+    # Philtrum: the groove from the base of the nose to the middle of the upper lip.
+    # About a millimetre deep and eight across, so by the usual rule the cutter is a
+    # 7 mm cylinder standing 6 mm clear of the skin -- almost all of its radius is
+    # spent on the clearance, and getting that balance wrong by a millimetre either
+    # loses the groove entirely or opens a slot up to the nose.
+    field.subtract(
+        RoundCone(
+            h.point(0.0, FACE_Y["subnasale"] + 0.030, FACE_Z["subnasale"] - 0.006),
+            h.point(0.0, FACE_Y["lip"] + 0.052, FACE_Z["lip_upper"] + 0.014),
+            0.030 * hh,
+            0.032 * hh,
+        ),
+        blend=0.0030 * hh,
+        name="philtrum",
+    )
 
 
 def _build_eyes(
@@ -870,28 +875,41 @@ def _build_ears(field: Field, h: HeadFrame) -> None:
 
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
         tilt = h.rotated(v3(1.0, 0.0, 0.0), 16.0)
-        # The plate: thin laterally, and set out far enough that its own thickness
-        # never reaches the skull.  Its lower half is pulled forward and its upper
-        # half back, which is the ear's characteristic lean.
+        # The plate, yawed so that its front edge is buried in the skull and its back
+        # edge stands 15 mm clear -- hinged in front and free behind, which is what
+        # an ear does.  The yaw is not cosmetic.  Set parallel to the skull and held
+        # a few millimetres off it, as it was, the plate's inner face and the head's
+        # surface run alongside each other over the whole area of the ear, and a
+        # union between two nearly parallel surfaces has a band through it where the
+        # blend is averaging two almost opposite normals.  The average of two
+        # opposite vectors is nearly zero, so the field stops being a distance there
+        # -- measurably: scripts/probe_field.py read a gradient of 0.09 where it
+        # should be 1.0 -- and the mesher, which finds the surface by interpolating
+        # linearly between samples, lays it down as a broken dotted line.  Burying
+        # the front edge makes the union decisive and the band disappears.
+        plate = h.rotated(v3(0.0, 0.0, 1.0), side * 22.0) @ rotation(
+            v3(1.0, 0.0, 0.0), 16.0
+        )
         field.add(
             Ellipsoid(
-                h.point(side * (skull + 0.056), FACE_Y["ear"] - 0.020, centre_z + 0.010),
+                h.point(side * (skull + 0.044), FACE_Y["ear"] - 0.020, centre_z + 0.010),
                 h.size(0.030, 0.074, half_z * 0.98),
-                rot=tilt,
+                rot=plate,
             ),
             blend=0.004 * hh,
             name=f"pinna_{tag}",
         )
-        # The root, which is the only part that touches the skull: a wedge under the
-        # front half of the plate, so the plate is hinged along the front edge and
-        # free at the back the way an ear is.
+        # The root: a small wedge filling the angle in front of the plate, where the
+        # tragus and the canal are.  It no longer has to carry the plate -- the plate
+        # reaches the skull by itself now -- so it is much smaller than it was, and a
+        # good thing too, since at its old size it stood proud of the plate.
         field.add(
             Ellipsoid(
-                h.point(side * (skull + 0.014), FACE_Y["ear"] + 0.026, centre_z - 0.006),
-                h.size(0.048, 0.040, half_z * 0.62),
+                h.point(side * (skull + 0.010), FACE_Y["ear"] + 0.030, centre_z - 0.006),
+                h.size(0.038, 0.034, half_z * 0.55),
                 rot=tilt,
             ),
-            blend=0.010 * hh,
+            blend=0.008 * hh,
             name=f"ear_root_{tag}",
         )
         # Concha: a shallow bowl in the outer face of the plate, centred behind the
@@ -908,7 +926,11 @@ def _build_ears(field: Field, h: HeadFrame) -> None:
             name=f"concha_{tag}",
         )
         # Helix: the rolled rim up the back and over the top.  Following the plate's
-        # own outline rather than sitting inside it, so it thickens the edge.
+        # own outline rather than sitting inside it, so it thickens the edge.  It
+        # carries the plate's yaw and sits further out than the plate's centre, for
+        # the same reason the plate is yawed: anything here that ends up hovering a
+        # few millimetres outside the skull and parallel to it flattens the field
+        # along the whole seam, and the ear meshes as a set of dotted outlines.
         for label, (y, z, ry, rz) in {
             "back": (-0.062, 0.004, 0.032, half_z * 0.62),
             "top": (-0.012, half_z * 0.80, 0.052, 0.030),
@@ -916,12 +938,12 @@ def _build_ears(field: Field, h: HeadFrame) -> None:
             field.add(
                 Ellipsoid(
                     h.point(
-                        side * (skull + 0.052),
+                        side * (skull + 0.074),
                         FACE_Y["ear"] + y,
                         centre_z + z,
                     ),
                     h.size(0.026, ry, rz),
-                    rot=tilt,
+                    rot=plate,
                 ),
                 blend=0.005 * hh,
                 name=f"helix_{label}_{tag}",
