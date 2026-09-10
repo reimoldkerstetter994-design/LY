@@ -150,8 +150,15 @@ class Studio:
     """Degrees the key light sits to the figure's left of the camera axis."""
 
     key_pitch: float = 26.0
-    key_size: float = 1.1
-    """Key light diagonal in metres; this is what sets how soft the shadows are."""
+    key_size: float = 0.58
+    """Key light diagonal as a fraction of the framed height.
+
+    A fraction rather than a size in metres, because how soft a light is depends
+    entirely on how big it is *relative to the subject*.  A 1.1 m softbox is a
+    good key for a standing figure and a giant flat panel for a head: rig one
+    absolute size for both and the portrait comes out with no modelling at all,
+    which is a lighting fault that reads as a modelling fault.
+    """
 
     ambient: float = 0.012
     backdrop: bool = True
@@ -184,7 +191,9 @@ def _area_light(
     return obj
 
 
-def light_studio(figure: Figure, look: Studio, aim_height: float) -> list[bpy.types.Object]:
+def light_studio(
+    figure: Figure, look: Studio, aim_height: float, subject: float | None = None
+) -> list[bpy.types.Object]:
     """Key, fill, rim and bounce, placed around the figure.
 
     The classic arrangement, and it is classic because of what it does to a face:
@@ -192,10 +201,17 @@ def light_studio(figure: Figure, look: Studio, aim_height: float) -> list[bpy.ty
     fill keeps those shadows from going black, and a rim behind the shoulders
     separates skin from a dark backdrop -- which is exactly where subsurface
     scattering shows itself, in the glow through an ear or a nostril.
+
+    Every distance is set from ``subject``, the height the frame covers, so the rig
+    stays in proportion to what is being photographed rather than to the figure.
+    A rig sized for a standing figure, used for a head, puts a two-metre-wide source
+    a metre and a half from a face: the result has no shadow anywhere on it, and
+    a face with no shadow on it has no shape.
     """
     H = figure.height
     target = np.array([0.0, 0.0, aim_height])
-    reach = max(1.6, 1.35 * H)
+    subject = subject if subject else H
+    reach = max(0.7, 2.2 * subject)
 
     def place(yaw: float, pitch: float, distance: float) -> np.ndarray:
         yaw_r, pitch_r = np.radians(yaw), np.radians(pitch)
@@ -219,7 +235,7 @@ def light_studio(figure: Figure, look: Studio, aim_height: float) -> list[bpy.ty
             key_at,
             target,
             power(look.key_power, reach),
-            look.key_size,
+            look.key_size * subject,
             (1.0, 0.965, 0.925),
         )
     )
@@ -232,7 +248,7 @@ def light_studio(figure: Figure, look: Studio, aim_height: float) -> list[bpy.ty
             fill_at,
             target,
             power(look.key_power * look.fill_ratio, reach * 1.15),
-            look.key_size * 2.4,
+            look.key_size * subject * 2.4,
             (0.93, 0.955, 1.0),
             aspect=1.6,
         )
@@ -244,21 +260,21 @@ def light_studio(figure: Figure, look: Studio, aim_height: float) -> list[bpy.ty
             rim_at,
             target,
             power(look.key_power * look.rim_ratio, reach * 0.95),
-            look.key_size * 0.55,
+            look.key_size * subject * 0.55,
             (0.90, 0.94, 1.0),
             aspect=2.2,
         )
     )
     # A reflector on the floor, which is what stops a standing figure's shins and
     # jaw from falling away into nothing.
-    bounce_at = target + np.array([0.0, 1.05 * H, -aim_height + 0.12 * H])
+    bounce_at = target + np.array([0.0, 0.85 * reach, -aim_height + 0.12 * H])
     lights.append(
         _area_light(
             "bounce",
             bounce_at,
             target,
             power(look.key_power * look.bounce_ratio, reach),
-            look.key_size * 2.8,
+            look.key_size * subject * 2.8,
             (1.0, 0.97, 0.94),
             aspect=1.0,
         )
@@ -348,15 +364,42 @@ SENSOR_HEIGHT = 24.0
 """Full-frame sensor height in millimetres, fixed so framing is predictable."""
 
 
-def add_camera(figure: Figure, shot: Shot, margin: float = 1.08) -> bpy.types.Object:
-    """Place a camera that frames ``shot`` and return it."""
+def relight(figure: Figure, studio: Studio, shot: Shot) -> list[bpy.types.Object]:
+    """Rebuild the studio rig around whatever ``shot`` frames.
+
+    Called per shot rather than once per figure, since a rig in proportion to a
+    standing figure is the wrong rig for a portrait taken from the same scene.
+    Moving four lights costs nothing next to meshing the body, so there is no
+    reason to share one compromise between them.
+    """
+    for obj in [o for o in bpy.data.objects if o.type == "LIGHT"]:
+        bpy.data.objects.remove(obj, do_unlink=True)
+    for light in list(bpy.data.lights):
+        bpy.data.lights.remove(light)
+    centre, covers = framing(figure, shot)
+    return light_studio(
+        figure, studio, aim_height=float(centre[2]), subject=covers
+    )
+
+
+def framing(figure: Figure, shot: Shot, margin: float = 1.08) -> tuple[np.ndarray, float]:
+    """Where ``shot`` is centred and how much height it covers, in metres.
+
+    Shared by the camera and the lights so the two cannot disagree about what is
+    being photographed.
+    """
     H = figure.height
     if shot.target == "body":
-        covers = shot.covers * H * margin
-        centre = np.array([0.0, 0.0, H * 0.50])
-    else:
-        covers = shot.covers * (H / 1.75) * margin
-        centre = np.asarray(figure.landmarks[shot.target], dtype=float)
+        return np.array([0.0, 0.0, H * 0.50]), shot.covers * H * margin
+    return (
+        np.asarray(figure.landmarks[shot.target], dtype=float),
+        shot.covers * (H / 1.75) * margin,
+    )
+
+
+def add_camera(figure: Figure, shot: Shot, margin: float = 1.08) -> bpy.types.Object:
+    """Place a camera that frames ``shot`` and return it."""
+    centre, covers = framing(figure, shot, margin)
 
     distance = covers * shot.focal / SENSOR_HEIGHT
     yaw, pitch = np.radians(shot.yaw), np.radians(shot.pitch)
@@ -401,12 +444,14 @@ class Staged:
     mesh: Mesh
     attachments: list[bpy.types.Object]
     lights: list[bpy.types.Object]
+    hair: bpy.types.Object | None = None
 
 
 def stage(
     figure: Figure,
     skin: materials.SkinLook,
     eyes: materials.EyeLook,
+    hair: materials.HairLook | None = None,
     voxel: float = 0.0042,
     studio: Studio = Studio(),
     smoothing: int = 4,
@@ -436,11 +481,37 @@ def stage(
         materials.clay_material("clay_nail", 0.40) if clay else materials.nail_material(f"nail_{name}", skin.tone),
     )
 
+    # The hair is its own mesh and its own material.  It has to be, since nothing
+    # done to a skin shader turns part of it into hair, and a hairline has to be a
+    # real edge in the geometry to survive a raking light.  It is meshed finer than
+    # the body because a shell 12 mm thick sampled at a body's voxel spacing is only
+    # a couple of cells through and comes out lumpy.
+    hair_object = None
+    if figure.hair is not None:
+        hair_mesh = taubin_smooth(
+            largest_component(polygonize(figure.hair, voxel=min(voxel, 0.0026))),
+            iterations=smoothing,
+        )
+        hair_object = add_mesh(
+            f"{name}_hair",
+            hair_mesh,
+            materials.clay_material("clay_hair", 0.16)
+            if clay
+            else materials.hair_material(
+                f"hair_{name}", hair or materials.HAIR_COLOURS["dark_brown"]
+            ),
+        )
+
     add_world(scene, studio.ambient)
     if studio.backdrop:
         add_backdrop(figure, materials.backdrop_material("backdrop"))
-    lights = light_studio(figure, studio, aim_height=figure.height * 0.62)
+    lights = relight(figure, studio, SHOTS["full"])
 
     return Staged(
-        figure=figure, body=body, mesh=mesh, attachments=attachments, lights=lights
+        figure=figure,
+        body=body,
+        mesh=mesh,
+        attachments=attachments,
+        lights=lights,
+        hair=hair_object,
     )

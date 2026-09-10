@@ -33,7 +33,7 @@ import numpy as np
 from humanforge import presets
 from humanforge.blend import looks
 from humanforge.blend.render import RenderSettings, configure, render
-from humanforge.blend.scene import SHOTS, Studio, add_camera, stage
+from humanforge.blend.scene import SHOTS, Studio, add_camera, relight, stage
 from humanforge.figure import build_figure
 from humanforge.metrics import implied_bmi, implied_mass
 
@@ -115,6 +115,7 @@ def main(argv: list[str]) -> int:
             skin=looks.skin(name),
             eyes=looks.eyes(name),
             voxel=voxel,
+            hair=looks.hair(name),
             studio=studio,
             smoothing=args.smoothing,
             clay=args.clay,
@@ -132,7 +133,9 @@ def main(argv: list[str]) -> int:
         scene = bpy.context.scene
         configure(scene, settings)
         for shot_name in shots:
-            camera = add_camera(figure, SHOTS[shot_name])
+            shot = SHOTS[shot_name]
+            relight(figure, studio, shot)
+            camera = add_camera(figure, shot)
             started = time.time()
             suffix = "_clay" if args.clay else ""
             path = render(
