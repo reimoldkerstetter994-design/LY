@@ -150,7 +150,7 @@ THINKING = _merge(
         "upperleg01.L": (-2.0, 0.0, -4.0),
         "lowerleg01.L": (8.0, 0.0, 0.0),
         "neck01": (6.0, -6.0, 0.0),
-        "head": (10.0, -8.0, -8.0),
+        "head": (9.0, -8.0, -7.0),
     },
     _fingers(30.0, sides="L"),
     _fingers(40.0, thumb=10.0, sides="R"),

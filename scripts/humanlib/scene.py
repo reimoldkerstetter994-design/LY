@@ -300,15 +300,30 @@ def frame_camera(scene, cam, lo, hi, lens=70.0, azimuth=15.0, elevation=2.0, mar
         vfov, hfov = long_fov, 2.0 * math.atan(math.tan(long_fov / 2) * res_x / res_y)
 
     center = (lo + hi) * 0.5 + Vector(aim_offset)
-    half_h = (hi.z - lo.z) * 0.5
-    half_w = max(hi.x - lo.x, hi.y - lo.y) * 0.5
-    distance = max(half_h * margin / math.tan(vfov / 2), half_w * margin / math.tan(hfov / 2))
-
     az = math.radians(azimuth)
     el = math.radians(elevation)
-    offset = Vector((math.sin(az) * math.cos(el), -math.cos(az) * math.cos(el), math.sin(el))) * distance
-    cam.location = center + offset
-    cam.rotation_euler = (-offset).to_track_quat("-Z", "Y").to_euler()
+    view_dir = Vector((math.sin(az) * math.cos(el), -math.cos(az) * math.cos(el), math.sin(el)))
+    rotation = (-view_dir).to_track_quat("-Z", "Y")
+    right = rotation @ Vector((1.0, 0.0, 0.0))
+    up = rotation @ Vector((0.0, 1.0, 0.0))
+
+    # Project the box corners onto the camera plane so wide-but-shallow subjects
+    # (seated / lying poses) are framed by their visible extent, not by the box diagonal.
+    # Corners nearer to the camera need extra distance to stay inside the frame.
+    distance = 0.0
+    for ix in (lo.x, hi.x):
+        for iy in (lo.y, hi.y):
+            for iz in (lo.z, hi.z):
+                rel = Vector((ix, iy, iz)) - center
+                depth = rel.dot(view_dir)
+                distance = max(
+                    distance,
+                    abs(rel.dot(up)) * margin / math.tan(vfov / 2) + depth,
+                    abs(rel.dot(right)) * margin / math.tan(hfov / 2) + depth,
+                )
+
+    cam.location = center + view_dir * distance
+    cam.rotation_euler = rotation.to_euler()
 
     if dof:
         cam.data.dof.use_dof = True

@@ -111,13 +111,18 @@ def render_character(spec, args):
     out_dir = args.out
 
     if not args.no_full:
-        scenelib.configure_render(scene, samples=args.samples, resolution=(1080, 1620), scale=args.scale, threads=args.threads)
         seated = height < 1.3
+        footprint = max(hi.x - lo.x, hi.y - lo.y)
+        # Wide floor poses get a landscape frame instead of a tall one.
+        landscape = footprint > height * 0.9
+        resolution = (1620, 1080) if landscape else (1080, 1620)
+        scenelib.configure_render(scene, samples=args.samples, resolution=resolution, scale=args.scale, threads=args.threads)
+        full = spec.get("full", {})
         scenelib.frame_camera(
             scene, cam, lo, hi,
-            lens=60.0 if seated else 70.0,
-            azimuth=spec.get("full_azimuth", 12.0),
-            elevation=8.0 if seated else 1.0,
+            lens=full.get("lens", 60.0 if seated else 70.0),
+            azimuth=full.get("azimuth", 12.0),
+            elevation=full.get("elevation", 8.0 if seated else 1.0),
             margin=1.14,
             dof=5.6,
         )

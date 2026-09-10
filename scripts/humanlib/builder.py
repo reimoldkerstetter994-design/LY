@@ -160,7 +160,7 @@ def _tint_makeskin_material(obj, color=None, roughness=None, specular=None, alph
         if max(color) > 0.45:
             # Light colours: blend toward the tint instead of multiplying (which can only darken).
             mix.blend_type = "MIX"
-            texture_share = 0.35
+            texture_share = 0.55
             mix.inputs["Fac"].default_value = texture_share if texture_is_color2 else 1.0 - texture_share
         else:
             mix.blend_type = "MULTIPLY"
