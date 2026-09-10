@@ -26,8 +26,13 @@ STYLES = {
     "short_grey": dict(kind="short", length=0.027, colour="grey", count=60000,
                        thin=0.75, sweep=(0.18, 0.94, -0.28)),
     "buzz_dark": dict(kind="buzz", length=0.010, colour="dark", count=110000),
-    "curly_dark": dict(kind="crop", length=0.056, colour="black", count=105000,
-                       curl=0.016, curl_period=0.028, sweep=(0.30, 0.75, -0.55)),
+    # A 16 mm amplitude on a 28 mm period wound each strand into a corkscrew
+    # dense enough to read as a solid cap -- no curl visible at all -- while
+    # rays crossing the head from the side had to traverse the whole depth of it,
+    # which took the side view from 77 seconds to 36 minutes.  A looser wave both
+    # renders as hair and costs what the other styles cost.
+    "curly_dark": dict(kind="crop", length=0.058, colour="black", count=88000,
+                       curl=0.0075, curl_period=0.044, sweep=(0.30, 0.75, -0.55)),
     "long_dark": dict(kind="long", length=0.27, colour="dark", count=130000,
                       curl=0.004, curl_period=0.14, sweep=(0.10, 0.97, -0.20)),
     "long_auburn": dict(kind="long", length=0.26, colour="auburn", count=130000,
