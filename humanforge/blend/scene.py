@@ -381,8 +381,16 @@ SHOTS = {
 SENSOR_HEIGHT = 24.0
 """Full-frame sensor height in millimetres, fixed so framing is predictable."""
 
+DEFAULT_ASPECT = 2.0 / 3.0
+"""Frame width over height, matching the default render resolution."""
 
-def relight(figure: Figure, studio: Studio, shot: Shot) -> list[bpy.types.Object]:
+
+def relight(
+    figure: Figure,
+    studio: Studio,
+    shot: Shot,
+    aspect: float = DEFAULT_ASPECT,
+) -> list[bpy.types.Object]:
     """Rebuild the studio rig around whatever ``shot`` frames.
 
     Called per shot rather than once per figure, since a rig in proportion to a
@@ -394,30 +402,65 @@ def relight(figure: Figure, studio: Studio, shot: Shot) -> list[bpy.types.Object
         bpy.data.objects.remove(obj, do_unlink=True)
     for light in list(bpy.data.lights):
         bpy.data.lights.remove(light)
-    centre, covers = framing(figure, shot)
+    centre, covers = framing(figure, shot, aspect=aspect)
     return light_studio(
         figure, studio, aim_height=float(centre[2]), subject=covers
     )
 
 
-def framing(figure: Figure, shot: Shot, margin: float = 1.08) -> tuple[np.ndarray, float]:
+def _spread(figure: Figure, shot: Shot, centre: np.ndarray) -> float:
+    """Half the width the figure occupies across ``shot``'s frame, in metres.
+
+    Measured along the camera's own horizontal axis rather than along X, since a
+    yawed camera sees a spread arm partly end-on and so foreshortens it.
+    """
+    yaw = np.radians(shot.yaw)
+    right = np.array([np.cos(yaw), np.sin(yaw), 0.0])
+
+    points = [np.asarray(p, dtype=float) for p in figure.skeleton.points.values()]
+    offsets = [abs(float((p - centre) @ right)) for p in points]
+    # Joints are bone, so allow for the flesh on the two that can be widest: the
+    # fingers spread beyond the hand's axis, and the hips beyond the hip joints.
+    m = figure.measures
+    return max(max(offsets) + 0.5 * m.b("hand_breadth"), 0.5 * m.b("hip"))
+
+
+def framing(
+    figure: Figure,
+    shot: Shot,
+    margin: float = 1.08,
+    aspect: float = DEFAULT_ASPECT,
+) -> tuple[np.ndarray, float]:
     """Where ``shot`` is centred and how much height it covers, in metres.
 
     Shared by the camera and the lights so the two cannot disagree about what is
     being photographed.
+
+    A whole figure needs ``aspect`` -- the frame's width over its height -- because
+    with the arms abducted it is half again as wide as it is tall in a portrait
+    frame, so fitting its height is not enough to fit the figure.  Fit whichever
+    of the two binds.
     """
     H = figure.height
-    if shot.target == "body":
-        return np.array([0.0, 0.0, H * 0.50]), shot.covers * H * margin
-    return (
-        np.asarray(figure.landmarks[shot.target], dtype=float),
-        shot.covers * (H / 1.75) * margin,
-    )
+    if shot.target != "body":
+        return (
+            np.asarray(figure.landmarks[shot.target], dtype=float),
+            shot.covers * (H / 1.75) * margin,
+        )
+    centre = np.array([0.0, 0.0, H * 0.50])
+    tall = shot.covers * H * margin
+    wide = 2.0 * _spread(figure, shot, centre) * margin / max(aspect, 1.0e-6)
+    return centre, max(tall, wide)
 
 
-def add_camera(figure: Figure, shot: Shot, margin: float = 1.08) -> bpy.types.Object:
+def add_camera(
+    figure: Figure,
+    shot: Shot,
+    margin: float = 1.08,
+    aspect: float = DEFAULT_ASPECT,
+) -> bpy.types.Object:
     """Place a camera that frames ``shot`` and return it."""
-    centre, covers = framing(figure, shot, margin)
+    centre, covers = framing(figure, shot, margin, aspect)
 
     distance = covers * shot.focal / SENSOR_HEIGHT
     yaw, pitch = np.radians(shot.yaw), np.radians(shot.pitch)

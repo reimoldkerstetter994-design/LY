@@ -139,10 +139,11 @@ def main(argv: list[str]) -> int:
 
         scene = bpy.context.scene
         configure(scene, settings)
+        aspect = settings.width / settings.height
         for shot_name in shots:
             shot = SHOTS[shot_name]
-            relight(figure, studio, shot)
-            camera = add_camera(figure, shot)
+            relight(figure, studio, shot, aspect)
+            camera = add_camera(figure, shot, aspect=aspect)
             started = time.time()
             suffix = "_clay" if args.clay else ""
             path = render(
