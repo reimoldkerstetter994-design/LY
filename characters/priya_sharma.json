@@ -74,13 +74,13 @@
     }
   },
   "scene": {
-    "hdri": "courtyard.exr",
-    "hdri_strength": 0.15,
+    "hdri": "studio.exr",
+    "hdri_strength": 0.2,
     "backdrop_color": [
-      0.3,
-      0.28,
-      0.26
+      0.24,
+      0.23,
+      0.22
     ],
-    "key_energy": 240
+    "key_energy": 210
   }
 }

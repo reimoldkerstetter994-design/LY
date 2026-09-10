@@ -32,7 +32,7 @@ PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 DEFAULT_SHOTS = {
     "full": {"lens": 50.0, "azimuth": 18.0, "elevation": 2.0, "margin": 1.12, "fstop": 5.6,
              "width": 1200, "height": 1800},
-    "portrait": {"lens": 105.0, "azimuth": 22.0, "elevation": 6.0, "frame_height": 0.42, "fstop": 2.8,
+    "portrait": {"lens": 105.0, "azimuth": 18.0, "elevation": 4.0, "frame_height": 0.46, "fstop": 2.8,
                  "width": 1400, "height": 1400},
     "three_quarter": {"lens": 70.0, "azimuth": 30.0, "elevation": 3.0, "frame_height": 1.0, "fstop": 4.0,
                       "width": 1200, "height": 1600, "anchor": "torso"},
@@ -276,11 +276,12 @@ def anchors(basemesh, armature):
             return None
         return armature.matrix_world @ (bone.head.lerp(bone.tail, fraction))
 
-    head = bone_point("head", 0.55) or Vector((0, 0, hi.z - 0.11))
-    eyes = bone_point("head", 0.42) or Vector((0, 0, hi.z - 0.12))
+    # MPFB 的 head 骨从下颌/颅底附近一直到头顶，0.6 左右大约是眼睛高度
+    head = bone_point("head", 0.7) or Vector((0, 0, hi.z - 0.10))
+    eyes = bone_point("head", 0.6) or Vector((0, 0, hi.z - 0.12))
     # 脸在头骨前方：沿 -Y 向前偏一点，对焦会更准
     result["head"] = head
-    result["face"] = eyes + Vector((0, -0.07, 0))
+    result["face"] = eyes + Vector((0, -0.08, 0))
     result["torso"] = bone_point("spine02", 0.5) or Vector((0, 0, (lo.z + hi.z) * 0.6))
     return result
 
@@ -297,7 +298,8 @@ def frame_shot(kind, params, anchor_points):
         anchor_name = params.get("anchor", "face" if kind == "portrait" else "torso")
         target = anchor_points[anchor_name].copy()
         if kind == "portrait":
-            target.z -= 0.03
+            # 让眼睛落在画面上三分之一附近，而不是正中
+            target.z -= params["frame_height"] * 0.12
         distance = studio.distance_for_frame_height(params["frame_height"], params["lens"])
         focus = anchor_points["face"]
     return studio.add_camera(target, distance, lens=params["lens"], azimuth_deg=params["azimuth"],
