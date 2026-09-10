@@ -370,6 +370,7 @@ def tweak_hair_materials(obj: bpy.types.Object) -> None:
 
 
 def create_character(spec: dict[str, Any], x: float) -> bpy.types.Object:
+    bpy.ops.object.select_all(action="DESELECT")
     macro = TargetService.get_default_macro_info_dict()
     for key, value in spec["macro"].items():
         if key == "race":
@@ -526,9 +527,12 @@ def aim_camera(objects: list[bpy.types.Object], *, portrait: bool) -> bpy.types.
         dist = max(1.55, height * 0.95)
         cam.location = (look[0] + dist * 0.32, look[1] - dist * 0.78, look[2] + 0.04)
     else:
-        look = (center[0], center[1], mins[2] + height * 0.52)
-        dist = max(2.8, height * 1.85)
-        cam.location = (look[0] + 0.55, look[1] - dist, look[2] + 0.12)
+        width = max(maxs[0] - mins[0], 0.8)
+        cam_data.lens = 28 if width > 4.0 else 55
+        look = (center[0], center[1], mins[2] + height * 0.50)
+        fov = 2 * math.atan((36 / 2) / max(cam_data.lens, 1))
+        dist = max((width * 0.58) / math.tan(fov / 2), height * 1.9, 2.8)
+        cam.location = (look[0], look[1] - dist, look[2] + 0.18)
 
     direction = Vector(look) - cam.location
     cam.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
