@@ -294,7 +294,7 @@ class RoundCone(Primitive):
 
 @dataclass
 class Loft(Primitive):
-    """A stack of horizontal elliptical sections: one solid, not a chain of them.
+    """A stack of horizontal superelliptical sections: one solid, not a chain.
 
     This is how a head or a trunk is actually described -- a table of sections at
     stated heights -- and building it out of :class:`RoundCone` segments instead
@@ -318,6 +318,18 @@ class Loft(Primitive):
     tear, and the whole loft is a single op, so the feature masses blend against
     one smooth surface instead of against whichever segment they happen to land on.
 
+    Sections are superellipses, ``|x/w|^n + |y/d|^n = 1``, and ``n`` is free to
+    vary up the stack.  At ``n = 2`` that is an ellipse; above it the section
+    squares off.  The difference is the whole feature wherever a form has a
+    *margin* rather than a smooth flank -- the wing of a nose being the clearest
+    case.  An ellipse reaches its full depth only at the midline and has already
+    given up two thirds of it by the time it is three quarters of the way out, so
+    an elliptical nose has no ala: its widest sections lie behind the cheek they
+    are supposed to stand proud of, and the nose measures barely wider than the
+    columella however wide the table is made.  A section with ``n`` near 3.5
+    carries its depth out to the alar crease and then turns, which is what a wing
+    actually does.
+
     The distance returned is the exact distance to the surface *along the radial
     ray*, capped at the ends the way an extrusion is.  That is not the true
     distance where the surface is steeply inclined, but it has the right zero set
@@ -332,16 +344,24 @@ class Loft(Primitive):
     half_depth: np.ndarray
     offset: np.ndarray
     """Where each section's centre sits along the depth axis."""
+    exponent: np.ndarray | float = 2.0
+    """Superellipse power per section; 2 is an ellipse, higher squares it off."""
 
     def __post_init__(self) -> None:
         self._z = np.asarray(self.heights, dtype=np.float64)
         self._w = np.asarray(self.half_width, dtype=np.float64)
         self._d = np.asarray(self.half_depth, dtype=np.float64)
         self._o = np.asarray(self.offset, dtype=np.float64)
+        self._n = np.broadcast_to(
+            np.asarray(self.exponent, dtype=np.float64), self._z.shape
+        ).copy()
         if not (self._z.size == self._w.size == self._d.size == self._o.size):
             raise ValueError("loft profile arrays must be the same length")
         if self._z.size < 2 or np.any(np.diff(self._z) <= 0.0):
             raise ValueError("loft heights must be ascending")
+        if np.any(self._n < 2.0):
+            raise ValueError("loft exponents below 2 give non-convex sections")
+        self._uniform = bool(np.ptp(self._n) < 1.0e-12)
 
     def bounds(self) -> tuple[Vec3, Vec3]:
         reach = max(self._w.max(), np.abs(self._o).max() + self._d.max())
@@ -364,9 +384,18 @@ class Loft(Primitive):
         d = np.interp(level, self._z, self._d)
         dy = ly - np.interp(level, self._z, self._o)
 
-        # Normalised elliptical radius: 1 exactly on the surface.
-        scaled = np.sqrt((lx / w) ** 2 + (dy / d) ** 2)
-        # Dividing the true radius by it gives the ellipse's own radius along the
+        # Normalised superelliptical radius: 1 exactly on the surface.
+        if self._uniform:
+            n = float(self._n[0])
+        else:
+            n = np.interp(level, self._z, self._n)
+        if self._uniform and n == 2.0:
+            scaled = np.sqrt((lx / w) ** 2 + (dy / d) ** 2)
+        else:
+            scaled = (
+                np.abs(lx / w) ** n + np.abs(dy / d) ** n
+            ) ** (1.0 / n)
+        # Dividing the true radius by it gives the section's own radius along the
         # same ray, which turns the normalised figure back into millimetres.
         true = np.sqrt(lx * lx + dy * dy)
         ray = np.where(scaled > _EPS, true / np.maximum(scaled, _EPS), np.minimum(w, d))
