@@ -8,11 +8,21 @@ import os
 import bpy
 
 
-def setup_render(res=(900, 1200), samples=128, denoise=True, threads=0, exposure=0.0):
+def setup_render(res=(900, 1200), samples=128, denoise=True, threads=0, exposure=0.0,
+                 time_limit=0.0):
+    """Cycles settings.  ``time_limit`` is seconds per frame, 0 for no limit.
+
+    A cap is worth setting for batch work.  Cost per frame is not predictable
+    from the geometry: the same figure at two camera angles a few degrees apart
+    can differ twenty-fold, because whether sight lines happen to graze along the
+    hair decides how many strands each ray crosses.  Frames that hit the cap are
+    still denoised and, at these sample counts, hard to tell apart.
+    """
     sc = bpy.context.scene
     sc.render.engine = "CYCLES"
     sc.cycles.device = "CPU"
     sc.cycles.samples = samples
+    sc.cycles.time_limit = float(time_limit)
     sc.cycles.adaptive_min_samples = max(8, samples // 8)
     sc.cycles.adaptive_threshold = 0.012
     sc.cycles.use_denoising = denoise

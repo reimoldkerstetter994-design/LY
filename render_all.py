@@ -77,6 +77,8 @@ def main():
     # adaptive threshold, so they run every sample.  A curly or long-haired
     # preset can take ten times what the body views take.
     ap.add_argument("--portrait-samples", type=int, default=0)
+    ap.add_argument("--time-limit", type=float, default=0.0,
+                    help="seconds per frame, 0 for no limit")
     ap.add_argument("--res", default="760x1100")
     ap.add_argument("--portrait-res", default="820x1000")
     ap.add_argument("--out", default="renders")
@@ -123,7 +125,7 @@ def main():
                                       key=3.2, azimuth=cfg["az"])
             portrait = bool(cfg.get("dof"))
             res = head_res if portrait else body_res
-            sc = scene.setup_render(res=res, denoise=True,
+            sc = scene.setup_render(res=res, denoise=True, time_limit=a.time_limit,
                                     samples=head_samples if portrait else a.samples)
             del sc
             dist = scene.frame_distance(cfg["fit"], cfg["lens"], res)
