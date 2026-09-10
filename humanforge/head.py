@@ -246,12 +246,15 @@ def _build_neck(field: Field, skeleton: Skeleton, h: HeadFrame, soft: float) -> 
     # reaching past it, the mass hangs under and in front of the jaw and the figure
     # gets a double chin it was not asked for.
     #
-    # So the front is set explicitly rather than left to fall where a fixed centre
-    # and half depth put it, and it is the one thing here that fleshiness moves.  A
-    # lean throat stops a good centimetre behind the chin; only a fat one is allowed
-    # to come past it, which is what a double chin is and who should have one.
-    depth = 0.150
-    front = 0.045 + 0.125 * soft
+    # The station table stops just above the chin, so this mass alone decides where
+    # the surface sits immediately under it, and the step between the two is the
+    # submental undercut.  Left at a fixed depth that step was 18 mm of setback over
+    # 10 mm of drop for every figure, which meshes as a crevice under the jaw with a
+    # ball of throat below it.  So the front is set explicitly and fleshiness moves
+    # it: a lean throat keeps a 12 mm undercut, a fat one comes nearly flush with
+    # the chin, which is what a double chin is and who should have one.
+    depth = 0.185
+    front = 0.215 + 0.130 * soft
     field.add(
         Ellipsoid(
             h.point(0.0, front - depth, 0.020),
