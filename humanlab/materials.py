@@ -394,8 +394,10 @@ HAIR_COLOURS = {
     "brown": dict(melanin=0.62, redness=0.32, rough=0.32),
     "auburn": dict(melanin=0.55, redness=0.75, rough=0.32),
     "blond": dict(melanin=0.18, redness=0.30, rough=0.34),
-    "grey": dict(melanin=0.10, redness=0.05, rough=0.40),
-    "white": dict(melanin=0.03, redness=0.02, rough=0.45),
+    # Grey has to sit very near zero melanin.  0.10 is still blond -- the elderly
+    # preset came out with a golden cap rather than grey hair.
+    "grey": dict(melanin=0.035, redness=0.02, rough=0.42),
+    "white": dict(melanin=0.008, redness=0.0, rough=0.46),
 }
 
 
