@@ -199,7 +199,7 @@ def build_head(field: Field, skeleton: Skeleton) -> dict[str, Vec3]:
     young = 1.0 if p.age in ("child", "teen") else 0.0
     female = 1.0 if p.sex == "female" else (0.5 if p.sex == "neutral" else 0.0)
 
-    _build_neck(field, skeleton, h)
+    _build_neck(field, skeleton, h, soft)
     _build_core(field, h, female, soft)
     _build_jawline(field, h, female, soft, p.age)
     _build_brow(field, h, female)
@@ -220,7 +220,7 @@ def build_head(field: Field, skeleton: Skeleton) -> dict[str, Vec3]:
 # neck
 
 
-def _build_neck(field: Field, skeleton: Skeleton, h: HeadFrame) -> None:
+def _build_neck(field: Field, skeleton: Skeleton, h: HeadFrame, soft: float) -> None:
     m = skeleton.measures
     p = m.params
     neck_r = m.b("neck") * 0.5
@@ -242,13 +242,20 @@ def _build_neck(field: Field, skeleton: Skeleton, h: HeadFrame) -> None:
     )
     # Throat: the soft tissue between the jaw and the neck proper.  Without it the
     # submandibular hollow has nothing left to cut into and opens a gap straight
-    # through under the chin.  It has to stay well behind the chin's own front,
-    # though: reaching past it, the mass hangs under and in front of the jaw and the
-    # figure gets a double chin it was not asked for.
+    # through under the chin.  It has to stay behind the chin's own front, though:
+    # reaching past it, the mass hangs under and in front of the jaw and the figure
+    # gets a double chin it was not asked for.
+    #
+    # So the front is set explicitly rather than left to fall where a fixed centre
+    # and half depth put it, and it is the one thing here that fleshiness moves.  A
+    # lean throat stops a good centimetre behind the chin; only a fat one is allowed
+    # to come past it, which is what a double chin is and who should have one.
+    depth = 0.150
+    front = 0.045 + 0.125 * soft
     field.add(
         Ellipsoid(
-            h.point(0.0, 0.055, 0.020),
-            h.size(0.215, 0.185, 0.062),
+            h.point(0.0, front - depth, 0.020),
+            h.size(0.215, depth, 0.062),
             rot=h.orientation,
         ),
         blend=0.030 * h.height,
@@ -826,13 +833,16 @@ def _build_eyes(
         # from being a slot in a flat cheek, and it has to be shallow -- three
         # millimetres of relief with a blend under one -- because at any more it
         # becomes a bag.
+        # It also has to stay behind the corneal plane.  Standing in front of the
+        # globe it stops being a lid and becomes the pouch of loose skin that a
+        # tired face has, which is a thing to add on purpose and not by accident.
         field.add(
             Ellipsoid(
-                h.point(cx, FACE_Y["cornea"] - 0.026, FACE_Z["eye"] - 0.044),
-                h.size(0.100, 0.030, 0.016),
+                h.point(cx, FACE_Y["cornea"] - 0.038, FACE_Z["eye"] - 0.044),
+                h.size(0.100, 0.030, 0.014),
                 rot=h.rotated(v3(1.0, 0.0, 0.0), 22.0),
             ),
-            blend=0.004 * hh,
+            blend=0.009 * hh,
             name=f"lower_lid_{tag}",
         )
 
