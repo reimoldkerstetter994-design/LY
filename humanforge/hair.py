@@ -27,7 +27,18 @@ from dataclasses import dataclass
 import numpy as np
 
 from .head import FACE_Y, FACE_Z, HEAD_STATIONS, HeadFrame, relax, spline
-from .sdf import Ellipsoid, Field, HalfSpace, Loft, v3
+from .sdf import (
+    Ellipsoid,
+    Field,
+    HalfSpace,
+    Loft,
+    Op,
+    RoundCone,
+    frame_with_axis,
+    normalize,
+    surface_along,
+    v3,
+)
 from .skeleton import LEFT, RIGHT, Skeleton
 
 SEGMENTS = 192
@@ -143,13 +154,39 @@ STYLES: dict[str, HairStyle] = {
 }
 
 
-def build_hair(skeleton: Skeleton, style_name: str | None) -> Field | None:
-    """The hair shell for ``style_name``, or ``None`` for a bald figure."""
-    if not style_name:
-        return None
-    style = STYLES[style_name]
+BROW_STATIONS = (
+    # Half breadth from the midline, height, and how thick the brow is there.
+    # A brow is not an arc struck about the eye: it rises from a blunt medial head,
+    # peaks about two thirds of the way out and falls away to a thin tail.  Getting
+    # the peak wrong is what makes drawn-on eyebrows look drawn on.
+    (0.048, 0.5405, 0.50),
+    (0.105, 0.5555, 0.98),
+    (0.163, 0.5655, 1.00),
+    (0.220, 0.5695, 0.86),
+    (0.268, 0.5595, 0.54),
+    (0.308, 0.5465, 0.20),
+)
+
+
+def build_hair(
+    skeleton: Skeleton, style_name: str | None, body: Field | None = None
+) -> Field:
+    """Everything on a head that is hair rather than skin.
+
+    Always returns a field, even for a bald figure, because the eyebrows live in it
+    too: they have to be shaded as hair and not as skin, and a face without them
+    reads as a shop mannequin however good the rest of it is.
+
+    ``body`` is the finished skin field, used only to find where the brows have to
+    sit.  Without it they are placed on the station table's idea of the forehead,
+    which the brow ridge masses have already moved by several millimetres.
+    """
     h = HeadFrame(skeleton)
-    field = Field(f"hair_{style_name}")
+    style = STYLES[style_name] if style_name else None
+    field = Field(f"hair_{style_name or 'brows'}")
+    if style is None:
+        _add_brows(field, skeleton, h, body)
+        return field
 
     # The shell is the skull's own profile *scaled up*, not offset outwards, and
     # that is the whole trick.  Offsetting fails at the crown: the station table
@@ -202,7 +239,61 @@ def build_hair(skeleton: Skeleton, style_name: str | None) -> Field | None:
     _add_fall(field, h, style, grow_xy)
     _cut_hairline(field, h, style)
     _clear_ears(field, h, style)
+    # After the cuts, or the hairline plane would shave the brows off with the
+    # forehead -- they sit well below it, but the plane reaches to infinity.
+    _add_brows(field, skeleton, h, body)
     return field
+
+
+def _add_brows(
+    field: Field, skeleton: Skeleton, h: HeadFrame, body: Field | None
+) -> None:
+    """A band of hair laid along each brow ridge, following the actual skin.
+
+    Placed by marching out from the middle of the head until the skin is crossed,
+    rather than by trusting the station table: the brow ridge masses stand three or
+    four millimetres proud of the lofted forehead, and a brow floating that far off
+    the face in a raking light is unmistakable.
+
+    Each segment's axis lies *on* the surface it was found on, so half its thickness
+    is buried in the head and half stands out.  Being a separate solid, the buried
+    half costs nothing -- there is no boolean to go wrong, and no seam.
+    """
+    p = skeleton.measures.params
+    female = 1.0 if p.sex == "female" else (0.5 if p.sex == "neutral" else 0.0)
+    weight = (1.0 - 0.30 * female) * (0.80 if p.age in ("child", "teen") else 1.0)
+    thick = 0.023 * h.height * weight
+    ops: list[Op] = list(body.ops) if body is not None else []
+    forward = normalize(h.orientation @ v3(0.0, 1.0, 0.0))
+
+    for side, tag in ((LEFT, "l"), (RIGHT, "r")):
+        points = []
+        for x, z, _ in BROW_STATIONS:
+            inner = h.point(side * x, 0.0, z)
+            if ops:
+                points.append(surface_along(ops, inner, forward, 0.75 * h.depth))
+            else:
+                points.append(h.point(side * x, FACE_Y["brow"], z))
+
+        for index in range(len(BROW_STATIONS) - 1):
+            a, b = points[index], points[index + 1]
+            ra = thick * BROW_STATIONS[index][2]
+            rb = thick * BROW_STATIONS[index + 1][2]
+            field.add(
+                RoundCone(
+                    a,
+                    b,
+                    ra,
+                    rb,
+                    # Flattened against the face: a brow is a couple of millimetres
+                    # of relief over a centimetre of height, and a round section
+                    # that tall would stand off the forehead like a welt.
+                    section=(0.42, 1.0),
+                    frame=frame_with_axis(b - a, forward),
+                ),
+                blend=0.004 * h.height,
+                name=f"brow_{tag}_{index}",
+            )
 
 
 def _add_fall(field: Field, h: HeadFrame, style: HairStyle, grow_xy: float) -> None:

@@ -80,7 +80,7 @@ class Figure:
     skeleton: Skeleton
     body: Field
     hair: Field | None = None
-    """A second solid, meshed and shaded separately; ``None`` for a bald figure."""
+    """Hair and brows: a second solid, meshed and shaded separately from the skin."""
 
     attachments: list[Attachment] = dataclass_field(default_factory=list)
     landmarks: dict[str, Vec3] = dataclass_field(default_factory=dict)
@@ -184,7 +184,7 @@ def build_figure(params: BodyParams) -> Figure:
         measures=m,
         skeleton=skeleton,
         body=body,
-        hair=build_hair(skeleton, params.hair),
+        hair=build_hair(skeleton, params.hair, body),
         attachments=attachments,
         landmarks=landmarks,
     )
@@ -682,12 +682,20 @@ def _build_arm(body: Field, skeleton: Skeleton, side: float) -> None:
     r_fore = m.r("forearm")
     r_wrist = m.r("wrist")
 
+    # The cone is deliberately narrower than the measured radius, because the
+    # muscles are what have to carry the girth out to it.  Sized to the radius
+    # instead, the cone reaches the skin on its own and every mass blended onto it
+    # afterwards sits *inside* it: the arithmetic is that a mass offset from the
+    # axis by less than its own radius never breaks a surface already that far out,
+    # so it adds volume nothing can see.  That is how a limb with a named belly for
+    # every muscle group comes out as a smooth tapering tube, and it is invisible in
+    # the code because each mass looks correctly placed relative to the *bone*.
     body.add(
         RoundCone(
             upper.start,
             upper.end,
-            r_upper * 1.05,
-            r_elbow * 1.10,
+            r_upper * 0.94,
+            r_elbow * 1.06,
             section=(1.0, 0.96),
         ),
         blend=0.007 * H,
@@ -696,20 +704,20 @@ def _build_arm(body: Field, skeleton: Skeleton, side: float) -> None:
     # Biceps in front, triceps behind, both riding on the upper arm frame.
     body.add(
         Ellipsoid(
-            upper.at(0.42, front=r_upper * 0.34),
-            v3(r_upper * 0.74, r_upper * (0.52 + 0.30 * muscle), upper.length * 0.30),
+            upper.at(0.42, front=r_upper * 0.44),
+            v3(r_upper * 0.76, r_upper * (0.54 + 0.32 * muscle), upper.length * 0.30),
             rot=upper.frame,
         ),
-        blend=0.007 * H,
+        blend=0.006 * H,
         name=f"biceps_{tag}",
     )
     body.add(
         Ellipsoid(
-            upper.at(0.36, front=-r_upper * 0.36),
-            v3(r_upper * 0.82, r_upper * (0.50 + 0.26 * muscle), upper.length * 0.36),
+            upper.at(0.36, front=-r_upper * 0.44),
+            v3(r_upper * 0.84, r_upper * (0.52 + 0.30 * muscle), upper.length * 0.36),
             rot=upper.frame,
         ),
-        blend=0.008 * H,
+        blend=0.0065 * H,
         name=f"triceps_{tag}",
     )
     body.add(
@@ -731,8 +739,8 @@ def _build_arm(body: Field, skeleton: Skeleton, side: float) -> None:
         RoundCone(
             fore.start,
             fore.end,
-            r_fore * 0.95,
-            r_wrist * 1.02,
+            r_fore * 0.86,
+            r_wrist * 1.00,
             section=(1.0, 0.90),
         ),
         blend=0.006 * H,
@@ -741,25 +749,25 @@ def _build_arm(body: Field, skeleton: Skeleton, side: float) -> None:
     # Flexor and extensor mass, bunched towards the elbow.
     body.add(
         Ellipsoid(
-            fore.at(0.24, front=r_fore * 0.22),
-            v3(r_fore * 0.82, r_fore * (0.60 + 0.24 * muscle), fore.length * 0.30),
+            fore.at(0.24, front=r_fore * 0.32),
+            v3(r_fore * 0.84, r_fore * (0.62 + 0.26 * muscle), fore.length * 0.30),
             rot=fore.frame,
         ),
-        blend=0.007 * H,
+        blend=0.0055 * H,
         name=f"flexors_{tag}",
     )
     body.add(
         Ellipsoid(
-            fore.at(0.30, front=-r_fore * 0.26, side=r_fore * 0.20),
-            v3(r_fore * 0.60, r_fore * (0.50 + 0.20 * muscle), fore.length * 0.34),
+            fore.at(0.30, front=-r_fore * 0.34, side=-side * r_fore * 0.24),
+            v3(r_fore * 0.62, r_fore * (0.54 + 0.24 * muscle), fore.length * 0.34),
             rot=fore.frame,
         ),
-        blend=0.007 * H,
+        blend=0.0055 * H,
         name=f"extensors_{tag}",
     )
     # Ulnar styloid, the bump on the little-finger side of the wrist.
     body.add(
-        Sphere(fore.at(0.98, side=-r_wrist * 0.55), r_wrist * 0.42),
+        Sphere(fore.at(0.98, side=side * r_wrist * 0.55), r_wrist * 0.42),
         blend=0.004 * H,
         name=f"styloid_{tag}",
     )
@@ -781,12 +789,16 @@ def _build_leg(
     r_calf = m.r("calf")
     r_ankle = m.r("ankle")
 
+    # As with the arm: the cone stays inside the measured radius so that the four
+    # muscle groups are what bring the surface out to it.  A thigh is the clearest
+    # case of why that matters -- it is markedly deeper than it is wide, and its
+    # widest point is above its middle, neither of which a cone can be.
     body.add(
         RoundCone(
             thigh.start + thigh.axis * r_thigh * 0.35,
             thigh.end,
-            r_thigh * 1.02,
-            r_knee * 1.08,
+            r_thigh * 0.90,
+            r_knee * 1.04,
             section=(1.0, 0.97),
         ),
         blend=0.004 * H,
@@ -795,46 +807,46 @@ def _build_leg(
     # Quadriceps, hamstrings, adductors and the outer sweep of the vastus.
     body.add(
         Ellipsoid(
-            thigh.at(0.56, front=r_thigh * 0.30),
-            v3(r_thigh * 0.72, r_thigh * (0.52 + 0.26 * muscle), thigh.length * 0.32),
+            thigh.at(0.56, front=r_thigh * 0.40),
+            v3(r_thigh * 0.78, r_thigh * (0.56 + 0.28 * muscle), thigh.length * 0.32),
             rot=thigh.frame,
         ),
-        blend=0.010 * H,
+        blend=0.0065 * H,
         name=f"quadriceps_{tag}",
     )
     body.add(
         Ellipsoid(
-            thigh.at(0.40, front=-r_thigh * 0.34),
-            v3(r_thigh * 0.78, r_thigh * (0.54 + 0.22 * muscle), thigh.length * 0.40),
+            thigh.at(0.40, front=-r_thigh * 0.42),
+            v3(r_thigh * 0.80, r_thigh * (0.56 + 0.24 * muscle), thigh.length * 0.40),
             rot=thigh.frame,
         ),
-        blend=0.010 * H,
+        blend=0.0065 * H,
         name=f"hamstrings_{tag}",
     )
     body.add(
         Ellipsoid(
-            thigh.at(0.16, side=-side * r_thigh * 0.16),
+            thigh.at(0.16, side=side * r_thigh * 0.28),
             v3(
-                r_thigh * (0.38 + 0.20 * fat),
+                r_thigh * (0.54 + 0.22 * fat),
                 r_thigh * 0.66,
                 thigh.length * 0.20,
             ),
             rot=thigh.frame,
         ),
-        blend=0.005 * H,
+        blend=0.006 * H,
         name=f"adductor_{tag}",
     )
     body.add(
         Ellipsoid(
-            thigh.at(0.46, side=side * r_thigh * 0.34),
+            thigh.at(0.46, side=-side * r_thigh * 0.44),
             v3(
-                r_thigh * (0.44 + 0.22 * muscle),
+                r_thigh * (0.50 + 0.24 * muscle),
                 r_thigh * 0.72,
                 thigh.length * 0.36,
             ),
             rot=thigh.frame,
         ),
-        blend=0.010 * H,
+        blend=0.0075 * H,
         name=f"vastus_lateralis_{tag}",
     )
 
@@ -883,40 +895,40 @@ def _build_leg(
     # Gastrocnemius: the medial head sits lower than the lateral one.
     body.add(
         Ellipsoid(
-            shank.at(0.30, front=-r_calf * 0.42, side=-side * r_calf * 0.22),
+            shank.at(0.30, front=-r_calf * 0.42, side=side * r_calf * 0.22),
             v3(r_calf * 0.62, r_calf * (0.62 + 0.26 * muscle), shank.length * 0.26),
             rot=shank.frame,
         ),
-        blend=0.008 * H,
+        blend=0.0060 * H,
         name=f"gastro_medial_{tag}",
     )
     body.add(
         Ellipsoid(
-            shank.at(0.24, front=-r_calf * 0.40, side=side * r_calf * 0.26),
+            shank.at(0.24, front=-r_calf * 0.40, side=-side * r_calf * 0.26),
             v3(r_calf * 0.58, r_calf * (0.58 + 0.24 * muscle), shank.length * 0.24),
             rot=shank.frame,
         ),
-        blend=0.008 * H,
+        blend=0.0060 * H,
         name=f"gastro_lateral_{tag}",
     )
     # Tibial crest, just under the skin along the front of the shin.
     body.add(
         RoundCone(
-            shank.at(0.10, front=r_knee * 0.42, side=-side * r_knee * 0.10),
-            shank.at(0.86, front=r_ankle * 0.42, side=-side * r_ankle * 0.10),
+            shank.at(0.10, front=r_knee * 0.42, side=side * r_knee * 0.10),
+            shank.at(0.86, front=r_ankle * 0.42, side=side * r_ankle * 0.10),
             r_knee * 0.30,
             r_ankle * 0.34,
         ),
-        blend=0.007 * H,
+        blend=0.0050 * H,
         name=f"tibia_{tag}",
     )
     body.add(
         Ellipsoid(
-            shank.at(0.52, front=r_calf * 0.10, side=side * r_calf * 0.42),
+            shank.at(0.52, front=r_calf * 0.10, side=-side * r_calf * 0.42),
             v3(r_calf * 0.36, r_calf * 0.46, shank.length * 0.24),
             rot=shank.frame,
         ),
-        blend=0.008 * H,
+        blend=0.0060 * H,
         name=f"peroneal_{tag}",
     )
 

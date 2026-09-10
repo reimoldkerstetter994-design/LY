@@ -33,61 +33,75 @@ class SkinTone:
     tanned: tuple[float, float, float]
     flush: tuple[float, float, float]
 
-    subsurface_radius: tuple[float, float, float] = (1.0, 0.32, 0.17)
+    subsurface_radius: tuple[float, float, float] = (1.0, 0.34, 0.19)
     """Relative mean free path per channel.  Red travels furthest, which is why
     an ear lit from behind glows orange rather than white."""
 
-    subsurface_scale: float = 0.0075
-    """Mean free path of the red channel, in metres."""
+    subsurface_scale: float = 0.0048
+    """Mean free path of the red channel, in metres.
+
+    Measurements of dermis put this near 5 mm for red and under 1 mm for blue,
+    which is smaller than it is tempting to set it.  Too large and the scattering
+    stops describing a surface and starts washing the whole body towards the
+    albedo of milk -- the figure goes pale, loses its shadow terminator and reads
+    as wax, and no amount of correcting the diffuse colour brings it back, because
+    what is wrong is the distance the light travels, not its hue.
+    """
 
 
+# Diffuse albedos, deliberately darker and more saturated than a photograph of
+# skin suggests.  Two things brighten these before they reach the image: the
+# subsurface term adds most of a stop on anything convex, and AgX pulls saturation
+# out of the top of its range.  Picking sRGB values straight off a photograph of a
+# lit arm therefore lands about two stops high, which is what made every figure
+# here look like unpainted porcelain until the whole table came down.
 TONES: dict[str, SkinTone] = {
     "porcelain": SkinTone(
         "porcelain",
-        base=(246, 222, 209),
-        tanned=(233, 197, 176),
-        flush=(226, 148, 137),
-        subsurface_radius=(1.0, 0.30, 0.16),
-        subsurface_scale=0.0090,
+        base=(232, 198, 184),
+        tanned=(214, 174, 154),
+        flush=(206, 130, 121),
+        subsurface_radius=(1.0, 0.32, 0.18),
+        subsurface_scale=0.0056,
     ),
     "fair": SkinTone(
         "fair",
-        base=(238, 208, 190),
-        tanned=(214, 172, 145),
-        flush=(213, 132, 120),
-        subsurface_scale=0.0082,
+        base=(220, 180, 158),
+        tanned=(193, 146, 119),
+        flush=(196, 116, 104),
+        subsurface_scale=0.0052,
     ),
     "olive": SkinTone(
         "olive",
-        base=(219, 184, 152),
-        tanned=(184, 145, 110),
-        flush=(191, 118, 100),
-        subsurface_radius=(1.0, 0.30, 0.15),
-        subsurface_scale=0.0070,
+        base=(196, 156, 121),
+        tanned=(160, 120, 87),
+        flush=(170, 100, 84),
+        subsurface_radius=(1.0, 0.32, 0.17),
+        subsurface_scale=0.0045,
     ),
     "tan": SkinTone(
         "tan",
-        base=(198, 158, 124),
-        tanned=(160, 118, 86),
-        flush=(170, 103, 86),
-        subsurface_radius=(1.0, 0.28, 0.14),
-        subsurface_scale=0.0062,
+        base=(174, 132, 99),
+        tanned=(138, 98, 69),
+        flush=(150, 86, 70),
+        subsurface_radius=(1.0, 0.30, 0.15),
+        subsurface_scale=0.0040,
     ),
     "brown": SkinTone(
         "brown",
-        base=(152, 111, 80),
-        tanned=(115, 79, 55),
-        flush=(133, 76, 62),
-        subsurface_radius=(1.0, 0.24, 0.11),
-        subsurface_scale=0.0050,
+        base=(131, 92, 64),
+        tanned=(97, 64, 43),
+        flush=(114, 62, 49),
+        subsurface_radius=(1.0, 0.26, 0.12),
+        subsurface_scale=0.0032,
     ),
     "deep": SkinTone(
         "deep",
-        base=(104, 71, 51),
-        tanned=(74, 49, 35),
-        flush=(96, 52, 42),
-        subsurface_radius=(1.0, 0.20, 0.09),
-        subsurface_scale=0.0040,
+        base=(88, 58, 41),
+        tanned=(61, 38, 27),
+        flush=(80, 42, 33),
+        subsurface_radius=(1.0, 0.22, 0.10),
+        subsurface_scale=0.0026,
     ),
 }
 
@@ -230,7 +244,14 @@ def skin_material(name: str, look: SkinLook) -> bpy.types.Material:
     # -- subsurface -------------------------------------------------------
     # Thin tissue (eyelids, ears, lips, webbing) scatters much further relative
     # to its thickness, so both the weight and the mean free path rise there.
-    sss_weight = graph.math("MULTIPLY_ADD", thin, 0.16, 0.17)
+    #
+    # The weight is high and the radius small, which is the right way round and
+    # not the intuitive one.  A low weight leaves most of the surface Lambertian,
+    # and Lambertian skin is matte paint: what makes flesh look like flesh is that
+    # almost all of the light coming back out has been under the surface, only not
+    # very far.  Weighting it low and compensating with a long radius produces the
+    # opposite of skin -- translucent in the large and dead in the small.
+    sss_weight = graph.math("MULTIPLY_ADD", thin, 0.22, 0.64)
     sss_scale = graph.math(
         "MULTIPLY", tone.subsurface_scale, graph.math("MULTIPLY_ADD", thin, 0.9, 1.0)
     )
@@ -254,7 +275,9 @@ def skin_material(name: str, look: SkinLook) -> bpy.types.Material:
     graph.feed(skin, "Coat IOR", 1.45)
 
     # Vellus hair: a faint retroreflective rim, most visible on a backlit arm.
-    graph.feed(skin, "Sheen Weight", 0.12)
+    # Faint is the operative word -- turned up it puts a pale halo round every
+    # limb, which is the other half of how skin ends up looking like candle wax.
+    graph.feed(skin, "Sheen Weight", 0.05)
     graph.feed(skin, "Sheen Roughness", 0.30)
     graph.feed(skin, "Sheen Tint", srgb(238, 214, 198))
     return material

@@ -70,10 +70,29 @@ class Segment:
 
     @property
     def side(self) -> Vec3:
+        """The transverse axis of the frame.
+
+        For every limb here -- both arms and both legs -- this comes out pointing
+        towards the midline, because :func:`frame_from_axis` resolves a
+        roughly downward axis the same way on either side of the body rather than
+        mirroring it.  So a positive ``side`` offset multiplied by the limb's own
+        ``side`` sign is *medial*, and a negative one is lateral.
+
+        Worth stating because it is not what the name suggests and because getting
+        it backwards is invisible: a thigh with its vastus lateralis on the inside
+        still looks like a thigh, and an offset written without the limb's sign at
+        all puts the feature on opposite sides of the two arms, which reads as a
+        deformity long before anyone works out which side is wrong.
+        """
         return self.frame[:, 0]
 
     def at(self, t: float, front: float = 0.0, side: float = 0.0) -> Vec3:
-        """Point at fraction ``t`` along the segment, offset in its frame."""
+        """Point at fraction ``t`` along the segment, offset in its frame.
+
+        ``side`` runs along :attr:`side`, so it should almost always be written as
+        the limb's own sign times a magnitude -- ``side=side * r * 0.4`` for medial,
+        ``side=-side * r * 0.4`` for lateral.
+        """
         base = self.start + (self.end - self.start) * t
         return base + self.front * front + self.side * side
 
