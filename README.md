@@ -161,6 +161,42 @@ of the intuitive setting. Weighted low, most of the surface stays Lambertian and
 Lambertian skin is matte paint. Given a long radius to compensate, the
 scattering stops describing a surface and the figure goes pale and waxy.
 
+*A standing figure with its arms out is about as wide as it is tall,* so framing
+its height in a portrait-shaped frame cuts the hands off. The camera fits
+whichever of the height and the width binds, measured along its own horizontal
+axis so that a yawed camera is allowed to foreshorten a spread arm.
+
+*Nothing in a shader can show on a surface that is out of focus,* and this is the
+one that wasted the most time. Three scales of relief were in the skin from early
+on and none of it reached a single render, because the portrait was focused on
+`head_centre` -- a landmark inside the skull -- at f/2.8, which is 40 mm of depth
+of field for a head 200 mm deep. Focus on the near eye and stop down, and *then*
+argue about bump strengths. The same goes for Cycles' Filter Glossy, which at its
+default was blurring away the specular breakup that sub-millimetre relief exists
+to produce.
+
+*An F1 Voronoi's distance output is already a field of pits,* zero at each cell
+centre and rising away from it. Inverting it -- the obvious thing to reach for
+when you want pores -- turns every pore into a bump and the skin into gooseflesh.
+
+*A sclera at one flat brightness reads as a white ball resting in an eye-shaped
+hole.* It has to be shaded down away from the gaze axis: the further round the
+globe a point lies, the deeper under the lids it is and the less of the room
+reaches it. Cycles gets some of this from the lids, nowhere near enough.
+
+*To judge a bulge, measure a profile rather than look at a render.* The ball slung
+under the jaw took four renders to misdiagnose and one sixteen-line script to
+find: printing the frontmost surface every 10 mm down the midline showed the
+surface falling back 36 mm in the 10 mm below the point of the chin, which is a
+cliff, and it is a number that can be tuned against in seconds rather than
+minutes. The same script showed that the fix I had reached for first made it
+worse, which no amount of looking at the render had told me.
+
+*The tables here are in four different units* -- head heights, head breadths,
+face depths and metres -- and `FACE_X`, `FACE_Y` and `FACE_Z` all have a `chin`
+key. Reading the half breadth (0.148) as the depth (0.353) is what caused the
+misdiagnosis above.
+
 ## What is still wrong
 
 Honest list, all of it visible only in close-up on the face; the figures hold up
@@ -170,9 +206,12 @@ at full length.
   longer dead straight, but there is no cupid's bow, because the bow is on the
   upper border of the upper lip rather than on the seam and that border is
   currently just where an ellipsoid runs out.
-- The eye reads as a lens set into the lids rather than lids lying over a globe.
-  The aperture is cut through a dome over the eyeball, which is the right
-  construction, but the lid margins are heavier than they should be.
+- The eye is the weakest thing on the figure. The aperture is cut through a dome
+  over the globe, which is the right construction, but the lid margins are far
+  heavier than a lid, the lower lid reads as a pad lying in front of the eye
+  rather than a rim on it, and there is no lash line: at portrait distance the
+  result is closer to a doll's glass eye than to an eye. Shading the sclera into
+  the socket helped and did not fix it.
 - The nose has flat facets near the tip, where the superelliptical sections reach
   an exponent above three and start to square off.
 - The hairline is a cleaner bevel than a real one, and the shell reads slightly
@@ -180,8 +219,15 @@ at full length.
   could carry more irregularity than it does.
 - Hands and feet are correct phalanx by phalanx and still read as paddles from
   the front, because the arches are missing.
-- `probe_field.py` still reports about 0.16 around the ear, down from 0.09. There
-  is a faint broken line there at a 1.5 mm voxel.
+- `probe_field.py` still reports about 0.16 around the ear, down from 0.09, and
+  0.38 under the chin. There is a faint broken line at both at a 1.5 mm voxel.
+- Skin relief now registers, but it is a long way from photographic. It reads as
+  fine texture rather than as skin, and there is no unevenness at the scale
+  between a pore and a whole face -- no blotching, no vellus catchlight, nothing
+  that varies from one part of a cheek to another.
+- The clay close-ups show the whole lower face as soft, thumb-pressed forms: the
+  jaw has no crisp lower border, the mentolabial sulcus is a groove rather than a
+  transition, and the lips are two overlapping slabs.
 
 ## Requirements
 
