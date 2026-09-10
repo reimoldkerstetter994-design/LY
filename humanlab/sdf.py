@@ -608,6 +608,31 @@ def push_outside(field, pts, margin=0.0, eps=0.002):
     return pts
 
 
+def clamp_shell(field, pts, lo=0.0, hi=0.02, eps=0.002):
+    """Keep points inside the shell ``lo <= d <= hi`` around a field's surface.
+
+    Hair strands integrated purely from a direction leave the scalp tangentially
+    and never come back, which is what turns long hair into a puffball.  Holding
+    every point in a thin shell makes strands follow the head and shoulders and
+    only fall away once they run past them.
+    """
+    d = eval_points(field, pts)
+    bad = (d < lo) | (d > hi)
+    if not bad.any():
+        return pts
+    p = pts[bad]
+    g = np.empty_like(p)
+    for i in range(3):
+        o = np.zeros(3)
+        o[i] = eps
+        g[:, i] = eval_points(field, p + o) - eval_points(field, p - o)
+    n = np.linalg.norm(g, axis=1, keepdims=True)
+    n[n < 1e-9] = 1.0
+    target = np.clip(d[bad], lo, hi)
+    pts[bad] = p + g / n * (target - d[bad])[:, None]
+    return pts
+
+
 def laplacian_smooth(verts, quads, iterations=2, factor=0.5):
     """Uniform Laplacian relaxation; removes the last of the voxel stepping."""
     if iterations <= 0 or len(quads) == 0:

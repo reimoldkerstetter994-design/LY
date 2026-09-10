@@ -143,9 +143,13 @@ def skin_material(P, lm, name="skin"):
     nt.links.new(obj, n_big.inputs["Vector"])
     col = _mix_colour(nt, 0.0, base, base)  # placeholder to start the chain
     tinted = _new(nt, "ShaderNodeMix", data_type="RGBA", blend_type="MIX")
-    tinted.inputs[6].default_value = base
+    tinted.inputs[6].default_value = tuple(
+        min(1.0, c * (1.16 if i == 0 else 1.02 if i == 1 else 0.94)) if i < 3 else c
+        for i, c in enumerate(base)
+    )
     tinted.inputs[7].default_value = tuple(
-        min(1.0, c * 1.07) if i < 1 else c * 0.93 for i, c in enumerate(base)
+        (c * (0.82 if i == 0 else 0.88 if i == 1 else 0.96)) if i < 3 else c
+        for i, c in enumerate(base)
     )
     nt.links.new(n_big.outputs["Fac"], tinted.inputs["Factor"])
     col = tinted.outputs[2]
@@ -158,7 +162,7 @@ def skin_material(P, lm, name="skin"):
     n_mid_f.inputs["From Min"].default_value = 0.42
     n_mid_f.inputs["From Max"].default_value = 0.62
     n_mid_f.inputs["To Min"].default_value = 0.0
-    n_mid_f.inputs["To Max"].default_value = 0.11
+    n_mid_f.inputs["To Max"].default_value = 0.07
     nt.links.new(n_mid.outputs["Fac"], n_mid_f.inputs["Value"])
     col = _mix_colour(nt, n_mid_f.outputs["Result"], col, blush)
 
@@ -183,15 +187,15 @@ def skin_material(P, lm, name="skin"):
         cx = lm["eye_centre"][0] * 1.25
         cz = 0.5 * (lm["eye_centre"][2] + lz)
         d = _dist_field(nt, obj, (cx, ly + 0.006 * H, cz), (0.030 * H, 0.030 * H, 0.028 * H))
-        col = _mix_colour(nt, _falloff(nt, d, 0.30, 1.45, 0.22), col, blush)
+        col = _mix_colour(nt, _falloff(nt, d, 0.30, 1.45, 0.14), col, blush)
         # eyelid / socket warmth
         ex, ey, ez = lm["eye_centre"]
         d = _dist_field(nt, obj, (ex, ey, ez), (0.026 * H, 0.020 * H, 0.020 * H))
-        col = _mix_colour(nt, _falloff(nt, d, 0.45, 1.35, 0.20), col, shadow)
+        col = _mix_colour(nt, _falloff(nt, d, 0.45, 1.35, 0.10), col, shadow)
         # ears catch the light and go pink
         erx, ery, erz = lm["ear"]
         d = _dist_field(nt, obj, (erx, ery, erz), (0.014 * H, 0.020 * H, 0.024 * H))
-        col = _mix_colour(nt, _falloff(nt, d, 0.55, 1.25, 0.30), col, blush)
+        col = _mix_colour(nt, _falloff(nt, d, 0.55, 1.25, 0.18), col, blush)
     if P.breast > 0.0 or P.sex == "m":
         zn = P.z_nipple * H
         prof = lm.get("profile")
@@ -203,12 +207,12 @@ def skin_material(P, lm, name="skin"):
     # knees, elbows and knuckles read slightly darker and rougher
     knee_d = _dist_field(nt, obj, (P.ankle_x * H + 0.004 * H, 0.004 * H, P.z_knee * H),
                          (0.045 * H, 0.045 * H, 0.055 * H))
-    knee_f = _falloff(nt, knee_d, 0.45, 1.35, 0.25)
+    knee_f = _falloff(nt, knee_d, 0.45, 1.35, 0.15)
     col = _mix_colour(nt, knee_f, col, shadow)
     elbow_d = _dist_field(nt, obj,
                           ((P.shoulder_x + 0.62 * P.arm_abduct) * H, 0.012 * H, P.z_elbow * H),
                           (0.035 * H, 0.035 * H, 0.045 * H))
-    col = _mix_colour(nt, _falloff(nt, elbow_d, 0.45, 1.35, 0.25), col, shadow)
+    col = _mix_colour(nt, _falloff(nt, elbow_d, 0.45, 1.35, 0.15), col, shadow)
 
     # soles and palms lose the tan
     sole = _new(nt, "ShaderNodeMapRange", clamp=True)
@@ -222,26 +226,38 @@ def skin_material(P, lm, name="skin"):
     pale = tuple(min(1.0, c * 1.20) for c in base[:3]) + (1.0,)
     col = _mix_colour(nt, sole.outputs["Result"], col, pale)
 
+    # very low frequency value drift, so limbs and torso do not share one flat tone
+    n_reg = _new(nt, "ShaderNodeTexNoise", inputs={"Scale": 0.9, "Detail": 3.0,
+                                                   "Roughness": 0.5})
+    nt.links.new(obj, n_reg.inputs["Vector"])
+    reg = _new(nt, "ShaderNodeMapRange", clamp=True)
+    reg.inputs["From Min"].default_value = 0.35
+    reg.inputs["From Max"].default_value = 0.65
+    reg.inputs["To Min"].default_value = 0.0
+    reg.inputs["To Max"].default_value = 0.06
+    nt.links.new(n_reg.outputs["Fac"], reg.inputs["Value"])
+    col = _mix_colour(nt, reg.outputs["Result"], col, shadow)
+
     nt.links.new(col, bsdf.inputs["Base Color"])
 
     # ---- surface response ------------------------------------------------- #
-    bsdf.inputs["Subsurface Weight"].default_value = 0.32
+    bsdf.inputs["Subsurface Weight"].default_value = 0.82
     bsdf.inputs["Subsurface Radius"].default_value = tone["sss"]
     bsdf.inputs["Subsurface Scale"].default_value = tone["sss_scale"]
-    bsdf.inputs["IOR"].default_value = 1.42
-    bsdf.inputs["Specular IOR Level"].default_value = 0.5
-    bsdf.inputs["Coat Weight"].default_value = 0.06
-    bsdf.inputs["Coat Roughness"].default_value = 0.28
-    bsdf.inputs["Sheen Weight"].default_value = 0.06
-    bsdf.inputs["Sheen Roughness"].default_value = 0.45
+    bsdf.inputs["IOR"].default_value = 1.40
+    bsdf.inputs["Specular IOR Level"].default_value = 0.40
+    bsdf.inputs["Coat Weight"].default_value = 0.02
+    bsdf.inputs["Coat Roughness"].default_value = 0.34
+    bsdf.inputs["Sheen Weight"].default_value = 0.10
+    bsdf.inputs["Sheen Roughness"].default_value = 0.42
 
     rough_n = _new(nt, "ShaderNodeTexNoise", inputs={"Scale": 55.0, "Detail": 6.0})
     nt.links.new(obj, rough_n.inputs["Vector"])
     rmap = _new(nt, "ShaderNodeMapRange", clamp=True)
     rmap.inputs["From Min"].default_value = 0.30
     rmap.inputs["From Max"].default_value = 0.70
-    rmap.inputs["To Min"].default_value = 0.38
-    rmap.inputs["To Max"].default_value = 0.62
+    rmap.inputs["To Min"].default_value = 0.42
+    rmap.inputs["To Max"].default_value = 0.74
     nt.links.new(rough_n.outputs["Fac"], rmap.inputs["Value"])
     nt.links.new(rmap.outputs["Result"], bsdf.inputs["Roughness"])
 
@@ -264,7 +280,7 @@ def skin_material(P, lm, name="skin"):
     nt.links.new(pore_h.outputs["Result"], mix_h.inputs[2])
     nt.links.new(micro.outputs["Fac"], mix_h.inputs[3])
 
-    bump = _new(nt, "ShaderNodeBump", inputs={"Strength": 0.28, "Distance": 0.0016})
+    bump = _new(nt, "ShaderNodeBump", inputs={"Strength": 0.42, "Distance": 0.0020})
     nt.links.new(mix_h.outputs[0], bump.inputs["Height"])
 
     if P.sag > 0.0:

@@ -19,20 +19,21 @@ from . import materials, sdf
 # kind: buzz | short | crop | long | ponytail
 STYLES = {
     "bald": None,
-    "short_dark": dict(kind="short", length=0.036, colour="dark", count=44000,
+    "short_dark": dict(kind="short", length=0.036, colour="dark", count=110000,
                        sweep=(0.22, 0.92, -0.30)),
-    "short_light": dict(kind="short", length=0.031, colour="blond", count=42000,
+    "short_light": dict(kind="short", length=0.031, colour="blond", count=105000,
                         sweep=(0.35, 0.85, -0.35)),
-    "short_grey": dict(kind="short", length=0.027, colour="grey", count=26000,
+    "short_grey": dict(kind="short", length=0.027, colour="grey", count=60000,
                        thin=0.75, sweep=(0.18, 0.94, -0.28)),
-    "buzz_dark": dict(kind="buzz", length=0.010, colour="dark", count=46000),
-    "curly_dark": dict(kind="crop", length=0.056, colour="black", count=42000,
+    "buzz_dark": dict(kind="buzz", length=0.010, colour="dark", count=110000),
+    "curly_dark": dict(kind="crop", length=0.056, colour="black", count=105000,
                        curl=0.016, curl_period=0.028, sweep=(0.30, 0.75, -0.55)),
-    "long_dark": dict(kind="long", length=0.32, colour="dark", count=46000,
-                      curl=0.006, curl_period=0.12),
-    "long_auburn": dict(kind="long", length=0.30, colour="auburn", count=46000,
-                        curl=0.008, curl_period=0.10),
-    "ponytail_dark": dict(kind="ponytail", length=0.30, colour="dark", count=44000),
+    "long_dark": dict(kind="long", length=0.27, colour="dark", count=130000,
+                      curl=0.004, curl_period=0.14, sweep=(0.10, 0.97, -0.20)),
+    "long_auburn": dict(kind="long", length=0.26, colour="auburn", count=130000,
+                        curl=0.006, curl_period=0.12, sweep=(0.14, 0.96, -0.24)),
+    "ponytail_dark": dict(kind="ponytail", length=0.30, colour="dark", count=120000,
+                          sweep=(0.06, 0.98, -0.18)),
 }
 
 
@@ -141,14 +142,17 @@ def grow(roots, normals, style, rng, proxy=None, gather=None):
     down = np.array([0.0, 0.0, -1.0])
 
     # per-strand variation
-    jitter = rng.normal(0.0, 0.30, (n, 3))
+    jitter = rng.normal(0.0, 0.18, (n, 3))
     length_var = 1.0 + rng.normal(0.0, 0.18 if kind != "buzz" else 0.35, (n, 1))
     length_var = np.clip(length_var, 0.35, 1.6)
     # clumping: every strand is drawn towards one of a few hundred guides
     n_clump = max(24, n // 260)
     clump_of = rng.integers(0, n_clump, n)
     clump_dir = _normalise(rng.normal(0.0, 1.0, (n_clump, 3)) * np.array([1.0, 1.0, 0.45]))
-    clump_pull = clump_dir[clump_of] * (0.35 if kind in ("long", "ponytail") else 0.22)
+    n_clump = max(24, n // 900)
+    clump_of = rng.integers(0, n_clump, n)
+    clump_dir = _normalise(rng.normal(0.0, 1.0, (n_clump, 3)) * np.array([1.0, 1.0, 0.45]))
+    clump_pull = clump_dir[clump_of] * (0.24 if kind in ("long", "ponytail") else 0.16)
 
     curl = style.get("curl", 0.0)
     curl_period = style.get("curl_period", 0.04)
@@ -173,12 +177,16 @@ def grow(roots, normals, style, rng, proxy=None, gather=None):
         elif kind == "crop":
             g = min(1.0, 1.55 * u**0.45)
         else:
-            g = min(1.0, 1.35 * u**0.5)
+            g = min(1.0, 1.30 * u**0.55)
         if kind in ("buzz", "short", "crop"):
             flow = tang * 1.45 + down * 0.30
         else:
-            flow = down * 1.6
-        target = normals * (1.0 - g) + flow * g + jitter * 0.10 * (1.0 - 0.5 * u)
+            # long hair runs back across the scalp before it falls, otherwise it
+            # drops straight down over the face
+            back = np.clip(1.0 - 1.45 * u, 0.0, 1.0)
+            flow = tang * (0.25 + 2.30 * back) + down * (1.80 - 1.05 * back)
+        frizz = 0.06 if kind in ("long", "ponytail") else 0.10
+        target = normals * (1.0 - g) + flow * g + jitter * frizz * (1.0 - 0.5 * u)
         target = target + clump_pull * u
         if gather is not None and kind == "ponytail":
             to_g = gather - pos
@@ -191,8 +199,13 @@ def grow(roots, normals, style, rng, proxy=None, gather=None):
             ang = 2 * np.pi * (i + 1) * step / curl_period + phase
             pos = pos + (side * np.cos(ang) + up * np.sin(ang)) * curl * (0.3 + 0.7 * u)
         if proxy is not None:
-            margin = 0.004 if kind in ("long", "ponytail") else 0.0015
-            pos = sdf.push_outside(proxy, pos, margin=margin)
+            if kind in ("long", "ponytail"):
+                # hold the strand in a shell around the head and shoulders while
+                # it is still travelling over them, then let it fall free
+                shell = 0.004 + 0.055 * min(1.0, max(0.0, (u - 0.35) / 0.35))
+                pos = sdf.clamp_shell(proxy, pos, lo=0.004, hi=shell)
+            else:
+                pos = sdf.push_outside(proxy, pos, margin=0.0015)
         paths[:, i + 1] = pos
     return paths
 
@@ -242,7 +255,8 @@ def build_hair(P, lm, verts, normals, density=1.0, clay=False, seed=7):
     sel = []
     for sign in (1.0, -1.0):
         c = np.array([sign * bx * 0.98, by, bz + 0.002 * u])
-        rel = (verts - c) / np.array([0.023 * u, 0.016 * u, 0.0075 * u])
+        bw = 1.0 if P.sex == "m" else 0.80
+        rel = (verts - c) / np.array([0.023 * u, 0.016 * u, 0.0075 * u * bw])
         m = (np.linalg.norm(rel, axis=1) < 1.0) & (normals[:, 1] < -0.25)
         idx = np.nonzero(m)[0]
         if len(idx) == 0:
@@ -254,12 +268,13 @@ def build_hair(P, lm, verts, normals, density=1.0, clay=False, seed=7):
         # brows sweep outwards and slightly up
         d = _normalise(nn * 0.42 + np.array([sign * 0.90, 0.0, 0.24])
                        + rng.normal(0, 0.13, (n_brow, 3)))
-        L = 0.0065 * u * (1.0 + rng.normal(0, 0.22, (n_brow, 1)))
+        L = 0.0065 * u * bw * (1.0 + rng.normal(0, 0.22, (n_brow, 1)))
         paths = np.stack([p, p + d * L * 0.45, p + d * L], axis=1)
         sel.append(paths)
     if sel:
         paths = np.concatenate(sel)
-        out.append(_curves_object("hair_brows", paths, _radii(2, 5.0e-5, 2.2e-5),
+        out.append(_curves_object("hair_brows", paths,
+                                  _radii(2, 5.0e-5 * bw, 2.2e-5 * bw),
                                   mat_for(brow_colour)))
 
     # ---- eyelashes --------------------------------------------------------- #
@@ -296,7 +311,7 @@ def build_hair(P, lm, verts, normals, density=1.0, clay=False, seed=7):
         x = np.abs(verts[:, 0])
         # beard density: full on the chin and jaw, fading up the cheek, with a
         # sideburn strip in front of the ear and nothing on the lips or nose
-        dens = _smoothstep((0.32 - t) / 0.10) * _smoothstep((t + 0.10) / 0.06)
+        dens = _smoothstep((0.32 - t) / 0.10) * _smoothstep((t + 0.015) / 0.05)
         dens *= _smoothstep((ym + 0.20 * hd - verts[:, 1]) / (0.25 * hd))
         dens *= 1.0 - 0.85 * _smoothstep((t - 0.20) / 0.12) * _smoothstep(
             (0.62 * hw - x) / (0.25 * hw))
@@ -314,15 +329,18 @@ def build_hair(P, lm, verts, normals, density=1.0, clay=False, seed=7):
         dens *= _smoothstep((normals[:, 2] + 0.75) / 0.4)
         idx = np.nonzero(dens > 0.01)[0]
         if len(idx) > 20:
-            n_s = max(2000, int(30000 * density))
+            n_s = max(3000, int(38000 * density))
             pick = _sample_weighted(idx, dens, n_s, rng)
             p = verts[pick]
             nn = normals[pick]
-            d = _normalise(nn + rng.normal(0, 0.25, (n_s, 3)))
-            L = 0.0016 * u * (1 + rng.normal(0, 0.3, (n_s, 1)))
+            # short hairs standing straight out read as cross-hatching, so lay
+            # them over towards gravity
+            d = _normalise(nn * 0.55 + np.array([0.0, 0.0, -0.55])
+                           + rng.normal(0, 0.42, (n_s, 3)))
+            L = 0.0026 * u * (1 + rng.normal(0, 0.32, (n_s, 1)))
             out.append(
                 _curves_object("hair_stubble", np.stack([p, p + d * L], axis=1),
-                               _radii(1, 6.5e-5, 5.0e-5),
+                               _radii(1, 4.2e-5, 2.8e-5),
                                mat_for("black" if colour in ("dark", "black") else colour))
             )
     return out
