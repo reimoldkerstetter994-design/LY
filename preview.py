@@ -51,11 +51,16 @@ def main():
         "three": dict(az=38, el=5, fit=1.16 * H, lens=85, target=(0, 0, 0.53 * H)),
         "face": dict(az=16, el=0, fit=0.30, lens=105, target=(0, -0.01 * H, head_z)),
         "torso": dict(az=22, el=2, fit=0.55 * H, lens=85, target=(0, 0, 0.68 * H)),
-        "hand": dict(az=35, el=-8, fit=0.26, lens=100,
-                     target=((P.shoulder_x + P.arm_abduct) * H, -0.02 * H,
-                             (P.z_wrist - 0.055) * H)),
+        "hand": dict(az=115, el=-4, fit=0.27, lens=100,
+                     target=((P.shoulder_x + P.arm_abduct) * H, -0.015 * H,
+                             (P.z_wrist - 0.058) * H)),
+        "palm": dict(az=-62, el=-4, fit=0.27, lens=100,
+                     target=((P.shoulder_x + P.arm_abduct) * H, -0.015 * H,
+                             (P.z_wrist - 0.058) * H)),
         "foot": dict(az=45, el=10, fit=0.34, lens=90,
                      target=(P.ankle_x * H, -0.03 * H, 0.035 * H)),
+        "foot_in": dict(az=-88, el=6, fit=0.32, lens=90,
+                        target=(P.ankle_x * H, -0.03 * H, 0.040 * H)),
     }
     os.makedirs(a.out, exist_ok=True)
     for v in a.views.split(","):

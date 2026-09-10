@@ -58,7 +58,7 @@ class Proportions:
     chest_w: float = 0.094
     chest_f: float = 0.067
     chest_b: float = 0.056
-    girdle_w: float = 0.086
+    girdle_w: float = 0.100
     girdle_f: float = 0.052
     girdle_b: float = 0.058
 
@@ -119,7 +119,7 @@ _ATHLETIC_MALE = replace(
     height=1.83,
     chest_w=0.099, chest_f=0.070, chest_b=0.058,
     ribs_w=0.089, waist_w=0.075, waist_f=0.054, waist_b=0.050,
-    girdle_w=0.092, hip_w=0.089,
+    girdle_w=0.106, hip_w=0.089,
     shoulder_x=0.100, deltoid_r=0.038,
     upperarm_r=0.033, elbow_r=0.024, forearm_r=0.029, wrist_r=0.018,
     thigh_r=0.057, knee_r=0.035, calf_r=0.041, glute_r=0.054,
@@ -135,7 +135,7 @@ _SLIM_MALE = replace(
     chest_w=0.086, chest_f=0.060, chest_b=0.052,
     ribs_w=0.080, waist_w=0.070, waist_f=0.050, waist_b=0.047,
     iliac_w=0.078, hip_w=0.083, hip_f=0.053, hip_b=0.063,
-    girdle_w=0.079, shoulder_x=0.089, deltoid_r=0.029,
+    girdle_w=0.093, shoulder_x=0.089, deltoid_r=0.029,
     upperarm_r=0.026, elbow_r=0.020, forearm_r=0.023, wrist_r=0.016,
     thigh_r=0.046, knee_r=0.031, calf_r=0.034, ankle_r=0.020, glute_r=0.045,
     neck_w=0.030, neck_d=0.033,
@@ -151,7 +151,7 @@ _HEAVY_MALE = replace(
     ribs_w=0.100, ribs_f=0.082, ribs_b=0.060,
     waist_w=0.099, waist_f=0.086, waist_b=0.060,
     iliac_w=0.098, hip_w=0.101, hip_f=0.070, hip_b=0.078,
-    girdle_w=0.092, shoulder_x=0.097, deltoid_r=0.037,
+    girdle_w=0.106, shoulder_x=0.097, deltoid_r=0.037,
     upperarm_r=0.036, elbow_r=0.026, forearm_r=0.030, wrist_r=0.019,
     thigh_r=0.062, knee_r=0.038, calf_r=0.043, glute_r=0.060,
     neck_w=0.038, neck_d=0.041, torso_exp=2.3,
@@ -172,7 +172,7 @@ _ADULT_FEMALE = replace(
     waist_w=0.070, waist_f=0.052, waist_b=0.049,
     ribs_w=0.079, ribs_f=0.057, ribs_b=0.050,
     chest_w=0.083, chest_f=0.058, chest_b=0.052,
-    girdle_w=0.077, girdle_f=0.048, girdle_b=0.053,
+    girdle_w=0.091, girdle_f=0.048, girdle_b=0.053,
     torso_exp=2.4, spine_sway=0.014,
     shoulder_x=0.087, deltoid_r=0.029,
     upperarm_r=0.028, elbow_r=0.021, forearm_r=0.024, wrist_r=0.015,
@@ -183,7 +183,7 @@ _ADULT_FEMALE = replace(
     neck_w=0.028, neck_d=0.031,
     head_w=0.0425, head_d=0.052,
     muscle=0.34, softness=0.52,
-    breast=0.043, breast_drop=0.006,
+    breast=0.038, breast_drop=0.006,
     skin="light", hair="long_dark",
 )
 
@@ -192,12 +192,12 @@ _ATHLETIC_FEMALE = replace(
     name="athletic_female",
     height=1.72,
     chest_w=0.086, waist_w=0.066, waist_f=0.049,
-    hip_w=0.094, girdle_w=0.082,
+    hip_w=0.094, girdle_w=0.096,
     shoulder_x=0.090, deltoid_r=0.032,
     upperarm_r=0.029, forearm_r=0.025,
     thigh_r=0.056, calf_r=0.039, glute_r=0.056,
     muscle=0.82, softness=0.22,
-    breast=0.036, breast_drop=0.003,
+    breast=0.033, breast_drop=0.003,
     skin="deep", hair="ponytail_dark",
 )
 
@@ -216,7 +216,7 @@ _CHILD = replace(
     waist_w=0.083, waist_f=0.064, waist_b=0.054,
     ribs_w=0.085, ribs_f=0.065, ribs_b=0.054,
     chest_w=0.086, chest_f=0.064, chest_b=0.055,
-    girdle_w=0.079, girdle_f=0.050, girdle_b=0.055,
+    girdle_w=0.090, girdle_f=0.050, girdle_b=0.055,
     torso_exp=2.3,
     shoulder_x=0.085, deltoid_r=0.030,
     upperarm_r=0.032, elbow_r=0.025, forearm_r=0.028, wrist_r=0.019,
@@ -238,7 +238,7 @@ _ELDERLY_MALE = replace(
     chest_w=0.090, chest_f=0.064, chest_b=0.060,
     ribs_w=0.088, waist_w=0.090, waist_f=0.074, waist_b=0.056,
     iliac_w=0.088, hip_w=0.092, hip_b=0.070,
-    girdle_w=0.083, shoulder_x=0.092, deltoid_r=0.029,
+    girdle_w=0.096, shoulder_x=0.092, deltoid_r=0.029,
     upperarm_r=0.027, elbow_r=0.021, forearm_r=0.024, wrist_r=0.017,
     thigh_r=0.048, knee_r=0.034, calf_r=0.034, glute_r=0.046,
     neck_w=0.031, neck_d=0.034,
