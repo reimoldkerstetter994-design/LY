@@ -332,6 +332,18 @@ def relax(values: np.ndarray, window: int = 5, passes: int = 2) -> np.ndarray:
     for _ in range(passes):
         padded = np.pad(out, window // 2, mode="edge")
         out = np.convolve(padded, kernel, mode="valid")
+    # Edge padding replicates the end value, so where a profile closes to a point
+    # the tip is averaged with the far wider sections below it and comes out blunt.
+    # On the hair shell, where the sideways growth magnifies it, that is a flat disc
+    # a couple of centimetres across lying on the crown and lit like a coin.  Fade
+    # the correction out at both ends, so the closure stays as the table wrote it
+    # and only the interior is smoothed.
+    reach = window * passes
+    if values.size > 2 * reach:
+        ramp = np.ones(values.size)
+        edge = np.linspace(0.0, 1.0, reach)
+        ramp[:reach], ramp[-reach:] = edge, edge[::-1]
+        out = values + (out - values) * ramp
     return out
 
 
