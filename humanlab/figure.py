@@ -241,19 +241,22 @@ def build_torso(f: sdf.Field, P: Proportions, prof: TorsoProfile):
                             (0.0044 * H, 0.0048 * H, 0.0044 * H)), k=0.005 * H,
               mirror=True)
         # Inframammary fold: a short arc following the underside of the breast.
-        # A single long capsule laid across the ribs reads as an incision, since
-        # the chest wall curves away from it along its length while the fold
-        # itself does not follow the breast at all.
-        for t in np.linspace(-0.80, 0.80, 7):
-            fx = cx + t * br * 0.78
-            fz = cz - br * (0.96 - 0.13 * t * t)
-            r = 0.0075 * H
-            f.sub(
-                sdf.Ball((fx, front_groove(prof, fz, r, 0.0034 * H,
-                                           bulge=0.0035 * H, x=fx), fz), r),
-                k=0.007 * H,
-                mirror=True,
-            )
+        # One long capsule laid across the ribs reads as an incision, because the
+        # chest wall curves away from it along its length while the fold follows
+        # nothing.  A row of separate cutters is worse: each only breaks the
+        # surface as a shallow cap, so the fold comes out as a line of stitches.
+        # Chaining capsules between the arc points is continuous by construction
+        # and still lets every point be placed against the wall beneath it.
+        r = 0.0075 * H
+        arc = [
+            (cx + t * br * 0.78,
+             front_groove(prof, cz - br * (0.96 - 0.13 * t * t), r, 0.0034 * H,
+                          bulge=0.0035 * H, x=cx + t * br * 0.78),
+             cz - br * (0.96 - 0.13 * t * t))
+            for t in np.linspace(-0.80, 0.80, 9)
+        ]
+        for a, b in zip(arc[:-1], arc[1:]):
+            f.sub(sdf.Capsule(a, b, r), k=0.007 * H, mirror=True)
     else:
         pz = zn + 0.019 * H - 0.012 * H * P.sag
         px = 0.046 * H
@@ -555,11 +558,15 @@ def build_arms(f: sdf.Field, P: Proportions, prof: TorsoProfile):
         k=(0.055 - 0.018 * mus) * H,
         mirror=True,
     )
-    # armpit hollow
+    # Armpit hollow.  It has to stay clear of the back of the arm: reaching to
+    # within 17 mm of it and then blurred by a 11 mm fillet, the tail of the
+    # subtraction broke the posterior surface and left a black pinhole either
+    # side of the upper back on the slighter figures.  The hollow is a hollow in
+    # x anyway, so the depth it needs front-to-back is small.
     f.sub(
-        sdf.Ellipsoid((sx - 0.012 * H, cy_sh - 0.004 * H, (P.z_armpit - 0.008) * H),
-                      (0.020 * H, 0.026 * H, 0.024 * H)),
-        k=0.030 * H,
+        sdf.Ellipsoid((sx - 0.012 * H, cy_sh - 0.008 * H, (P.z_armpit - 0.008) * H),
+                      (0.020 * H, 0.020 * H, 0.024 * H)),
+        k=0.026 * H,
         mirror=True,
     )
 
