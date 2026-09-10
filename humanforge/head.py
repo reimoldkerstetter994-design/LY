@@ -75,7 +75,7 @@ FACE_X = {
     "gonion": 0.336,
     "condyle": 0.430,
     "chin": 0.148,
-    "alar": 0.117,
+    "alar": 0.130,
     "mouth": 0.166,
     "pupil": 0.202,
     "ear": 0.485,
@@ -105,8 +105,8 @@ FACE_Y = {
     "nose_tip": 0.498,
 }
 
-# Horizontal sections of the head, from the point of the chin up to the brow,
-# where the cranial vault takes over: height as a fraction of head height, half
+# Horizontal sections of the whole head, from under the chin to the vertex:
+# height as a fraction of head height, half
 # breadth as a fraction of head breadth, then the front and back of the section
 # in face depths.  The half breadths pass through the anthropometric landmarks --
 # 0.348 at the gonion, 0.45 at the zygomatic arch -- so the mid-face keeps its
@@ -122,17 +122,20 @@ HEAD_STATIONS = (
     (0.330, 0.425, 0.372, -0.360),
     (0.390, 0.437, 0.352, -0.410),
     (0.440, 0.440, 0.339, -0.450),
-    (0.500, 0.450, 0.340, -0.475),
-    (0.560, 0.462, 0.360, -0.492),
-    (0.620, 0.480, 0.372, -0.497),
+    (0.495, 0.450, 0.338, -0.474),
+    (0.526, 0.455, 0.346, -0.482),
+    (0.556, 0.460, 0.384, -0.492),
+    (0.590, 0.464, 0.376, -0.495),
+    (0.620, 0.470, 0.366, -0.497),
+    (0.680, 0.494, 0.362, -0.494),
+    (0.740, 0.497, 0.341, -0.478),
+    (0.800, 0.478, 0.310, -0.447),
+    (0.860, 0.428, 0.270, -0.396),
+    (0.920, 0.342, 0.216, -0.317),
+    (0.960, 0.256, 0.160, -0.240),
+    (0.985, 0.150, 0.082, -0.148),
+    (1.000, 0.010, -0.010, -0.030),
 )
-
-# The cranial vault, which carries the forehead, the parietals and the occiput as
-# one surface.  Its top lands exactly on the vertex, its section at the topmost
-# loft station matches that station, and it dies out just below the cheekbones
-# rather than bulging out over the jaw.  The front stops short of the glabella,
-# which the brow ridge supplies.
-VAULT = ((0.0, -0.0625, 0.660), (0.500, 0.4375, 0.340))
 
 # How finely the station table is resampled before it is handed to the loft.  The
 # table is anatomical data and is deliberately sparse; the surface needs to be
@@ -208,18 +211,32 @@ def _build_neck(field: Field, skeleton: Skeleton, h: HeadFrame) -> None:
     p = m.params
     neck_r = m.b("neck") * 0.5
     base = skeleton.p("neck_base")
-    # The top station sits barely above the chin, not up at the jaw.  A round cone
-    # ends in a hemisphere of its own end radius, and the neck's radius is around
-    # 55 mm, so a top placed at jaw height puts a ball of that size two thirds of
-    # the way up the head.  It is wider there than the mandible is, which swallows
-    # the jawline from the inside: the jaw then measures as wide as the neck no
-    # matter what the loft says, and no amount of shadow under it reads as bone.
-    top = h.point(0.0, -0.02, 0.02)
+    # A round cone ends in a hemisphere of its own end radius, and a neck's radius
+    # is around 55 mm, so a top station placed up at the jaw puts a ball that size
+    # two thirds of the way up the head.  It is wider there than the mandible is,
+    # so it swallows the jawline from the inside: the jaw then measures as wide as
+    # the neck whatever the skull loft says, and no amount of shadow under it reads
+    # as bone.  The top therefore sits low and narrow, and the throat under the jaw
+    # is filled by its own mass, which can be flat enough not to reach the jaw's
+    # width.
+    top = h.point(0.0, -0.02, 0.060)
 
     field.add(
-        RoundCone(base, top, neck_r * 1.18, neck_r * 0.92, section=(1.0, 1.04)),
+        RoundCone(base, top, neck_r * 1.18, neck_r * 0.78, section=(1.0, 1.04)),
         blend=0.008 * m.height,
         name="neck",
+    )
+    # Throat: the soft tissue between the jaw and the neck proper.  Without it the
+    # submandibular hollow has nothing left to cut into and opens a gap straight
+    # through under the chin.
+    field.add(
+        Ellipsoid(
+            h.point(0.0, 0.105, 0.035),
+            h.size(0.235, 0.235, 0.070),
+            rot=h.orientation,
+        ),
+        blend=0.030 * h.height,
+        name="throat",
     )
     # Sternocleidomastoids: the paired straps that define the front of a neck.
     # They run from the sternal notch up to the mastoid process, which is *behind*
@@ -275,6 +292,23 @@ def _spline(knots: np.ndarray, values: np.ndarray, at: np.ndarray) -> np.ndarray
     )
 
 
+def _relax(values: np.ndarray, window: int = 5, passes: int = 2) -> np.ndarray:
+    """Smooth a resampled profile so its curvature is continuous.
+
+    A cubic Hermite through the station table is only C1: its curvature jumps at
+    every knot.  That is invisible in the silhouette and glaringly visible under
+    smooth shading, as broad horizontal bands across the skull wherever the table's
+    stations are far apart.  A couple of box passes over a few millimetres removes
+    the jumps and moves the surface itself by almost nothing.
+    """
+    kernel = np.ones(window) / window
+    out = values
+    for _ in range(passes):
+        padded = np.pad(out, window // 2, mode="edge")
+        out = np.convolve(padded, kernel, mode="valid")
+    return out
+
+
 def _build_core(field: Field, h: HeadFrame, female: float, soft: float) -> None:
     """The skull and mid-face, lofted from :data:`HEAD_STATIONS` in one piece.
 
@@ -295,6 +329,19 @@ def _build_core(field: Field, h: HeadFrame, female: float, soft: float) -> None:
 
     ramp = np.clip((zs - 0.18) / 0.20, 0.0, 1.0)
     widths = widths * (jaw + (cheek - jaw) * ramp * ramp * (3.0 - 2.0 * ramp))
+    # How upright the forehead is, which is one of the few reliable sex differences
+    # in the skull: a male one slopes back from a heavier ridge, a female one rises
+    # almost vertically.  Adding it to the loft's own front profile rather than as a
+    # frontal mass matters -- a mass big enough to be a forehead puts its bulge
+    # *above* the brow, which is an infant's skull, and its rim shows as a welt
+    # across the temples.
+    fronts = fronts + 0.024 * female * np.exp(-(((zs - 0.760) / 0.150) ** 2))
+    # The vertex station is nearly a point, and a cubic through it can undershoot
+    # into negative widths just below the crown, which turns the top of the head
+    # inside out.
+    widths = np.maximum(_relax(widths), 0.004)
+    fronts = np.maximum(_relax(fronts), backs + 0.010)
+    backs = _relax(backs)
 
     field.add(
         Loft(
@@ -306,32 +353,6 @@ def _build_core(field: Field, h: HeadFrame, female: float, soft: float) -> None:
             offset=0.5 * (fronts + backs) * h.depth,
         ),
         name="head_core",
-    )
-
-    centre, radii = VAULT
-    field.add(
-        Ellipsoid(
-            h.point(*centre),
-            h.size(*radii),
-            rot=h.orientation,
-        ),
-        blend=0.014 * hh,
-        name="vault",
-    )
-    # Frontal eminences.  The vault already carries the forehead; all this does is
-    # set how upright it is, which is one of the few reliable sex differences in
-    # the skull -- a male forehead slopes back from a heavier ridge, a female one
-    # rises almost vertically.  It has to stay small: the glabella is the front of
-    # the upper face, and a frontal mass big enough to be a forehead in its own
-    # right puts the bulge above the brow instead, which is an infant's skull.
-    field.add(
-        Ellipsoid(
-            h.point(0.0, FACE_Y["forehead"] - 0.105 + 0.020 * female, FACE_Z["brow"] + 0.110),
-            h.size(0.300, 0.110, 0.100),
-            rot=h.rotated(v3(1.0, 0.0, 0.0), 16.0 - 12.0 * female),
-        ),
-        blend=0.035 * hh,
-        name="forehead",
     )
 
 
@@ -352,9 +373,11 @@ def _build_jawline(
     # behind so the mandible's lower border becomes an edge.  Soft faces keep
     # more of it filled in, which is most of what a double chin is.
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
+        # The hollow starts well off the midline.  Started near it, the left and
+        # right cuts overlap under the chin and trench straight through the throat.
         field.subtract(
             RoundCone(
-                h.point(side * 0.060, FACE_Y["chin"] - 0.180, -0.030),
+                h.point(side * 0.135, FACE_Y["chin"] - 0.150, -0.020),
                 h.point(side * 0.330, FACE_Y["gonion"] - 0.020, FACE_Z["gonion"] - 0.045),
                 0.052 * hh * (1.25 - 0.45 * soft),
                 0.060 * hh * (1.25 - 0.45 * soft),
@@ -378,26 +401,30 @@ def _build_jawline(
             name=f"gonion_{tag}",
         )
 
-    # Mental protuberance: the chin proper, a small pad on the front of the
-    # mandible rather than the whole point of the jaw.
+    # Mental protuberance: the chin proper.  The loft already carries how far the
+    # chin projects, so this only adds the swell of the boss itself -- wide and
+    # shallow, with a blend well under its own relief, or it becomes a pad stuck on
+    # below the lip.
     field.add(
         Ellipsoid(
-            h.point(0.0, FACE_Y["chin"] - 0.040, 0.062),
-            h.size(FACE_X["chin"] + 0.030 * square, 0.075, 0.062),
+            h.point(0.0, FACE_Y["chin"] - 0.090, 0.072),
+            h.size(FACE_X["chin"] + 0.048 * square, 0.105, 0.078),
             rot=h.orientation,
         ),
-        blend=0.024 * hh,
+        blend=0.005 * hh,
         name="chin",
     )
-    # Mental crease, the shadow under the lower lip.
+    # Mental crease, the shadow under the lower lip.  Its axis sits in front of the
+    # skin, not behind it: a cut whose centre is a couple of millimetres under the
+    # surface breaks through only in patches and leaves a ragged line.
     field.subtract(
         RoundCone(
-            h.point(-0.075, FACE_Y["lip"] - 0.012, FACE_Z["lip_lower"] - 0.032),
-            h.point(0.075, FACE_Y["lip"] - 0.012, FACE_Z["lip_lower"] - 0.032),
-            0.013 * hh,
-            0.013 * hh,
+            h.point(-0.070, FACE_Y["lip"] + 0.004, FACE_Z["lip_lower"] - 0.032),
+            h.point(0.070, FACE_Y["lip"] + 0.004, FACE_Z["lip_lower"] - 0.032),
+            0.011 * hh,
+            0.011 * hh,
         ),
-        blend=0.014 * hh,
+        blend=0.007 * hh,
         name="mental_crease",
     )
     if soft > 0.85 or age == "elder":
@@ -413,27 +440,45 @@ def _build_jawline(
 
 
 def _build_brow(field: Field, h: HeadFrame, female: float) -> None:
-    """Supraorbital ridge; its projection is one of the strongest male cues."""
+    """What the station table cannot carry of the supraorbital ridge.
+
+    Most of the ridge is in :data:`HEAD_STATIONS`, as a step in the loft's front
+    profile between the nasion and the brow.  That is the only way to get it: the
+    ridge's projection is easy to add as a mass, but what makes it read as bone is
+    the way it *turns back* almost ninety degrees by the time it reaches the outer
+    corner of the eye, and a mass laid across the face at constant depth turns into
+    a visor instead.  The loft's own elliptical sections sweep back on their own.
+
+    What is left is the pair of swells over the inner half of each orbit, and they
+    have to be shallow and wide with a blend well under their own projection.  A
+    mass that stands as far proud as its blend radius is wide raises a ring around
+    its rim, and on a brow that ring reads as a bead sitting above the eye.
+    """
     hh = h.height
-    field.add(
-        RoundCone(
-            h.point(-0.300, FACE_Y["brow"] - 0.031, FACE_Z["brow"] - 0.008),
-            h.point(0.300, FACE_Y["brow"] - 0.031, FACE_Z["brow"] - 0.008),
-            0.030 * hh,
-            0.030 * hh,
-        ),
-        blend=0.024 * hh,
-        name="brow_ridge",
-    )
-    if female < 0.75:
+    heavy = 1.0 - 0.55 * female
+
+    for side, tag in ((LEFT, "l"), (RIGHT, "r")):
         field.add(
-            RoundCone(
-                h.point(-0.190, FACE_Y["brow"] - 0.020, FACE_Z["brow"] - 0.020),
-                h.point(0.190, FACE_Y["brow"] - 0.020, FACE_Z["brow"] - 0.020),
-                0.024 * hh * (1.0 - female),
-                0.024 * hh * (1.0 - female),
+            Ellipsoid(
+                h.point(
+                    side * 0.150,
+                    FACE_Y["brow"] - 0.115,
+                    FACE_Z["brow"] - 0.014,
+                ),
+                h.size(0.175, 0.130, 0.042),
+                rot=h.rotated(v3(1.0, 0.0, 0.0), 8.0),
             ),
-            blend=0.020 * hh,
+            blend=0.006 * hh,
+            name=f"brow_ridge_{tag}",
+        )
+    if heavy > 0.4:
+        field.add(
+            Ellipsoid(
+                h.point(0.0, FACE_Y["brow"] - 0.125, FACE_Z["brow"] - 0.026),
+                h.size(0.095, 0.135, 0.050),
+                rot=h.orientation,
+            ),
+            blend=0.006 * hh,
             name="glabella",
         )
 
@@ -443,73 +488,78 @@ def _build_brow(field: Field, h: HeadFrame, female: float) -> None:
 
 
 def _build_nose(field: Field, h: HeadFrame, female: float, young: float) -> None:
-    """Bridge, dorsum, tip, columella and wings.
+    """The nose, as its own loft: root, bridge, dorsum, tip and wings in one piece.
 
-    Every part is placed by pulling its centre back from the landmark by its own
-    radius, so the *surface* lands on the measurement.  Centring a mass on the
-    landmark instead puts the skin a whole radius in front of it, and on a nose
-    that is a centimetre -- half again as much projection as the nose is supposed
-    to have, which is most of what makes a procedural nose look like a beak.
+    Assembled from separate masses -- a cone for the bridge, another for the dorsum,
+    a ball for the tip, one for each wing -- a nose comes out as a row of beads with
+    a bulb on the end.  Each mass has to be blended into its neighbours, each blend
+    raises a rim where the two surfaces cross, and the rims are at exactly the scale
+    the eye reads as anatomy, so they look like structure that is not there.
+
+    Lofting it fixes the whole class of problem at once, and the table below is
+    directly checkable: the front column is the midline profile of a nose, so it
+    peaks at the pronasale and dips at the nasion, and the width column is its
+    breadth, so it reaches the measured alar width at the base.
+
+    The back column is set well behind the face, not just behind the nose.  It puts
+    the widest part of each section *inside* the cheek, which is what keeps the
+    sidewalls from standing out as a pair of ridges: the nasofacial groove should be
+    where the nose leaves the face, and if the section's widest point is in front of
+    the cheek then the groove ends up on the nose itself.
+
+    The last column is the sections' superellipse power (see
+    :class:`~humanforge.sdf.Loft`).  It has to rise towards the base, because an
+    elliptical section three quarters of the way out to the alar margin has already
+    given up two thirds of its depth and so lies *behind* the cheek: the wings
+    disappear into the face and the nose measures 27 mm across however wide the
+    width column is made.  Squaring the lower sections off carries their depth out
+    to the alar crease and lets the wing stand where the crease can cut around it.
     """
     hh = h.height
-    width = 1.0 - 0.02 * female - 0.05 * young
-    projection = 1.0 - 0.10 * female - 0.12 * young
+    width = 1.0 - 0.02 * female - 0.02 * young
+    # How far the tip stands out past the *base* of the nose.  Scaling its depth
+    # from mid head instead drags the 0.41 the whole face already sits forward
+    # along with it, so a nominal tenth off a female nose removes half of it.
+    reach = 1.0 - 0.07 * female - 0.08 * young
+    base = FACE_Y["subnasale"]
 
-    tip_radius = 0.048
-    root = h.point(0.0, FACE_Y["nasion"] - 0.030, FACE_Z["nasion"])
-    # The projection factor scales how far the tip stands out *past the base of
-    # the nose*, not its depth from the middle of the head.  Scaling the latter
-    # takes the whole 0.41 the face already sits forward of mid head along with
-    # it, so a nominal tenth off a female nose removes half of it.
-    tip = h.point(
-        0.0,
-        FACE_Y["subnasale"]
-        + (FACE_Y["nose_tip"] - FACE_Y["subnasale"]) * projection
-        - tip_radius,
-        FACE_Z["nose_tip"],
+    stations = (
+        # z,     half width, front,  back,  power
+        (0.585, 0.040, 0.372, 0.200, 2.0),  # root, running up into the glabella
+        (0.556, 0.041, 0.362, 0.200, 2.0),
+        (0.526, 0.043, 0.357, 0.200, 2.0),  # nasion, the dip of the bridge
+        (0.480, 0.048, 0.381, 0.200, 2.1),
+        (0.430, 0.055, 0.412, 0.200, 2.3),  # dorsum
+        (0.390, 0.064, 0.450, 0.200, 2.7),
+        (0.362, 0.076, 0.494, 0.200, 3.0),  # supratip
+        (0.353, 0.080, 0.498, 0.200, 3.1),  # pronasale
+        (0.336, 0.105, 0.464, 0.200, 3.4),  # lobule spreading into the wings
+        (0.318, 0.126, 0.412, 0.200, 3.6),
+        (0.304, 0.130, 0.382, 0.200, 3.6),  # alar base
+        (0.292, 0.122, 0.350, 0.200, 3.4),
     )
-    bridge = 0.5 * (root + tip)
+    rows = np.asarray(stations[::-1], dtype=np.float64)
+    knots = rows[:, 0]
+    zs = np.linspace(knots[0], knots[-1], 128)
+    widths, fronts, backs, powers = (
+        _relax(_spline(knots, rows[:, c], zs)) for c in (1, 2, 3, 4)
+    )
+    fronts = base + (fronts - base) * reach
 
     field.add(
-        RoundCone(root, bridge, 0.026 * hh, 0.024 * hh, section=(0.85 * width, 1.0)),
-        blend=0.011 * hh,
-        name="nasal_bridge",
-    )
-    field.add(
-        RoundCone(bridge, tip, 0.024 * hh, 0.028 * hh, section=(1.05 * width, 1.0)),
-        blend=0.007 * hh,
-        name="nasal_dorsum",
-    )
-    field.add(
-        Ellipsoid(tip, h.size(0.046 * width, tip_radius, 0.028), rot=h.orientation),
-        blend=0.005 * hh,
-        name="nasal_tip",
-    )
-    # Columella and the septum between the nostrils.
-    field.add(
-        RoundCone(
-            tip,
-            h.point(0.0, FACE_Y["subnasale"] - 0.015, FACE_Z["subnasale"] + 0.015),
-            0.017 * hh,
-            0.015 * hh,
+        Loft(
+            origin=h.origin,
+            rot=h.orientation,
+            heights=zs * hh,
+            half_width=widths * width * h.width,
+            half_depth=0.5 * (fronts - backs) * h.depth,
+            offset=0.5 * (fronts + backs) * h.depth,
+            exponent=np.maximum(powers, 2.0),
         ),
         blend=0.006 * hh,
-        name="columella",
+        name="nose",
     )
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
-        field.add(
-            Ellipsoid(
-                h.point(
-                    side * 0.080 * width,
-                    FACE_Y["subnasale"] - 0.062,
-                    FACE_Z["subnasale"] + 0.010,
-                ),
-                h.size(0.043 * width, 0.058, 0.024),
-                rot=h.orientation,
-            ),
-            blend=0.007 * hh,
-            name=f"ala_{tag}",
-        )
         # Nostrils open downwards and slightly back.
         field.subtract(
             Ellipsoid(
@@ -521,19 +571,19 @@ def _build_nose(field: Field, h: HeadFrame, female: float, young: float) -> None
                 h.size(0.024, 0.042, 0.026),
                 rot=h.rotated(v3(1.0, 0.0, 0.0), -20.0),
             ),
-            blend=0.005 * hh,
+            blend=0.0045 * hh,
             name=f"nostril_{tag}",
         )
         # Alar crease, where the wing of the nose meets the cheek.
         field.subtract(
             RoundCone(
                 h.point(
-                    side * (FACE_X["alar"] + 0.022) * width,
+                    side * (FACE_X["alar"] + 0.030) * width,
                     FACE_Y["subnasale"] - 0.100,
                     FACE_Z["subnasale"] + 0.052,
                 ),
                 h.point(
-                    side * (FACE_X["alar"] + 0.030) * width,
+                    side * (FACE_X["alar"] + 0.038) * width,
                     FACE_Y["subnasale"] - 0.120,
                     FACE_Z["subnasale"] + 0.004,
                 ),
@@ -543,12 +593,14 @@ def _build_nose(field: Field, h: HeadFrame, female: float, young: float) -> None
             blend=0.008 * hh,
             name=f"alar_crease_{tag}",
         )
-    # Philtrum: the shallow groove from the nose base down to the upper lip.
+    # Philtrum: the shallow groove from the nose base down towards the upper lip.
+    # It stops short of the lip, because a cut that reaches the vermilion crosses the
+    # lip's own rim at a glancing angle and the two together leave a ragged notch.
     field.subtract(
         RoundCone(
-            h.point(0.0, FACE_Y["subnasale"] + 0.010, FACE_Z["subnasale"]),
-            h.point(0.0, FACE_Y["lip"] + 0.014, FACE_Z["lip_upper"] + 0.006),
-            0.013 * hh,
+            h.point(0.0, FACE_Y["subnasale"] + 0.014, FACE_Z["subnasale"] - 0.004),
+            h.point(0.0, FACE_Y["lip"] + 0.030, FACE_Z["lip_upper"] + 0.026),
+            0.014 * hh,
             0.016 * hh,
         ),
         blend=0.010 * hh,
@@ -557,60 +609,82 @@ def _build_nose(field: Field, h: HeadFrame, female: float, young: float) -> None
 
 
 def _build_mouth(field: Field, h: HeadFrame, female: float) -> None:
-    hh = h.height
-    fullness = 1.0 + 0.22 * female
-    half = FACE_X["mouth"]
+    """The lips: shallow swells and a seam, not a stack of balls.
 
-    # The upper lip is three lobes, which is what gives a cupid's bow.
-    for offset, scale in ((0.0, 0.80), (-0.070, 1.0), (0.070, 1.0)):
-        field.add(
-            Ellipsoid(
-                h.point(offset, FACE_Y["lip"] - 0.010, FACE_Z["lip_upper"]),
-                h.size(half * 0.50 * scale, 0.040, 0.020 * fullness * scale),
-                rot=h.orientation,
-            ),
-            blend=0.011 * hh,
-            name="upper_lip",
-        )
+    The skull loft already carries how far the mouth projects -- at lip height the
+    front of the loft *is* the lips -- so nothing here needs to add that, and adding
+    it anyway is what turned the mouth into three balls for the upper lip and one
+    for the lower.  What is missing is only the vermilion: a millimetre or two of
+    relief with a definite border.
+
+    That sets the blends.  A mass standing as far proud as its blend radius is wide
+    raises a ring around its rim, so a two millimetre swell needs a blend well under
+    two millimetres -- which is also what leaves the vermilion border crisp, the way
+    it is on a face.
+    """
+    hh = h.height
+    fullness = 1.0 + 0.30 * female
+    half = FACE_X["mouth"]
+    seam = 0.0055 * hh
+
+    # Each lip is one form, standing decisively proud rather than grazing the face.
+    # A mass that only just breaks the surface crosses it at a glancing angle over a
+    # wide, thin sliver, and the mesher renders that sliver as a broken line -- which
+    # on a mouth looks like a scar above the lip, not like a vermilion border.
+    # Each lip runs wider than the mouth is measured, because an ellipsoid's relief
+    # fades to nothing at its ends: a lip only as wide as the cheilion has under a
+    # millimetre of vermilion for the last third of its span, which is not enough
+    # for the seam to have two lips to sit between.  Where the mouth *ends* is set
+    # by how far the seam is cut, not by where the swells run out.
     field.add(
         Ellipsoid(
-            h.point(0.0, FACE_Y["lip"], FACE_Z["lip_lower"]),
-            h.size(half * 0.90, 0.044, 0.026 * fullness),
-            rot=h.orientation,
+            h.point(0.0, FACE_Y["lip"] - 0.038, FACE_Z["lip_upper"] - 0.004),
+            h.size(half * 1.15, 0.058, 0.030 * fullness),
+            rot=h.rotated(v3(1.0, 0.0, 0.0), -10.0),
         ),
-        blend=0.012 * hh,
+        blend=seam,
+        name="upper_lip",
+    )
+    field.add(
+        Ellipsoid(
+            h.point(0.0, FACE_Y["lip"] - 0.034, FACE_Z["lip_lower"] + 0.004),
+            h.size(half * 1.08, 0.058, 0.036 * fullness),
+            rot=h.rotated(v3(1.0, 0.0, 0.0), 12.0),
+        ),
+        blend=seam,
         name="lower_lip",
     )
-    for side, tag in ((LEFT, "l"), (RIGHT, "r")):
-        field.add(
-            Ellipsoid(
-                h.point(side * (half + 0.006), FACE_Y["lip"] - 0.055, FACE_Z["lip_line"]),
-                h.size(0.030, 0.045, 0.028),
-                rot=h.orientation,
-            ),
-            blend=0.012 * hh,
-            name=f"mouth_corner_{tag}",
-        )
-    # Lip seam: a slit of nearly constant depth, running from the midline back to
-    # each corner.  A single lens shaped cut is thinnest exactly where the mouth is
-    # widest, so it stops reading as a seam several millimetres inboard of the
-    # corners and the mouth measures short of its breadth.  Two straight slits
-    # instead follow the way the lips curve back around the teeth, and hold their
-    # depth all the way out to the cheilion.
+    # Lip seam: a slit running from the midline out to each corner.  Two straight
+    # slits rather than one lens shaped cut, because a lens is thinnest exactly
+    # where the mouth is widest and so stops reading several millimetres inboard of
+    # the cheilion.
+    #
+    # The axis sits a couple of millimetres *in front of* the lips all the way
+    # along, and the slit's depth is what is left of the radius once that clearance
+    # is taken off.  Sunk into the flesh instead -- which is what a straight line
+    # between two anatomical points does, since the lips bulge 7 mm forward of the
+    # lip plane at the midline and only 3 mm at the corner -- the cut stays entirely
+    # inside the head over the outer half of the mouth and the seam simply stops.
+    #
+    # Which is also why the cutter is flattened rather than round.  A round cutter
+    # standing 2 mm clear of the surface has to be 7 mm across to reach 5 mm into
+    # it, and a 7 mm ball opens a 13 mm gash: the mouth ends up as a hole between
+    # the lips rather than a line.  Squashing the section vertically keeps the depth
+    # and gives back the thinness.
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
         field.subtract(
             RoundCone(
-                h.point(0.0, FACE_Y["lip"] + 0.006, FACE_Z["lip_line"]),
+                h.point(0.0, FACE_Y["lip"] + 0.043, FACE_Z["lip_line"]),
                 h.point(
-                    side * half * 1.02,
-                    FACE_Y["lip"] - 0.048,
+                    side * half * 0.75,
+                    FACE_Y["lip"] + 0.012,
                     FACE_Z["lip_line"] + 0.004,
                 ),
-                0.017 * hh,
-                0.013 * hh,
+                0.034 * hh,
+                0.034 * hh,
                 section=(0.38, 1.0),
             ),
-            blend=0.006 * hh,
+            blend=0.0035 * hh,
             name=f"lip_seam_{tag}",
         )
 
@@ -691,40 +765,39 @@ def _build_eyes(
         )
         field.subtract(
             Intersection((Sphere(pivot, globe * 2.15), window)),
-            blend=0.0012 * hh,
+            blend=0.0020 * hh,
             name=f"fissure_{tag}",
         )
-        # Upper lid crease, a few millimetres above the lash line.
+        # Upper lid crease, a couple of millimetres above the lash line.  Shallow
+        # and tight: a crease is a fold, and cut any deeper it becomes a slot with
+        # its own pair of rims, which reads as a second eyelid.
         field.subtract(
             RoundCone(
-                h.point(cx - 0.090, FACE_Y["cornea"] - 0.010, FACE_Z["eye"] + 0.048),
-                h.point(cx + 0.090, FACE_Y["cornea"] - 0.010, FACE_Z["eye"] + 0.052),
-                0.007 * hh,
-                0.007 * hh,
+                h.point(cx - 0.085, FACE_Y["cornea"] - 0.020, FACE_Z["eye"] + 0.044),
+                h.point(cx + 0.085, FACE_Y["cornea"] - 0.020, FACE_Z["eye"] + 0.048),
+                0.005 * hh,
+                0.005 * hh,
             ),
-            blend=0.007 * hh,
+            blend=0.003 * hh,
             name=f"lid_crease_{tag}",
         )
-        # Both canthi, so the corners of the aperture close into a point instead
-        # of ending in a notch.  They sit level with the globe's equator, which
-        # is behind the cut, so they cannot creep back over the eye.
-        for reach, depth, lift, name in (
-            (-0.112, 0.030, -0.012, "canthus_medial"),
-            (0.086, 0.052, 0.004, "canthus_lateral"),
-        ):
-            field.add(
-                Ellipsoid(
-                    h.point(
-                        side * (FACE_X["pupil"] + reach),
-                        FACE_Y["cornea"] - depth - globe / h.depth,
-                        FACE_Z["eye"] + lift,
-                    ),
-                    h.size(0.040, 0.048, 0.032),
-                    rot=h.orientation,
+        # The canthi close the corners of the aperture into a point instead of a
+        # notch.  One wide flat mass across the whole orbit does it; the pair of
+        # small ones this replaces stood as far proud as they were wide, so each
+        # showed up as a bead beside the eye.
+        field.add(
+            Ellipsoid(
+                h.point(
+                    side * FACE_X["pupil"],
+                    FACE_Y["cornea"] - 0.085 - globe / h.depth,
+                    FACE_Z["eye"] - 0.004,
                 ),
-                blend=0.010 * hh,
-                name=f"{name}_{tag}",
-            )
+                h.size(0.155, 0.105, 0.052),
+                rot=h.orientation,
+            ),
+            blend=0.005 * hh,
+            name=f"orbital_rim_{tag}",
+        )
 
         landmarks[f"eye_{tag}"] = cornea
         landmarks[f"eyeball_{tag}"] = pivot
@@ -756,21 +829,25 @@ def _build_ears(field: Field, h: HeadFrame) -> None:
 
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
         tilt = h.rotated(v3(1.0, 0.0, 0.0), 15.0)
-        # Pinna: a flattened dish whose outer edge stands clear of the skull.
+        # Pinna: a flattened dish whose outer edge stands clear of the skull.  An
+        # ear is about 62 mm tall and only 33 mm front to back; made as deep as it
+        # is tall it stops reading as an ear and becomes a paddle on the skull.
         field.add(
             Ellipsoid(
-                h.point(side * (skull - 0.010), FACE_Y["ear"] + 0.010, centre_z + 0.005),
-                h.size(0.098, 0.105, half_z * 0.78),
+                h.point(side * (skull - 0.012), FACE_Y["ear"] - 0.010, centre_z + 0.005),
+                h.size(0.094, 0.076, half_z * 0.80),
                 rot=tilt,
             ),
-            blend=0.010 * hh,
+            blend=0.006 * hh,
             name=f"ear_{tag}",
         )
-        # Concha and scapha, scooped out of the outer face so the dish is a dish.
+        # Concha, scooped out of the outer face so the dish is a dish.  Shallow: a
+        # scoop deeper than the pinna is thick punches straight through it and the
+        # ear becomes a ring.
         field.subtract(
             Ellipsoid(
-                h.point(side * (skull + 0.115), FACE_Y["ear"] + 0.020, centre_z + 0.010),
-                h.size(0.105, 0.070, half_z * 0.66),
+                h.point(side * (skull + 0.128), FACE_Y["ear"] + 0.004, centre_z + 0.004),
+                h.size(0.100, 0.042, half_z * 0.44),
                 rot=tilt,
             ),
             blend=0.006 * hh,
@@ -779,49 +856,55 @@ def _build_ears(field: Field, h: HeadFrame) -> None:
         # The gap behind the ear, which is what actually makes it stand out.
         field.subtract(
             Ellipsoid(
-                h.point(side * (skull + 0.040), FACE_Y["ear"] - 0.155, centre_z + 0.030),
-                h.size(0.075, 0.090, half_z * 0.90),
+                h.point(side * (skull + 0.034), FACE_Y["ear"] - 0.125, centre_z + 0.024),
+                h.size(0.068, 0.070, half_z * 0.92),
                 rot=tilt,
             ),
-            blend=0.008 * hh,
+            blend=0.006 * hh,
             name=f"ear_gap_{tag}",
         )
         # Helix: the rolled rim around the top and back.
         field.add(
             Ellipsoid(
-                h.point(side * (skull + 0.055), FACE_Y["ear"] - 0.045, centre_z + 0.025),
-                h.size(0.042, 0.048, half_z * 0.70),
+                h.point(side * (skull + 0.044), FACE_Y["ear"] - 0.034, centre_z + 0.022),
+                h.size(0.036, 0.034, half_z * 0.72),
                 rot=tilt,
             ),
-            blend=0.007 * hh,
+            blend=0.005 * hh,
             name=f"helix_{tag}",
         )
         field.add(
             Ellipsoid(
-                h.point(side * (skull + 0.010), FACE_Y["ear"] + 0.015, bottom + 0.030),
-                h.size(0.038, 0.050, 0.030),
+                h.point(side * (skull + 0.006), FACE_Y["ear"] + 0.004, bottom + 0.026),
+                h.size(0.034, 0.036, 0.026),
                 rot=tilt,
             ),
-            blend=0.009 * hh,
+            blend=0.005 * hh,
             name=f"lobe_{tag}",
         )
 
 
 def _build_aging(field: Field, h: HeadFrame, age: str, sag: float) -> None:
-    """Nasolabial folds and eye-corner creases; the strongest age cues."""
+    """Nasolabial folds and eye-corner creases; the strongest age cues.
+
+    Nothing is cut at all below a threshold, rather than cut faintly.  A crease a
+    fraction of a millimetre deep does not read as a fine crease: it grazes the
+    surface, breaks through only where the mesh happens to sample it, and shows up
+    as a dotted line.  A young face is better off with no fold than a dotted one.
+    """
     depth = {"child": 0.0, "teen": 0.12, "adult": 0.35, "elder": 1.0}[age]
     depth = min(1.0, depth + 0.35 * sag)
-    if depth <= 0.02:
+    if depth <= 0.45:
         return
     hh = h.height
 
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
         field.subtract(
             RoundCone(
-                h.point(side * 0.150, FACE_Y["subnasale"] - 0.030, FACE_Z["subnasale"] - 0.010),
-                h.point(side * 0.205, FACE_Y["lip"] - 0.075, FACE_Z["lip_lower"] - 0.010),
-                0.011 * hh * depth,
-                0.015 * hh * depth,
+                h.point(side * 0.150, FACE_Y["subnasale"] + 0.010, FACE_Z["subnasale"] - 0.010),
+                h.point(side * 0.205, FACE_Y["lip"] - 0.030, FACE_Z["lip_lower"] - 0.010),
+                0.013 * hh * depth,
+                0.017 * hh * depth,
             ),
             blend=0.013 * hh,
             name=f"nasolabial_{tag}",
