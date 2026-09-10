@@ -315,21 +315,24 @@ def _add_fall(field: Field, h: HeadFrame, style: HairStyle, grow_xy: float) -> N
     # 0 at the bottom of the fall, 1 where it meets the shell, so the fall can
     # narrow towards its end without the taper showing as a crease at the top.
     along = (zs + style.fall) / span
-    width = (0.30 + 0.14 * along) * grow_xy
-    # A loft ends at its lowest station, and one whose sections are still full
-    # size there ends in a flat cap -- which on a fall of hair is a rectangular
-    # slab hanging behind the ear, the same fault as a teat on the crown and for
-    # the same reason.  Close the sections over the last of the length instead,
-    # square-rooted so the end is round rather than conical.
-    cap = np.sqrt(np.clip(along / 0.12, 0.0, 1.0))
+    # Wide and shallow, but only so far.  At half a head breadth of half width
+    # against 20 mm of half depth this was 166 mm across and 44 mm thick, which is
+    # not a mass of hair but a plate, and from three quarters on it presented its
+    # side as a flat slab hanging behind the ear.
+    width = (0.24 + 0.11 * along) * grow_xy
+    # A loft ends at its lowest station, and one whose sections are still full size
+    # there ends in a flat cap -- the same fault as a teat on the crown, from the
+    # same cause.  Close the sections towards the bottom instead, square-rooted so
+    # the end comes to a round rather than a cone.
+    cap = np.sqrt(np.clip(along / 0.30, 0.0, 1.0))
     field.add(
         Loft(
             origin=h.origin,
             rot=h.orientation,
             heights=zs * h.height,
             half_width=np.maximum(width * h.width * cap, 1.0e-4),
-            half_depth=np.maximum((0.075 + 0.045 * along) * h.depth * cap, 1.0e-4),
-            offset=(-0.315 - 0.055 * along) * h.depth,
+            half_depth=np.maximum((0.135 + 0.055 * along) * h.depth * cap, 1.0e-4),
+            offset=(-0.300 - 0.045 * along) * h.depth,
             exponent=2.6,
         ),
         blend=0.030 * h.height,
