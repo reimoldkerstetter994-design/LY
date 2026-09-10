@@ -160,7 +160,6 @@ def grow(roots, normals, style, rng, proxy=None, gather=None):
     # tangent plane at each root so strands travel across the head, not out of it
     sweep = np.asarray(style.get("sweep", (0.20, 0.90, -0.35)), np.float64)
     sweep = sweep / np.linalg.norm(sweep)
-    sweep = np.where(roots[:, :1] > 0, sweep, sweep * np.array([-1.0, 1.0, 1.0]))
     tang = _normalise(sweep - normals * np.sum(sweep * normals, axis=1, keepdims=True))
 
     step = length / segs
@@ -170,28 +169,30 @@ def grow(roots, normals, style, rng, proxy=None, gather=None):
         if kind == "buzz":
             g = 0.25 * u
         elif kind == "short":
-            g = 0.92 * u**0.55
+            g = min(1.0, 1.90 * u**0.35)
         elif kind == "crop":
-            g = 0.88 * u**0.6
+            g = min(1.0, 1.55 * u**0.45)
         else:
             g = min(1.0, 1.35 * u**0.5)
         if kind in ("buzz", "short", "crop"):
-            flow = tang * 1.20 + down * 0.30
+            flow = tang * 1.45 + down * 0.30
         else:
             flow = down * 1.6
-        target = normals * (1.0 - g) + flow * g + jitter * 0.15 * (1.0 - 0.5 * u)
+        target = normals * (1.0 - g) + flow * g + jitter * 0.10 * (1.0 - 0.5 * u)
         target = target + clump_pull * u
         if gather is not None and kind == "ponytail":
             to_g = gather - pos
             w = np.clip(1.6 * (1.0 - u * 2.2), 0.0, 1.0)
             target = target * (1.0 - w) + _normalise(to_g) * (w * 2.0)
-        d = _normalise(d * 0.45 + _normalise(target) * 0.55)
+        blend = 0.30 if kind in ("short", "crop", "buzz") else 0.45
+        d = _normalise(d * blend + _normalise(target) * (1.0 - blend))
         pos = pos + d * (step * length_var)
         if curl > 0.0:
             ang = 2 * np.pi * (i + 1) * step / curl_period + phase
             pos = pos + (side * np.cos(ang) + up * np.sin(ang)) * curl * (0.3 + 0.7 * u)
-        if proxy is not None and kind in ("long", "ponytail", "crop"):
-            pos = sdf.push_outside(proxy, pos, margin=0.004)
+        if proxy is not None:
+            margin = 0.004 if kind in ("long", "ponytail") else 0.0015
+            pos = sdf.push_outside(proxy, pos, margin=margin)
         paths[:, i + 1] = pos
     return paths
 
@@ -241,7 +242,7 @@ def build_hair(P, lm, verts, normals, density=1.0, clay=False, seed=7):
     sel = []
     for sign in (1.0, -1.0):
         c = np.array([sign * bx * 0.98, by, bz + 0.002 * u])
-        rel = (verts - c) / np.array([0.026 * u, 0.020 * u, 0.011 * u])
+        rel = (verts - c) / np.array([0.023 * u, 0.016 * u, 0.0075 * u])
         m = (np.linalg.norm(rel, axis=1) < 1.0) & (normals[:, 1] < -0.25)
         idx = np.nonzero(m)[0]
         if len(idx) == 0:
@@ -251,14 +252,14 @@ def build_hair(P, lm, verts, normals, density=1.0, clay=False, seed=7):
         p = verts[pick]
         nn = normals[pick]
         # brows sweep outwards and slightly up
-        d = _normalise(nn * 0.8 + np.array([sign * 0.75, 0.0, 0.42])
-                       + rng.normal(0, 0.18, (n_brow, 3)))
-        L = 0.009 * u * (1.0 + rng.normal(0, 0.25, (n_brow, 1)))
+        d = _normalise(nn * 0.42 + np.array([sign * 0.90, 0.0, 0.24])
+                       + rng.normal(0, 0.13, (n_brow, 3)))
+        L = 0.0065 * u * (1.0 + rng.normal(0, 0.22, (n_brow, 1)))
         paths = np.stack([p, p + d * L * 0.45, p + d * L], axis=1)
         sel.append(paths)
     if sel:
         paths = np.concatenate(sel)
-        out.append(_curves_object("hair_brows", paths, _radii(2, 7.0e-5, 3.0e-5),
+        out.append(_curves_object("hair_brows", paths, _radii(2, 5.0e-5, 2.2e-5),
                                   mat_for(brow_colour)))
 
     # ---- eyelashes --------------------------------------------------------- #
