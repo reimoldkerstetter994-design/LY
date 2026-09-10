@@ -53,8 +53,14 @@ TORSO_STATIONS = (
     (0.505, "hip", 0.430, "hip_depth", 0.418),
     (0.545, "hip", 0.500, "hip_depth", 0.452),
     (0.585, "hip", 0.462, "hip_depth", 0.455),
-    (0.620, "waist", 0.500, "waist_depth", 0.500),
-    (0.662, "waist", 0.535, "waist_depth", 0.530),
+    # The waist's depth fractions are deliberately smaller than its breadth
+    # fractions.  Waist depth carries most of the fat response, and at anything
+    # above lean a loft built on it straight is deeper at the navel than at the
+    # sternum -- so in profile the belly is the frontmost part of an *average*
+    # figure, which reads as a paunch on everyone.  The paunch belongs to the
+    # abdominal mass, which is where the fat response can be made explicit.
+    (0.620, "waist", 0.530, "waist_depth", 0.470),
+    (0.662, "waist", 0.562, "waist_depth", 0.478),
     (0.700, "chest", 0.470, "chest_depth", 0.505),
     (0.736, "chest", 0.500, "chest_depth", 0.512),
     (0.776, "chest", 0.478, "chest_depth", 0.452),
@@ -72,6 +78,7 @@ class Figure:
     measures: Measures
     skeleton: Skeleton
     body: Field
+
     attachments: list[Attachment] = dataclass_field(default_factory=list)
     landmarks: dict[str, Vec3] = dataclass_field(default_factory=dict)
 
@@ -273,20 +280,22 @@ def _build_torso(body: Field, skeleton: Skeleton, profile: TorsoProfile) -> None
     )
 
     # -- abdomen ----------------------------------------------------------
-    belly = 0.45 + 1.15 * fat
+    # Placed by how far it stands in front of the trunk, the same way the
+    # pectoral and the buttock are, because that is the quantity anyone would
+    # describe: nothing on a lean figure, a couple of centimetres on a heavy one.
+    # Sized from the loft's own depth instead, the belly is whatever the fat
+    # response happened to add and there is no height at which it is flat.
     z_belly = (0.648 - 0.012 * sag) * H
+    depth_radius = m.b("waist_depth") * 0.330
+    protrusion = max(0.0, fat - 0.30) * 0.052 * H
     body.add(
         Ellipsoid(
             v3(
                 0.0,
-                profile.front(z_belly) - m.b("waist_depth") * 0.405,
+                profile.front(z_belly) + protrusion - depth_radius,
                 z_belly,
             ),
-            v3(
-                m.b("waist") * 0.430,
-                m.b("waist_depth") * 0.335 * belly,
-                0.070 * H,
-            ),
+            v3(m.b("waist") * 0.430, depth_radius, 0.070 * H),
         ),
         blend=0.011 * H,
         name="abdomen",
@@ -311,7 +320,7 @@ def _build_torso(body: Field, skeleton: Skeleton, profile: TorsoProfile) -> None
     # at a glancing angle, and a blend comparable to the protrusion then leaves a
     # raised ring right around the rim.  Making the protrusion explicit and the
     # blend clearly larger than it keeps the swelling soft-edged.
-    protrusion = (0.008 + 0.011 * muscle) * H
+    protrusion = (0.004 + 0.008 * muscle) * H
     depth_radius = 0.028 * H
     surfaces = {
         tag: _on_surface(body, profile, side * m.b("chest") * 0.270, z_pec)
@@ -361,12 +370,16 @@ def _build_torso(body: Field, skeleton: Skeleton, profile: TorsoProfile) -> None
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
         medial = _on_surface(body, profile, side * m.b("hip") * 0.070, 0.487 * H)
         lateral = _on_surface(body, profile, side * m.b("hip") * 0.330, 0.524 * H)
+        # Four millimetres deep, which is what an inguinal crease is.  The radii
+        # have to be read together with the offset that lifts the axis clear of the
+        # skin: at the radii a limb would use, the axis clearance is a fraction of
+        # them and the crease becomes a 10 mm trench across the groin.
         body.subtract(
             RoundCone(
-                medial + v3(0.0, 0.0035 * H, 0.0),
-                lateral + v3(0.0, 0.0035 * H, 0.0),
-                0.0075 * H,
-                0.0090 * H,
+                medial + v3(0.0, 0.0042 * H, 0.0),
+                lateral + v3(0.0, 0.0042 * H, 0.0),
+                0.0064 * H,
+                0.0074 * H,
             ),
             blend=0.004 * H,
             name=f"inguinal_{tag}",
@@ -555,18 +568,21 @@ def _build_shoulder_girdle(
             blend=0.006 * H,
             name=f"clavicle_{tag}",
         )
-        # The hollow above the clavicle: a shallow trough, about 8 mm deep, so it
-        # is cut a short way outside the surface it sits in.
+        # The hollow above the clavicle: a shallow trough, three millimetres deep,
+        # cut from outside the surface it sits in.  It has to be long and shallow.
+        # Short and deep -- which is what a round cutter sunk into the chest gives
+        # -- it stops reading as the hollow behind a collarbone and becomes a pair
+        # of drilled ovals on the upper chest.
         fossa = _on_surface(
             body, profile, side * m.b("biacromial") * 0.175, 0.824 * H
         )
         body.subtract(
             Ellipsoid(
-                fossa + v3(0.0, 0.0075 * H, 0.0),
-                v3(0.020 * H, 0.0105 * H, 0.0075 * H),
+                fossa + v3(0.0, 0.0080 * H, 0.0),
+                v3(0.026 * H, 0.0105 * H, 0.0060 * H),
                 rot=rotation((0.0, 1.0, 0.0), -side * 14.0),
             ),
-            blend=0.0035 * H,
+            blend=0.0045 * H,
             name=f"supraclavicular_{tag}",
         )
         # Deltoid cap, oriented down the arm.
