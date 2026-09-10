@@ -72,6 +72,11 @@ def main():
     ap.add_argument("--views", default="front,three,portrait")
     ap.add_argument("--voxel", type=float, default=0.0020)
     ap.add_argument("--samples", type=int, default=200)
+    # Portraits are the expensive frames by a long way: shallow depth of field
+    # over a hundred thousand hair strands leaves most pixels short of the
+    # adaptive threshold, so they run every sample.  A curly or long-haired
+    # preset can take ten times what the body views take.
+    ap.add_argument("--portrait-samples", type=int, default=0)
     ap.add_argument("--res", default="760x1100")
     ap.add_argument("--portrait-res", default="820x1000")
     ap.add_argument("--out", default="renders")
@@ -84,8 +89,12 @@ def main():
     views = a.views.split(",")
     body_res = tuple(int(v) for v in a.res.split("x"))
     head_res = tuple(int(v) for v in a.portrait_res.split("x"))
-    # the whole series shares one framing height so figures compare honestly
-    tall = max(proportions.get(n).height for n in names)
+    # The whole series shares one framing height so the figures compare honestly,
+    # and it is taken over the series rather than over whatever subset is being
+    # rendered: otherwise a re-run of a few presets frames them differently from
+    # the ones already on disk.
+    tall = max(proportions.get(n).height for n in ORDER)
+    head_samples = a.portrait_samples or a.samples
     os.makedirs(a.out, exist_ok=True)
 
     for name in names:
@@ -112,8 +121,10 @@ def main():
                 rig += scene.backdrop(azimuth=cfg["az"])
             rig += scene.studio_lights(target=(0, 0, 0.60 * P.height), scale=1.35,
                                       key=3.2, azimuth=cfg["az"])
-            res = head_res if cfg.get("dof") else body_res
-            sc = scene.setup_render(res=res, samples=a.samples, denoise=True)
+            portrait = bool(cfg.get("dof"))
+            res = head_res if portrait else body_res
+            sc = scene.setup_render(res=res, denoise=True,
+                                    samples=head_samples if portrait else a.samples)
             del sc
             dist = scene.frame_distance(cfg["fit"], cfg["lens"], res)
             loc = scene.orbit_position(cfg["target"], dist, cfg["az"], cfg["el"])

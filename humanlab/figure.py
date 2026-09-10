@@ -462,13 +462,19 @@ def build_neck(f: sdf.Field, P: Proportions, prof: TorsoProfile):
         (z1, P.neck_w * 0.84 * H, P.neck_d * 0.74 * H, P.neck_d * 0.86 * H, cy * 1.4, 2.2),
     ]
     f.add(sdf.Loft(secs, cap_blend=0.03 * H), k=0.05 * H)
-    # sterno-cleidomastoid
+    # Sterno-cleidomastoid, from the sternal end up and back to the mastoid.  The
+    # top has to finish *inside* the skull, a good way above the chin and behind
+    # the ear, because that is where the muscle actually attaches.  Stopped at
+    # chin level it ends in open air lateral to the jaw -- 51 mm out from the
+    # midline against a 40 mm neck -- and the round cap on the end of the cone
+    # shows up as a finger growing out of the side of the neck.
+    hh = (1.0 - P.z_chin) * H
     f.add(
         sdf.RoundCone(
             (0.014 * H, cy - P.neck_d * 0.80 * H, (P.z_neck - 0.010) * H),
-            (0.030 * H, cy + P.neck_d * 0.24 * H, (P.z_chin + 0.004) * H),
+            (0.018 * H, cy + P.neck_d * 0.12 * H, P.z_chin * H + 0.28 * hh),
             0.0065 * H,
-            0.0048 * H,
+            0.0042 * H,
         ),
         k=0.036 * H,
         mirror=True,
