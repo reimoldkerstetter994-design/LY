@@ -14,6 +14,7 @@ import sys
 from typing import Any
 
 import bpy
+from mathutils import Matrix, Vector
 
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -37,7 +38,6 @@ def dynamic_import(absolute_package_str: str, key: str):
 
 HumanService = dynamic_import("mpfb.services.humanservice", "HumanService")
 AssetService = dynamic_import("mpfb.services.assetservice", "AssetService")
-ObjectService = dynamic_import("mpfb.services.objectservice", "ObjectService")
 TargetService = dynamic_import("mpfb.services.targetservice", "TargetService")
 
 
@@ -52,11 +52,19 @@ CHARACTERS: list[dict[str, Any]] = [
             "age": 0.52,
             "muscle": 0.42,
             "weight": 0.46,
-            "height": 0.48,
+            "height": 0.52,
             "proportions": 0.58,
             "cupsize": 0.42,
             "firmness": 0.55,
             "race": {"asian": 1.0, "caucasian": 0.0, "african": 0.0},
+        },
+        "details": {
+            "head-oval": 0.45,
+            "l-eye-epicanthus-in": 0.35,
+            "r-eye-epicanthus-in": 0.35,
+            "nose-scale-horiz-decr": 0.25,
+            "nose-point-up": 0.15,
+            "chin-width-decr": 0.2,
         },
         "skin": "young_asian_female.mhmat",
         "hair": "long01.mhclo",
@@ -73,11 +81,16 @@ CHARACTERS: list[dict[str, Any]] = [
             "age": 0.53,
             "muscle": 0.58,
             "weight": 0.50,
-            "height": 0.62,
+            "height": 0.64,
             "proportions": 0.55,
             "cupsize": 0.3,
             "firmness": 0.4,
             "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0},
+        },
+        "details": {
+            "head-rectangular": 0.3,
+            "chin-prominent-incr": 0.35,
+            "nose-scale-vert-incr": 0.2,
         },
         "skin": "young_caucasian_male.mhmat",
         "hair": "short02.mhclo",
@@ -94,11 +107,19 @@ CHARACTERS: list[dict[str, Any]] = [
             "age": 0.51,
             "muscle": 0.62,
             "weight": 0.52,
-            "height": 0.55,
+            "height": 0.58,
             "proportions": 0.60,
             "cupsize": 0.55,
             "firmness": 0.58,
             "race": {"asian": 0.0, "caucasian": 0.0, "african": 1.0},
+        },
+        "details": {
+            "head-round": 0.25,
+            "nose-width1-incr": 0.4,
+            "nose-flaring-incr": 0.3,
+            "mouth-scale-horiz-incr": 0.25,
+            "l-eye-scale-incr": 0.15,
+            "r-eye-scale-incr": 0.15,
         },
         "skin": "young_african_female.mhmat",
         "hair": "afro01.mhclo",
@@ -115,11 +136,18 @@ CHARACTERS: list[dict[str, Any]] = [
             "age": 0.54,
             "muscle": 0.78,
             "weight": 0.56,
-            "height": 0.68,
+            "height": 0.70,
             "proportions": 0.62,
             "cupsize": 0.3,
             "firmness": 0.4,
             "race": {"asian": 0.0, "caucasian": 0.0, "african": 1.0},
+        },
+        "details": {
+            "head-square": 0.3,
+            "chin-width-incr": 0.25,
+            "nose-width2-incr": 0.45,
+            "nose-flaring-incr": 0.25,
+            "mouth-scale-horiz-incr": 0.2,
         },
         "skin": "young_african_male.mhmat",
         "hair": "short04.mhclo",
@@ -136,11 +164,19 @@ CHARACTERS: list[dict[str, Any]] = [
             "age": 0.72,
             "muscle": 0.40,
             "weight": 0.58,
-            "height": 0.50,
+            "height": 0.52,
             "proportions": 0.48,
             "cupsize": 0.3,
             "firmness": 0.35,
             "race": {"asian": 1.0, "caucasian": 0.0, "african": 0.0},
+        },
+        "details": {
+            "head-round": 0.2,
+            "head-fat-incr": 0.15,
+            "l-eye-bag-incr": 0.25,
+            "r-eye-bag-incr": 0.25,
+            "nose-scale-horiz-decr": 0.15,
+            "mouth-laugh-lines-out": 0.2,
         },
         "skin": "middleage_asian_male.mhmat",
         "hair": "short01.mhclo",
@@ -157,11 +193,19 @@ CHARACTERS: list[dict[str, Any]] = [
             "age": 0.70,
             "muscle": 0.38,
             "weight": 0.54,
-            "height": 0.50,
+            "height": 0.52,
             "proportions": 0.50,
             "cupsize": 0.48,
             "firmness": 0.40,
             "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0},
+        },
+        "details": {
+            "head-oval": 0.3,
+            "l-eye-bag-incr": 0.2,
+            "r-eye-bag-incr": 0.2,
+            "mouth-laugh-lines-out": 0.25,
+            "nose-hump-incr": 0.15,
+            "chin-height-decr": 0.1,
         },
         "skin": "middleage_caucasian_female.mhmat",
         "hair": "bob01.mhclo",
@@ -178,11 +222,20 @@ CHARACTERS: list[dict[str, Any]] = [
             "age": 0.88,
             "muscle": 0.32,
             "weight": 0.55,
-            "height": 0.52,
+            "height": 0.54,
             "proportions": 0.42,
             "cupsize": 0.3,
             "firmness": 0.3,
             "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0},
+        },
+        "details": {
+            "head-rectangular": 0.25,
+            "head-age-incr": 0.45,
+            "l-eye-bag-incr": 0.4,
+            "r-eye-bag-incr": 0.4,
+            "chin-prominent-incr": 0.2,
+            "nose-hump-incr": 0.25,
+            "mouth-laugh-lines-out": 0.35,
         },
         "skin": "old_caucasian_male.mhmat",
         "hair": "short03.mhclo",
@@ -199,11 +252,19 @@ CHARACTERS: list[dict[str, Any]] = [
             "age": 0.52,
             "muscle": 0.48,
             "weight": 0.50,
-            "height": 0.54,
+            "height": 0.56,
             "proportions": 0.57,
             "cupsize": 0.50,
             "firmness": 0.52,
             "race": {"asian": 0.15, "caucasian": 0.40, "african": 0.45},
+        },
+        "details": {
+            "head-oval": 0.3,
+            "nose-width1-incr": 0.2,
+            "mouth-scale-horiz-incr": 0.15,
+            "l-eye-scale-incr": 0.12,
+            "r-eye-scale-incr": 0.12,
+            "chin-width-decr": 0.1,
         },
         "skin": "young_african_female.mhmat",
         "hair": "braid01.mhclo",
@@ -222,10 +283,21 @@ def require_asset(filename: str, subdir: str) -> str:
     return path
 
 
+def character_root(basemesh: bpy.types.Object) -> bpy.types.Object:
+    obj = basemesh
+    while obj.parent:
+        obj = obj.parent
+    return obj
+
+
 def character_objects(basemesh: bpy.types.Object) -> list[bpy.types.Object]:
-    objs = [basemesh]
-    objs.extend(list(basemesh.children_recursive))
-    return objs
+    root = character_root(basemesh)
+    return [root] + list(root.children_recursive)
+
+
+def world_height(basemesh: bpy.types.Object) -> float:
+    mins, maxs = bounds_of(character_objects(basemesh))
+    return maxs[2] - mins[2]
 
 
 def shade_smooth(obj: bpy.types.Object) -> None:
@@ -238,6 +310,65 @@ def shade_smooth(obj: bpy.types.Object) -> None:
         mesh.auto_smooth_angle = math.radians(60)
 
 
+def apply_face_details(basemesh: bpy.types.Object, details: dict[str, float]) -> None:
+    for name, weight in details.items():
+        if not weight:
+            continue
+        path = TargetService.target_full_path(name)
+        if not path:
+            print(f"    skip missing morph {name}", flush=True)
+            continue
+        TargetService.load_target(basemesh, path, weight=float(weight))
+
+
+def rotate_bone_world(armature: bpy.types.Object, bone_name: str, axis: Vector, angle: float) -> None:
+    pb = armature.pose.bones.get(bone_name)
+    if pb is None:
+        return
+    head = pb.matrix.to_translation()
+    rot = Matrix.Rotation(angle, 4, axis)
+    trans = Matrix.Translation(head)
+    pb.matrix = trans @ rot @ trans.inverted() @ pb.matrix
+
+
+def relax_standing_pose(armature: bpy.types.Object) -> None:
+    bpy.context.view_layer.objects.active = armature
+    armature.select_set(True)
+    bpy.ops.object.mode_set(mode="POSE")
+    # Bring A-pose arms slightly closer to the torso.
+    rotate_bone_world(armature, "upperarm01.L", Vector((0, 1, 0)), math.radians(24))
+    rotate_bone_world(armature, "upperarm01.R", Vector((0, 1, 0)), math.radians(-24))
+    bpy.context.view_layer.update()
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+
+def tweak_hair_materials(obj: bpy.types.Object) -> None:
+    if obj.type != "MESH":
+        return
+    name = obj.name.lower()
+    if "hair" not in name and not any(tag in name for tag in ("long", "short", "bob", "afro", "braid", "ponytail")):
+        # Still tweak if the datablock looks like hair cards
+        if "hair" not in (obj.data.name.lower() if obj.data else ""):
+            if not any(k in name for k in ("long01", "short01", "short02", "short03", "short04", "bob01", "bob02", "afro01", "braid01", "ponytail01")):
+                return
+    for mat in obj.data.materials:
+        if mat is None:
+            continue
+        mat.blend_method = "HASHED"
+        if hasattr(mat, "shadow_method"):
+            mat.shadow_method = "HASHED"
+        if not mat.node_tree:
+            continue
+        for node in mat.node_tree.nodes:
+            if node.type == "BSDF_PRINCIPLED":
+                if "Roughness" in node.inputs:
+                    node.inputs["Roughness"].default_value = max(float(node.inputs["Roughness"].default_value), 0.38)
+                if "Specular IOR Level" in node.inputs:
+                    node.inputs["Specular IOR Level"].default_value = 0.12
+                elif "Specular" in node.inputs:
+                    node.inputs["Specular"].default_value = 0.12
+
+
 def create_character(spec: dict[str, Any], x: float) -> bpy.types.Object:
     macro = TargetService.get_default_macro_info_dict()
     for key, value in spec["macro"].items():
@@ -248,14 +379,17 @@ def create_character(spec: dict[str, Any], x: float) -> bpy.types.Object:
 
     basemesh = HumanService.create_human(macro_detail_dict=macro)
     basemesh.name = spec["id"]
-    if spec["id"] + ".body" in bpy.data.objects:
-        bpy.data.objects[spec["id"] + ".body"].name = spec["id"]
+    apply_face_details(basemesh, spec.get("details") or {})
 
     HumanService.set_character_skin(
         require_asset(spec["skin"], "skins"),
         basemesh,
         skin_type="ENHANCED_SSS",
     )
+
+    rig = HumanService.add_builtin_rig(basemesh, "default")
+    if rig:
+        rig.name = spec["id"] + ".rig"
 
     assets = [
         ("eyes", "high-poly.mhclo", "Eyes"),
@@ -271,12 +405,15 @@ def create_character(spec: dict[str, Any], x: float) -> bpy.types.Object:
         path = require_asset(fname, subdir)
         HumanService.add_mhclo_asset(path, basemesh, asset_type=atype, material_type="MAKESKIN")
 
+    if rig:
+        relax_standing_pose(rig)
+
     for obj in character_objects(basemesh):
         shade_smooth(obj)
-        obj.pass_index = 1
+        tweak_hair_materials(obj)
 
-    # Move the whole hierarchy after parenting is in place.
-    basemesh.location.x = x
+    root = character_root(basemesh)
+    root.location.x = x
     bpy.context.view_layer.update()
     return basemesh
 
@@ -291,25 +428,29 @@ def clear_scene() -> None:
 
 
 def make_studio() -> None:
-    # Seamless cyc backdrop
-    bpy.ops.mesh.primitive_plane_add(size=20, location=(0, 2.4, 0))
-    wall = bpy.context.active_object
-    wall.name = "StudioWall"
-    wall.rotation_euler[0] = math.radians(90)
-
-    bpy.ops.mesh.primitive_plane_add(size=20, location=(0, 0, 0))
-    floor = bpy.context.active_object
-    floor.name = "StudioFloor"
+    # Seamless cyclorama from a subdivided grid.
+    bpy.ops.mesh.primitive_grid_add(x_subdivisions=12, y_subdivisions=18, size=18, location=(0, 1.5, 0))
+    cyc = bpy.context.active_object
+    cyc.name = "StudioCyc"
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    for vert in cyc.data.vertices:
+        # Local Y positive is toward the back of the studio.
+        if vert.co.y > 1.8:
+            lift = (vert.co.y - 1.8) * 1.15
+            vert.co.z += lift
+            vert.co.y = 1.8 + (vert.co.y - 1.8) * 0.15
+    cyc.data.update()
+    shade_smooth(cyc)
 
     mat = bpy.data.materials.new("StudioSurface")
     mat.use_nodes = True
     bsdf = mat.node_tree.nodes.get("Principled BSDF")
-    bsdf.inputs["Base Color"].default_value = (0.18, 0.18, 0.20, 1)
-    bsdf.inputs["Roughness"].default_value = 0.55
-    wall.data.materials.append(mat)
-    floor.data.materials.append(mat)
+    bsdf.inputs["Base Color"].default_value = (0.16, 0.165, 0.18, 1)
+    bsdf.inputs["Roughness"].default_value = 0.62
+    cyc.data.materials.append(mat)
 
-    # Key / fill / rim
     def area(name, loc, rot, energy, size, color):
         light_data = bpy.data.lights.new(name, type="AREA")
         light_data.energy = energy
@@ -323,9 +464,9 @@ def make_studio() -> None:
         bpy.context.collection.objects.link(obj)
         return obj
 
-    area("KeyLight", (-2.2, -2.6, 2.4), (math.radians(55), 0, math.radians(-25)), 450, 1.6, (1.0, 0.97, 0.94))
-    area("FillLight", (2.4, -1.8, 1.6), (math.radians(70), 0, math.radians(35)), 160, 2.2, (0.85, 0.90, 1.0))
-    area("RimLight", (0.4, 2.2, 2.2), (math.radians(70), 0, math.radians(180)), 220, 1.2, (1.0, 0.98, 1.0))
+    area("KeyLight", (-2.0, -2.8, 2.5), (math.radians(58), 0, math.radians(-22)), 380, 1.8, (1.0, 0.96, 0.90))
+    area("FillLight", (2.6, -1.6, 1.7), (math.radians(72), 0, math.radians(38)), 120, 2.4, (0.78, 0.86, 1.0))
+    area("RimLight", (0.2, 2.4, 2.4), (math.radians(65), 0, math.radians(180)), 180, 1.4, (1.0, 0.98, 1.0))
 
     world = bpy.data.worlds.new("StudioWorld")
     bpy.context.scene.world = world
@@ -335,7 +476,7 @@ def make_studio() -> None:
     nodes.clear()
     output = nodes.new("ShaderNodeOutputWorld")
     background = nodes.new("ShaderNodeBackground")
-    background.inputs["Strength"].default_value = 0.35
+    background.inputs["Strength"].default_value = 0.28
     if os.path.isfile(HDRI):
         env = nodes.new("ShaderNodeTexEnvironment")
         env.image = bpy.data.images.load(HDRI)
@@ -345,8 +486,8 @@ def make_studio() -> None:
         links.new(mapping.outputs["Vector"], env.inputs["Vector"])
         links.new(env.outputs["Color"], background.inputs["Color"])
     else:
-        background.inputs["Color"].default_value = (0.12, 0.13, 0.15, 1)
-    links.new(background.outputs["Output"], output.inputs["Surface"])
+        background.inputs["Color"].default_value = (0.10, 0.11, 0.13, 1)
+    links.new(background.outputs["Background"], output.inputs["Surface"])
 
 
 def bounds_of(objects: list[bpy.types.Object]) -> tuple[list[float], list[float]]:
@@ -357,36 +498,39 @@ def bounds_of(objects: list[bpy.types.Object]) -> tuple[list[float], list[float]
         if obj.type != "MESH":
             continue
         for corner in obj.bound_box:
-            world = obj.matrix_world @ __import__("mathutils").Vector(corner)
+            world = obj.matrix_world @ Vector(corner)
             for i in range(3):
                 mins[i] = min(mins[i], world[i])
                 maxs[i] = max(maxs[i], world[i])
     return mins, maxs
 
 
+def remove_cameras() -> None:
+    for cam in [o for o in bpy.data.objects if o.type == "CAMERA"]:
+        bpy.data.objects.remove(cam, do_unlink=True)
+
+
 def aim_camera(objects: list[bpy.types.Object], *, portrait: bool) -> bpy.types.Object:
     mins, maxs = bounds_of(objects)
     center = [(a + b) / 2 for a, b in zip(mins, maxs)]
-    height = maxs[2] - mins[2]
-    width = max(maxs[0] - mins[0], 0.4)
+    height = max(maxs[2] - mins[2], 1.4)
     cam_data = bpy.data.cameras.new("HumanCamera")
-    cam_data.lens = 85 if portrait else 50
+    cam_data.lens = 80 if portrait else 55
+    cam_data.dof.use_dof = False
     cam = bpy.data.objects.new("HumanCamera", cam_data)
     bpy.context.collection.objects.link(cam)
     bpy.context.scene.camera = cam
 
     if portrait:
-        # 3/4 view, slightly above chest
-        dist = max(2.15, height * 1.35)
-        cam.location = (center[0] + dist * 0.42, center[1] - dist * 0.92, center[2] + height * 0.12)
-        # Crop toward head/torso for a character portrait
-        look = (center[0], center[1], mins[2] + height * 0.62)
+        look = (center[0], center[1], maxs[2] - height * 0.16)
+        dist = max(1.55, height * 0.95)
+        cam.location = (look[0] + dist * 0.32, look[1] - dist * 0.78, look[2] + 0.04)
     else:
-        dist = max(3.2, height * 2.1 + width * 1.4)
-        cam.location = (center[0] + 0.35, center[1] - dist, center[2] + 0.15)
-        look = (center[0], center[1], mins[2] + height * 0.48)
+        look = (center[0], center[1], mins[2] + height * 0.52)
+        dist = max(2.8, height * 1.85)
+        cam.location = (look[0] + 0.55, look[1] - dist, look[2] + 0.12)
 
-    direction = __import__("mathutils").Vector(look) - cam.location
+    direction = Vector(look) - cam.location
     cam.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
     return cam
 
@@ -396,7 +540,7 @@ def configure_cycles(scene: bpy.types.Scene, samples: int, res: tuple[int, int])
     scene.cycles.device = "CPU"
     scene.cycles.samples = samples
     scene.cycles.use_adaptive_sampling = True
-    scene.cycles.adaptive_threshold = 0.04
+    scene.cycles.adaptive_threshold = 0.03
     scene.cycles.use_denoising = True
     scene.cycles.denoiser = "OPENIMAGEDENOISE"
     scene.cycles.denoising_input_passes = "RGB_ALBEDO_NORMAL"
@@ -417,31 +561,30 @@ def configure_cycles(scene: bpy.types.Scene, samples: int, res: tuple[int, int])
     scene.render.film_transparent = False
     scene.view_settings.view_transform = "AgX"
     scene.view_settings.look = "AgX - Medium High Contrast"
-    scene.view_settings.exposure = 0.15
+    scene.view_settings.exposure = 0.2
     scene.render.threads_mode = "FIXED"
     scene.render.threads = max(1, os.cpu_count() or 4)
-    scene.cycles.preview_samples = 16
 
 
-def hide_except(keep: set[str]) -> None:
+def set_character_visibility(keep_meshes: set[str], visible: bool) -> None:
     for obj in bpy.data.objects:
-        hide = obj.name not in keep and not obj.name.startswith("Studio") and obj.type not in {"CAMERA", "LIGHT"}
-        if obj.name in {"HumanCamera", "KeyLight", "FillLight", "RimLight", "StudioWall", "StudioFloor"}:
-            hide = False
-        if obj.type in {"CAMERA", "LIGHT"}:
-            hide = False
-        if obj.name.startswith("Studio"):
-            hide = False
-        obj.hide_render = hide and obj.name not in keep
-        obj.hide_viewport = obj.hide_render
+        if obj.type in {"CAMERA", "LIGHT"} or obj.name.startswith("Studio"):
+            continue
+        if obj.name in keep_meshes or any(obj.name.startswith(k + ".") for k in keep_meshes):
+            obj.hide_render = not visible
+            obj.hide_viewport = not visible
+        elif obj.type in {"MESH", "ARMATURE"}:
+            obj.hide_render = visible
+            obj.hide_viewport = visible
 
 
 def export_glb(basemesh: bpy.types.Object, path: str) -> None:
     bpy.ops.object.select_all(action="DESELECT")
     for obj in character_objects(basemesh):
-        obj.select_set(True)
         obj.hide_set(False)
-    bpy.context.view_layer.objects.active = basemesh
+        obj.hide_viewport = False
+        obj.select_set(True)
+    bpy.context.view_layer.objects.active = character_root(basemesh)
     bpy.ops.export_scene.gltf(
         filepath=path,
         export_format="GLB",
@@ -454,7 +597,7 @@ def export_glb(basemesh: bpy.types.Object, path: str) -> None:
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip-render", action="store_true")
-    parser.add_argument("--samples", type=int, default=48)
+    parser.add_argument("--samples", type=int, default=40)
     parser.add_argument("--only", nargs="*", default=None)
     if "--" in argv:
         argv = argv[argv.index("--") + 1 :]
@@ -479,13 +622,13 @@ def main() -> None:
     make_studio()
 
     created: list[tuple[dict[str, Any], bpy.types.Object]] = []
-    spacing = 1.35
+    spacing = 1.4
     start_x = -spacing * (len(specs) - 1) / 2
     for i, spec in enumerate(specs):
         print(f"=== Creating {spec['id']} ===", flush=True)
         basemesh = create_character(spec, start_x + i * spacing)
         created.append((spec, basemesh))
-        print(f"    height={basemesh.dimensions.z:.3f}m verts={len(basemesh.data.vertices)}", flush=True)
+        print(f"    world_height={world_height(basemesh):.3f}m verts={len(basemesh.data.vertices)}", flush=True)
 
     blend_path = os.path.join(OUT_MODELS, "realistic_humans_lineup.blend")
     bpy.ops.wm.save_as_mainfile(filepath=blend_path)
@@ -501,46 +644,44 @@ def main() -> None:
         return
 
     scene = bpy.context.scene
-    configure_cycles(scene, args.samples, (1920, 1080))
 
-    # Lineup
-    all_chars = []
+    all_chars: list[bpy.types.Object] = []
     for _, mesh in created:
         all_chars.extend(character_objects(mesh))
-    for cam in [o for o in bpy.data.objects if o.type == "CAMERA"]:
-        bpy.data.objects.remove(cam, do_unlink=True)
+    for obj in bpy.data.objects:
+        if obj.type in {"MESH", "ARMATURE"} and not obj.name.startswith("Studio"):
+            obj.hide_render = False
+            obj.hide_viewport = False
+
+    remove_cameras()
+    configure_cycles(scene, args.samples, (1920, 1080))
     aim_camera(all_chars, portrait=False)
     scene.render.filepath = os.path.join(OUT_RENDERS, "lineup_fullbody.png")
     print("Rendering lineup...", flush=True)
     bpy.ops.render.render(write_still=True)
 
-    # Individual portraits
     for spec, mesh in created:
         keep = {o.name for o in character_objects(mesh)}
         for obj in bpy.data.objects:
-            if obj.type in {"MESH"} and obj.name not in keep and not obj.name.startswith("Studio"):
-                obj.hide_render = True
-            elif obj.name in keep:
-                obj.hide_render = False
-        for cam in [o for o in bpy.data.objects if o.type == "CAMERA"]:
-            bpy.data.objects.remove(cam, do_unlink=True)
+            if obj.type in {"CAMERA", "LIGHT"} or obj.name.startswith("Studio"):
+                continue
+            hidden = obj.name not in keep
+            obj.hide_render = hidden
+            obj.hide_viewport = hidden
+
+        remove_cameras()
         configure_cycles(scene, args.samples, (1080, 1440))
         aim_camera(character_objects(mesh), portrait=True)
         scene.render.filepath = os.path.join(OUT_RENDERS, f"{spec['id']}_portrait.png")
         print(f"Rendering {spec['id']} portrait...", flush=True)
         bpy.ops.render.render(write_still=True)
 
-        configure_cycles(scene, max(24, args.samples // 2), (900, 1600))
-        for cam in [o for o in bpy.data.objects if o.type == "CAMERA"]:
-            bpy.data.objects.remove(cam, do_unlink=True)
+        remove_cameras()
+        configure_cycles(scene, max(28, args.samples - 8), (900, 1600))
         aim_camera(character_objects(mesh), portrait=False)
         scene.render.filepath = os.path.join(OUT_RENDERS, f"{spec['id']}_fullbody.png")
         print(f"Rendering {spec['id']} full body...", flush=True)
         bpy.ops.render.render(write_still=True)
-
-        for obj in bpy.data.objects:
-            if obj.type == "MESH" and not obj.name.startswith("Studio"):
-                obj.hide_render = False
 
     bpy.ops.wm.save_as_mainfile(filepath=blend_path)
     print("DONE", flush=True)
