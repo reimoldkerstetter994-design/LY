@@ -106,35 +106,49 @@ FACE_Y = {
 }
 
 # Horizontal sections of the whole head, from under the chin to the vertex:
-# height as a fraction of head height, half
-# breadth as a fraction of head breadth, then the front and back of the section
-# in face depths.  The half breadths pass through the anthropometric landmarks --
-# 0.348 at the gonion, 0.45 at the zygomatic arch -- so the mid-face keeps its
-# measured width instead of being whatever a stack of ellipsoids added up to.
+# height as a fraction of head height, half breadth as a fraction of head
+# breadth, the front and back of the section in face depths, and the section's
+# superellipse power (see :class:`~humanforge.sdf.Loft`).  The half breadths pass
+# through the anthropometric landmarks -- 0.348 at the gonion, 0.44 at the
+# zygomatic arch -- so the mid-face keeps its measured width instead of being
+# whatever a stack of ellipsoids added up to.
 #
+# Two things about this table are easy to get wrong and ruin the head.
+#
+# The widest section is at 0.62, a little above the ear and well below the crown.
+# Put it higher -- which is what happens if the vault is treated as the top of an
+# egg -- and the head is at its broadest near the top: the cranium then reads as a
+# balloon with a small face hung under it, and no amount of work on the features
+# fixes it, because the fault is that the face is too narrow *relative to* the
+# vault rather than too small.
+#
+# And the front column carries no brow ridge.  A step in it applies across the
+# whole section, so a ridge put here comes with a ledge running round to the
+# temples -- the same visor the ridge was moved into the loft to avoid.  The
+# glabella's projection is a mass; see :func:`_build_brow`.
 HEAD_STATIONS = (
-    (0.010, 0.040, 0.336, 0.253),
-    (0.058, 0.111, 0.350, 0.150),
-    (0.100, 0.174, 0.362, 0.060),
-    (0.152, 0.348, 0.372, -0.125),
-    (0.215, 0.385, 0.382, -0.230),
-    (0.270, 0.405, 0.390, -0.300),
-    (0.330, 0.425, 0.372, -0.360),
-    (0.390, 0.437, 0.352, -0.410),
-    (0.440, 0.440, 0.339, -0.450),
-    (0.495, 0.450, 0.338, -0.474),
-    (0.526, 0.455, 0.346, -0.482),
-    (0.556, 0.460, 0.384, -0.492),
-    (0.590, 0.464, 0.376, -0.495),
-    (0.620, 0.470, 0.366, -0.497),
-    (0.680, 0.494, 0.362, -0.494),
-    (0.740, 0.497, 0.341, -0.478),
-    (0.800, 0.478, 0.310, -0.447),
-    (0.860, 0.428, 0.270, -0.396),
-    (0.920, 0.342, 0.216, -0.317),
-    (0.960, 0.256, 0.160, -0.240),
-    (0.985, 0.150, 0.082, -0.148),
-    (1.000, 0.010, -0.010, -0.030),
+    (0.010, 0.040, 0.336, 0.253, 2.0),
+    (0.058, 0.111, 0.350, 0.150, 2.0),
+    (0.100, 0.174, 0.362, 0.060, 2.0),
+    (0.152, 0.348, 0.372, -0.125, 2.2),
+    (0.215, 0.385, 0.382, -0.230, 2.3),
+    (0.270, 0.405, 0.390, -0.300, 2.4),
+    (0.330, 0.425, 0.372, -0.360, 2.5),
+    (0.390, 0.437, 0.352, -0.410, 2.5),
+    (0.440, 0.442, 0.339, -0.450, 2.5),
+    (0.495, 0.460, 0.338, -0.474, 2.5),
+    (0.526, 0.468, 0.346, -0.482, 2.5),
+    (0.556, 0.476, 0.360, -0.492, 2.5),
+    (0.590, 0.486, 0.370, -0.496, 2.4),
+    (0.620, 0.492, 0.366, -0.498, 2.3),  # euryon: the widest section of the head
+    (0.680, 0.488, 0.356, -0.497, 2.2),
+    (0.740, 0.466, 0.336, -0.487, 2.1),
+    (0.800, 0.428, 0.306, -0.462, 2.0),
+    (0.860, 0.375, 0.266, -0.415, 2.0),
+    (0.920, 0.300, 0.212, -0.338, 2.0),
+    (0.960, 0.228, 0.158, -0.258, 2.0),
+    (0.985, 0.140, 0.082, -0.155, 2.0),
+    (1.000, 0.010, -0.010, -0.030, 2.0),
 )
 
 # How finely the station table is resampled before it is handed to the loft.  The
@@ -228,11 +242,13 @@ def _build_neck(field: Field, skeleton: Skeleton, h: HeadFrame) -> None:
     )
     # Throat: the soft tissue between the jaw and the neck proper.  Without it the
     # submandibular hollow has nothing left to cut into and opens a gap straight
-    # through under the chin.
+    # through under the chin.  It has to stay well behind the chin's own front,
+    # though: reaching past it, the mass hangs under and in front of the jaw and the
+    # figure gets a double chin it was not asked for.
     field.add(
         Ellipsoid(
-            h.point(0.0, 0.105, 0.035),
-            h.size(0.235, 0.235, 0.070),
+            h.point(0.0, 0.055, 0.020),
+            h.size(0.215, 0.185, 0.062),
             rot=h.orientation,
         ),
         blend=0.030 * h.height,
@@ -271,7 +287,7 @@ def _build_neck(field: Field, skeleton: Skeleton, h: HeadFrame) -> None:
 # skull and mid-face
 
 
-def _spline(knots: np.ndarray, values: np.ndarray, at: np.ndarray) -> np.ndarray:
+def spline(knots: np.ndarray, values: np.ndarray, at: np.ndarray) -> np.ndarray:
     """Cubic Hermite through ``values``, with finite-difference tangents.
 
     Passes through every knot, so the anatomical table still says exactly what the
@@ -292,7 +308,7 @@ def _spline(knots: np.ndarray, values: np.ndarray, at: np.ndarray) -> np.ndarray
     )
 
 
-def _relax(values: np.ndarray, window: int = 5, passes: int = 2) -> np.ndarray:
+def relax(values: np.ndarray, window: int = 5, passes: int = 2) -> np.ndarray:
     """Smooth a resampled profile so its curvature is continuous.
 
     A cubic Hermite through the station table is only C1: its curvature jumps at
@@ -325,23 +341,24 @@ def _build_core(field: Field, h: HeadFrame, female: float, soft: float) -> None:
     rows = np.asarray(HEAD_STATIONS, dtype=np.float64)
     knots = rows[:, 0]
     zs = np.linspace(knots[0], knots[-1], LOFT_SEGMENTS + 1)
-    widths, fronts, backs = (_spline(knots, rows[:, c], zs) for c in (1, 2, 3))
+    widths, fronts, backs, powers = (
+        spline(knots, rows[:, c], zs) for c in (1, 2, 3, 4)
+    )
 
     ramp = np.clip((zs - 0.18) / 0.20, 0.0, 1.0)
     widths = widths * (jaw + (cheek - jaw) * ramp * ramp * (3.0 - 2.0 * ramp))
     # How upright the forehead is, which is one of the few reliable sex differences
     # in the skull: a male one slopes back from a heavier ridge, a female one rises
-    # almost vertically.  Adding it to the loft's own front profile rather than as a
-    # frontal mass matters -- a mass big enough to be a forehead puts its bulge
-    # *above* the brow, which is an infant's skull, and its rim shows as a welt
-    # across the temples.
+    # almost vertically.  This is a whole-section change over 60 mm of height rather
+    # than a step, so unlike a brow ridge it belongs in the front profile: it moves
+    # the temples with the forehead, which is what a rounder skull does.
     fronts = fronts + 0.024 * female * np.exp(-(((zs - 0.760) / 0.150) ** 2))
     # The vertex station is nearly a point, and a cubic through it can undershoot
     # into negative widths just below the crown, which turns the top of the head
     # inside out.
-    widths = np.maximum(_relax(widths), 0.004)
-    fronts = np.maximum(_relax(fronts), backs + 0.010)
-    backs = _relax(backs)
+    widths = np.maximum(relax(widths), 0.004)
+    fronts = np.maximum(relax(fronts), backs + 0.010)
+    backs = relax(backs)
 
     field.add(
         Loft(
@@ -351,6 +368,7 @@ def _build_core(field: Field, h: HeadFrame, female: float, soft: float) -> None:
             half_width=widths * h.width,
             half_depth=0.5 * (fronts - backs) * h.depth,
             offset=0.5 * (fronts + backs) * h.depth,
+            exponent=np.maximum(relax(powers), 2.0),
         ),
         name="head_core",
     )
@@ -385,21 +403,12 @@ def _build_jawline(
             blend=0.030 * hh,
             name=f"submandibular_{tag}",
         )
-        # The gonial angle itself, squarer on a male: one of the clearest sex
-        # cues in a face, and the only place the jaw stands proud of the loft.
-        field.add(
-            Ellipsoid(
-                h.point(
-                    side * (FACE_X["gonion"] - 0.082),
-                    FACE_Y["gonion"] - 0.020,
-                    FACE_Z["gonion"] + 0.010,
-                ),
-                h.size(0.055 * (0.7 + 0.6 * square), 0.105, 0.070),
-                rot=h.orientation,
-            ),
-            blend=0.038 * hh,
-            name=f"gonion_{tag}",
-        )
+
+    # Nothing is added at the gonial angle.  A mass there is the wrong tool twice
+    # over: the loft already carries the mandible's width, so it adds nothing
+    # laterally, and it is *deeper* than the section it sits on, so all it does is
+    # bulge 25 mm out behind the jaw -- which in profile is a lump on the neck.  How
+    # square the angle is comes from the width table's own jaw factor instead.
 
     # Mental protuberance: the chin proper.  The loft already carries how far the
     # chin projects, so this only adds the swell of the boss itself -- wide and
@@ -442,17 +451,19 @@ def _build_jawline(
 def _build_brow(field: Field, h: HeadFrame, female: float) -> None:
     """What the station table cannot carry of the supraorbital ridge.
 
-    Most of the ridge is in :data:`HEAD_STATIONS`, as a step in the loft's front
-    profile between the nasion and the brow.  That is the only way to get it: the
-    ridge's projection is easy to add as a mass, but what makes it read as bone is
-    the way it *turns back* almost ninety degrees by the time it reaches the outer
-    corner of the eye, and a mass laid across the face at constant depth turns into
-    a visor instead.  The loft's own elliptical sections sweep back on their own.
+    The ridge is a pair of wide, shallow masses over the orbits.  Neither of the two
+    obvious alternatives works.  A cylinder laid across the face at constant depth
+    is a visor: what makes a ridge read as bone is that it turns back almost ninety
+    degrees by the time it reaches the outer corner of the eye.  And a step in the
+    loft's front profile applies to the whole section, so it comes with a ledge
+    running round to the temples -- the same visor from the other side.
 
-    What is left is the pair of swells over the inner half of each orbit, and they
-    have to be shallow and wide with a blend well under their own projection.  A
-    mass that stands as far proud as its blend radius is wide raises a ring around
-    its rim, and on a brow that ring reads as a bead sitting above the eye.
+    An ellipsoid does turn back, because it is set into the face and only its front
+    emerges; the shape of the patch that emerges is the intersection of two curved
+    surfaces, which sweeps back and dies out at the temple on its own.  What that
+    demands is a blend well under the projection: a mass standing as far proud as
+    its blend radius is wide raises a ring around its rim, and on a brow that ring
+    reads as a bead sitting above the eye.
     """
     hh = h.height
     heavy = 1.0 - 0.55 * female
@@ -465,7 +476,7 @@ def _build_brow(field: Field, h: HeadFrame, female: float) -> None:
                     FACE_Y["brow"] - 0.115,
                     FACE_Z["brow"] - 0.014,
                 ),
-                h.size(0.175, 0.130, 0.042),
+                h.size(0.175, 0.115, 0.042),
                 rot=h.rotated(v3(1.0, 0.0, 0.0), 8.0),
             ),
             blend=0.006 * hh,
@@ -475,7 +486,7 @@ def _build_brow(field: Field, h: HeadFrame, female: float) -> None:
         field.add(
             Ellipsoid(
                 h.point(0.0, FACE_Y["brow"] - 0.125, FACE_Z["brow"] - 0.026),
-                h.size(0.095, 0.135, 0.050),
+                h.size(0.095, 0.128, 0.050),
                 rot=h.orientation,
             ),
             blend=0.006 * hh,
@@ -542,7 +553,7 @@ def _build_nose(field: Field, h: HeadFrame, female: float, young: float) -> None
     knots = rows[:, 0]
     zs = np.linspace(knots[0], knots[-1], 128)
     widths, fronts, backs, powers = (
-        _relax(_spline(knots, rows[:, c], zs)) for c in (1, 2, 3, 4)
+        relax(spline(knots, rows[:, c], zs)) for c in (1, 2, 3, 4)
     )
     fronts = base + (fronts - base) * reach
 
@@ -733,10 +744,16 @@ def _build_eyes(
         # stops behind the globe's equator so that the dome, not the fill, is
         # what the aperture gets cut through; otherwise the rim of the aperture
         # is a centimetre of cheek instead of a two-millimetre lid.
+        # The fill has to come almost as far forward as the lid dome does.  Set
+        # back from it -- which is where an orbit *bone* is -- the dome stands 12 mm
+        # proud of everything round it, and cutting the aperture into a ball that
+        # proud leaves a hard lens shaped rim standing off the face: the eye reads as
+        # a goggle lens rather than as lids.  On a real face the lids are the
+        # frontmost part of the region by two or three millimetres, no more.
         field.add(
             Ellipsoid(
-                h.point(cx, FACE_Y["cornea"] - 0.150, FACE_Z["eye"] + 0.006),
-                h.size(0.132, 0.100, 0.080),
+                h.point(cx, FACE_Y["cornea"] - 0.120, FACE_Z["eye"] + 0.006),
+                h.size(0.145, 0.110, 0.088),
                 rot=h.orientation,
             ),
             blend=0.012 * hh,
@@ -781,22 +798,18 @@ def _build_eyes(
             blend=0.003 * hh,
             name=f"lid_crease_{tag}",
         )
-        # The canthi close the corners of the aperture into a point instead of a
-        # notch.  One wide flat mass across the whole orbit does it; the pair of
-        # small ones this replaces stood as far proud as they were wide, so each
-        # showed up as a bead beside the eye.
+        # Lower lid: a thin ridge under the aperture.  It is what stops the eye
+        # from being a slot in a flat cheek, and it has to be shallow -- three
+        # millimetres of relief with a blend under one -- because at any more it
+        # becomes a bag.
         field.add(
             Ellipsoid(
-                h.point(
-                    side * FACE_X["pupil"],
-                    FACE_Y["cornea"] - 0.085 - globe / h.depth,
-                    FACE_Z["eye"] - 0.004,
-                ),
-                h.size(0.155, 0.105, 0.052),
-                rot=h.orientation,
+                h.point(cx, FACE_Y["cornea"] - 0.026, FACE_Z["eye"] - 0.044),
+                h.size(0.100, 0.030, 0.016),
+                rot=h.rotated(v3(1.0, 0.0, 0.0), 22.0),
             ),
-            blend=0.005 * hh,
-            name=f"orbital_rim_{tag}",
+            blend=0.004 * hh,
+            name=f"lower_lid_{tag}",
         )
 
         landmarks[f"eye_{tag}"] = cornea
@@ -809,17 +822,26 @@ def _build_eyes(
 
 
 def _build_ears(field: Field, h: HeadFrame) -> None:
-    """An ear is a dish standing off the side of the skull, not a plate on it.
+    """An ear is a thin plate standing off the skull, hinged along its front edge.
 
-    Two things have to be right or it does not read at all.  The height: an ear
-    spans the brow to the base of the nose, and placing it high is by far the
-    commonest mistake.  And the stand-off: a real ear leaves a 15-20 mm gap
-    between the helix and the skull, so building it flush -- which is what happens
-    if it is centred on the skull's own surface -- loses the whole feature, since
-    everything that makes an ear legible is the shadow behind that gap.
+    Three things have to be right or it does not read at all.
+
+    The height: an ear spans the brow to the base of the nose, and placing it high
+    is by far the commonest mistake.
+
+    The stand-off: a real ear leaves a 15-20 mm gap between the helix and the
+    skull, and everything that makes an ear legible is the shadow in that gap.
+
+    And the thickness.  A pinna is 60 mm tall, 33 mm front to back and about 4 mm
+    thick, so of the three dimensions the small one is the one that carries the
+    feature.  Built from a mass thick enough to span from the skull out to the helix
+    -- which is what happens if one ellipsoid is asked to be both the plate and its
+    root -- the ear becomes a 30 mm bulge, and scooping a concha out of a bulge
+    that deep leaves a ring: the shape reads as a spiral shell rather than an ear.
+    So the plate and the root are separate, and only the root touches the skull.
     """
     hh = h.height
-    top, bottom = FACE_Z["ear_top"], FACE_Z["subnasale"] - 0.050
+    top, bottom = FACE_Z["ear_top"] + 0.015, FACE_Z["subnasale"] - 0.032
     centre_z = 0.5 * (top + bottom)
     half_z = 0.5 * (top - bottom)
     # The skull's own half breadth at ear height, from the loft table.
@@ -828,58 +850,91 @@ def _build_ears(field: Field, h: HeadFrame) -> None:
     )
 
     for side, tag in ((LEFT, "l"), (RIGHT, "r")):
-        tilt = h.rotated(v3(1.0, 0.0, 0.0), 15.0)
-        # Pinna: a flattened dish whose outer edge stands clear of the skull.  An
-        # ear is about 62 mm tall and only 33 mm front to back; made as deep as it
-        # is tall it stops reading as an ear and becomes a paddle on the skull.
+        tilt = h.rotated(v3(1.0, 0.0, 0.0), 16.0)
+        # The plate: thin laterally, and set out far enough that its own thickness
+        # never reaches the skull.  Its lower half is pulled forward and its upper
+        # half back, which is the ear's characteristic lean.
         field.add(
             Ellipsoid(
-                h.point(side * (skull - 0.012), FACE_Y["ear"] - 0.010, centre_z + 0.005),
-                h.size(0.094, 0.076, half_z * 0.80),
+                h.point(side * (skull + 0.056), FACE_Y["ear"] - 0.020, centre_z + 0.010),
+                h.size(0.030, 0.074, half_z * 0.98),
                 rot=tilt,
             ),
-            blend=0.006 * hh,
-            name=f"ear_{tag}",
+            blend=0.004 * hh,
+            name=f"pinna_{tag}",
         )
-        # Concha, scooped out of the outer face so the dish is a dish.  Shallow: a
-        # scoop deeper than the pinna is thick punches straight through it and the
-        # ear becomes a ring.
+        # The root, which is the only part that touches the skull: a wedge under the
+        # front half of the plate, so the plate is hinged along the front edge and
+        # free at the back the way an ear is.
+        field.add(
+            Ellipsoid(
+                h.point(side * (skull + 0.014), FACE_Y["ear"] + 0.026, centre_z - 0.006),
+                h.size(0.048, 0.040, half_z * 0.62),
+                rot=tilt,
+            ),
+            blend=0.010 * hh,
+            name=f"ear_root_{tag}",
+        )
+        # Concha: a shallow bowl in the outer face of the plate, centred behind the
+        # canal.  Its centre sits outboard of the plate's own surface so that only
+        # the near side of the sphere cuts, which is what keeps it a bowl instead of
+        # a hole punched through a 4 mm plate.
         field.subtract(
             Ellipsoid(
-                h.point(side * (skull + 0.128), FACE_Y["ear"] + 0.004, centre_z + 0.004),
-                h.size(0.100, 0.042, half_z * 0.44),
+                h.point(side * (skull + 0.116), FACE_Y["ear"] - 0.014, centre_z - 0.006),
+                h.size(0.075, 0.034, half_z * 0.38),
                 rot=tilt,
             ),
-            blend=0.006 * hh,
+            blend=0.004 * hh,
             name=f"concha_{tag}",
         )
-        # The gap behind the ear, which is what actually makes it stand out.
-        field.subtract(
+        # Helix: the rolled rim up the back and over the top.  Following the plate's
+        # own outline rather than sitting inside it, so it thickens the edge.
+        for label, (y, z, ry, rz) in {
+            "back": (-0.062, 0.004, 0.032, half_z * 0.62),
+            "top": (-0.012, half_z * 0.80, 0.052, 0.030),
+        }.items():
+            field.add(
+                Ellipsoid(
+                    h.point(
+                        side * (skull + 0.052),
+                        FACE_Y["ear"] + y,
+                        centre_z + z,
+                    ),
+                    h.size(0.026, ry, rz),
+                    rot=tilt,
+                ),
+                blend=0.005 * hh,
+                name=f"helix_{label}_{tag}",
+            )
+        # Antihelix: the Y shaped ridge inside the bowl, and the only thing that
+        # keeps the concha from reading as a plain dent.
+        field.add(
             Ellipsoid(
-                h.point(side * (skull + 0.034), FACE_Y["ear"] - 0.125, centre_z + 0.024),
-                h.size(0.068, 0.070, half_z * 0.92),
+                h.point(side * (skull + 0.062), FACE_Y["ear"] - 0.044, centre_z + 0.012),
+                h.size(0.022, 0.024, half_z * 0.46),
+                rot=tilt,
+            ),
+            blend=0.005 * hh,
+            name=f"antihelix_{tag}",
+        )
+        # Tragus: the flap in front of the canal.
+        field.add(
+            Ellipsoid(
+                h.point(side * (skull + 0.050), FACE_Y["ear"] + 0.036, centre_z - 0.014),
+                h.size(0.020, 0.020, 0.026),
+                rot=tilt,
+            ),
+            blend=0.005 * hh,
+            name=f"tragus_{tag}",
+        )
+        field.add(
+            Ellipsoid(
+                h.point(side * (skull + 0.036), FACE_Y["ear"] - 0.004, bottom + 0.022),
+                h.size(0.026, 0.030, 0.024),
                 rot=tilt,
             ),
             blend=0.006 * hh,
-            name=f"ear_gap_{tag}",
-        )
-        # Helix: the rolled rim around the top and back.
-        field.add(
-            Ellipsoid(
-                h.point(side * (skull + 0.044), FACE_Y["ear"] - 0.034, centre_z + 0.022),
-                h.size(0.036, 0.034, half_z * 0.72),
-                rot=tilt,
-            ),
-            blend=0.005 * hh,
-            name=f"helix_{tag}",
-        )
-        field.add(
-            Ellipsoid(
-                h.point(side * (skull + 0.006), FACE_Y["ear"] + 0.004, bottom + 0.026),
-                h.size(0.034, 0.036, 0.026),
-                rot=tilt,
-            ),
-            blend=0.005 * hh,
             name=f"lobe_{tag}",
         )
 
