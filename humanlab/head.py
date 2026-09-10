@@ -172,6 +172,14 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
         return tuple(p + np.asarray(d, np.float64) / np.linalg.norm(d)
                      * -max(r - depth, 0.25 * r))
 
+    def fyp(t, x=0.0):
+        """Front y of the surface as built so far, not of the bare skull loft.
+
+        The nose, lips and chin are fused on after the brow, muzzle and mandible,
+        so measuring their projection from the loft leaves them half buried.
+        """
+        return float(project((x, sy(x, t), Z(t)), (0.0, -1.0, 0.0))[1])
+
     f.add(sdf.Loft(secs, cap_blend=0.020 * u), k=0.055 * H)
 
     # ---- brow ridge and forehead ----------------------------------------- #
@@ -214,9 +222,9 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
 
     # ---- cheek bones, cheeks, temples ------------------------------------ #
     f.addk(
-        sdf.Ellipsoid((hw * 0.72, sy(hw * 0.72, 0.465) + 0.004 * u, Z(0.462)),
-                      (0.021 * u, 0.011 * u, 0.013 * u)),
-        k=0.026 * u,
+        sdf.Ellipsoid((hw * 0.72, sy(hw * 0.72, 0.465) + 0.010 * u, Z(0.462)),
+                      (0.024 * u, 0.017 * u, 0.016 * u)),
+        k=0.032 * u,
         mirror=True,
     )
     if P.softness > 0.4 or youth:
@@ -245,7 +253,7 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
         )
     chin_w = (0.0170 if male else 0.0145) * u * (1.0 - 0.12 * youth)
     f.addk(
-        sdf.Ellipsoid((0.0, fy(Z(0.072)) - 0.004 * u, Z(0.074)),
+        sdf.Ellipsoid((0.0, fyp(0.074) + 0.005 * u, Z(0.074)),
                       (chin_w, 0.011 * u, 0.015 * u)),
         k=0.014 * u,
     )
@@ -269,70 +277,124 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
         )
 
     # ---- nose ------------------------------------------------------------ #
+    # Nasal projection is measured forward from the mid-face plane: about 23 mm
+    # at the tip on an adult, which is much more than it looks like in a table
+    # of small offsets.  Too little and the nose vanishes into the cheeks.
     ns = (1.0 - 0.22 * youth) * u
-    f.addk(  # dorsum
-        sdf.RoundCone((0.0, fy(Z(0.600)) + 0.006 * u, Z(0.600)),
-                      (0.0, fy(Z(0.394)) - 0.009 * ns, Z(0.392)),
-                      0.0055 * ns, 0.0085 * ns),
+    base = fyp(0.372)
+    f.addk(  # dorsum, from the nasion down to just above the tip
+        sdf.RoundCone((0.0, fyp(0.600) + 0.005 * u, Z(0.600)),
+                      (0.0, base - 0.0150 * ns, Z(0.400)),
+                      0.0050 * ns, 0.0084 * ns),
         k=0.011 * u,
     )
-    tip = (0.0, fy(Z(0.382)) - 0.015 * ns, Z(0.368))
-    f.addk(sdf.Ellipsoid(tip, (0.0092 * ns, 0.0100 * ns, 0.0080 * ns)), k=0.009 * u)
+    tip = (0.0, base - 0.0224 * ns, Z(0.366))
+    f.addk(sdf.Ellipsoid(tip, (0.0092 * ns, 0.0104 * ns, 0.0086 * ns)), k=0.009 * u)
     f.addk(  # alae
-        sdf.Ellipsoid((0.0098 * ns, fy(Z(0.360)) - 0.005 * ns, Z(0.354)),
-                      (0.0074 * ns, 0.0082 * ns, 0.0064 * ns)),
+        sdf.Ellipsoid((0.0104 * ns, base - 0.0118 * ns, Z(0.352)),
+                      (0.0078 * ns, 0.0088 * ns, 0.0066 * ns)),
         k=0.0065 * u,
         mirror=True,
     )
-    f.subk(  # nostrils
-        sdf.Ellipsoid((0.0076 * ns, fy(Z(0.350)) - 0.010 * ns, Z(0.342)),
-                      (0.0030 * ns, 0.0046 * ns, 0.0036 * ns)),
-        k=0.0028 * u,
+    f.addk(  # columella between the nostrils
+        sdf.Capsule((0.0, base - 0.0175 * ns, Z(0.360)),
+                    (0.0, base - 0.0105 * ns, Z(0.344)), 0.0032 * ns),
+        k=0.004 * u,
+    )
+    f.subk(  # nostrils: they open downwards, so barely show from the front
+        sdf.Transformed(
+            sdf.Ellipsoid((0.0068 * ns, base - 0.0150 * ns, Z(0.3395)),
+                          (0.0023 * ns, 0.0046 * ns, 0.0025 * ns)),
+            euler=(np.deg2rad(-38.0), 0.0, 0.0),
+            pivot=(0.0068 * ns, base - 0.0150 * ns, Z(0.3395)),
+        ),
+        k=0.0022 * u,
         mirror=True,
     )
     f.subk(  # alar crease
-        sdf.Capsule((0.0130 * ns, fy(Z(0.368)) + 0.0018 * ns, Z(0.372)),
-                    (0.0098 * ns, fy(Z(0.340)) + 0.0060 * ns, Z(0.336)), 0.0034 * u),
+        sdf.Capsule((0.0146 * ns, base - 0.0086 * ns, Z(0.370)),
+                    (0.0112 * ns, base - 0.0026 * ns, Z(0.336)), 0.0034 * u),
         k=0.005 * u,
         mirror=True,
     )
-    f.subk(  # columella / septum notch
-        sdf.Ball((0.0, fy(Z(0.345)) - 0.0035 * ns, Z(0.336)), 0.0030 * u), k=0.004 * u
+    f.subk(  # supratip break, the small dip above the tip
+        sdf.Ball((0.0, base - 0.0072 * ns, Z(0.394)), 0.0060 * u), k=0.006 * u
     )
 
     # ---- mouth ----------------------------------------------------------- #
+    # A pair of wide ellipsoids with a straight slot cut across them reads as a
+    # letterbox.  The vermilion is built instead as a row of beads whose height,
+    # projection and radius all fall away towards the corners, which is what puts
+    # a cupid's bow on the upper lip and tucks the corners back into the cheek.
     lip_w = (0.0255 if male else 0.0235) * u * (1.0 - 0.16 * youth)
     thin = 1.0 - 0.30 * sag
-    zu, zl = Z(0.252), Z(0.228)
+    zm = 0.242
+    lip_y = fyp(zm)
+    # a mound of maxilla behind the vermilion, so the lip line has something to
+    # be cut into instead of perforating a thin shell
     f.addk(
-        sdf.Ellipsoid((0.0, fy(zu) - 0.0018 * u, zu),
-                      (lip_w, 0.0068 * u, 0.0052 * u * thin)),
-        k=0.0060 * u,
+        sdf.Ellipsoid((0.0, lip_y + 0.0130 * u, Z(zm)),
+                      (lip_w * 1.30, 0.0140 * u, 0.0170 * u)),
+        k=0.014 * u,
     )
-    f.addk(
-        sdf.Ellipsoid((0.0, fy(zl) - 0.0024 * u, zl),
-                      (lip_w * 0.92, 0.0076 * u, 0.0062 * u * thin)),
-        k=0.0065 * u,
-    )
-    f.subk(  # lip line
-        sdf.Ellipsoid(groove(0.0, 0.240, 0.0090 * u, 0.0030 * u),
-                      (lip_w * 1.14, 0.0090 * u, 0.0016 * u)),
-        k=0.0030 * u,
-    )
+
+    def vermilion(row, sign):
+        # (x / lip_w, height above the mouth line, forward projection, radius).
+        # The two rows have to overlap across the mouth line: leave even half a
+        # millimetre of daylight and the line cutter goes straight through the
+        # lips and out the other side.
+        for xf, dz, out, r in row:
+            f.addk(
+                sdf.Ellipsoid(
+                    (xf * lip_w, lip_y + 0.0052 * u - out * u,
+                     Z(zm) + sign * dz * u * thin),
+                    (r * 1.45 * u, 0.0086 * u, r * 1.20 * u * thin),
+                ),
+                k=0.0026 * u,
+                mirror=(xf > 0.0),
+            )
+
+    vermilion([(0.00, 0.0028, 0.0056, 0.0038),
+               (0.28, 0.0036, 0.0054, 0.0036),
+               (0.55, 0.0027, 0.0042, 0.0031),
+               (0.79, 0.0013, 0.0024, 0.0025)], +1.0)
+    vermilion([(0.00, 0.0040, 0.0066, 0.0044),
+               (0.30, 0.0038, 0.0061, 0.0041),
+               (0.58, 0.0029, 0.0045, 0.0033),
+               (0.81, 0.0015, 0.0023, 0.0025)], -1.0)
+
+    # The mouth line is one shallow slot, curved down towards the corners.  Its
+    # depth is worked out from the vermilion crest arithmetically rather than by
+    # projecting onto the surface: the junction is a concave saddle, where a
+    # fixed-direction Newton march wanders and leaves the cut ragged.
+    crest = lip_y - 0.0090 * u
+    seam = [(0.00, 0.0006), (0.34, 0.0009), (0.64, 0.0000), (0.90, -0.0020)]
+    pts = [(xf * lip_w, crest + (0.0024 - 0.0012 + 0.0024 * xf * xf) * u,
+            Z(zm) + dz * u) for xf, dz in seam]
+    for a, b in zip(pts[:-1], pts[1:]):
+        f.subk(sdf.Capsule(a, b, 0.0024 * u), k=0.0014 * u, mirror=True)
+
     f.subk(  # philtrum
-        sdf.Capsule(groove(0.0, 0.292, 0.0028 * u, 0.0010 * u),
-                    groove(0.0, 0.272, 0.0028 * u, 0.0012 * u), 0.0028 * u),
-        k=0.0040 * u,
+        sdf.Capsule(groove(0.0, 0.300, 0.0030 * u, 0.0013 * u),
+                    groove(0.0, 0.276, 0.0030 * u, 0.0017 * u), 0.0030 * u),
+        k=0.0042 * u,
     )
-    f.subk(  # mouth corners
-        sdf.Ball(groove(lip_w, 0.246, 0.0034 * u, 0.0016 * u), 0.0034 * u),
-        k=0.0060 * u,
+    f.addk(  # philtral columns flanking it
+        sdf.Capsule((0.0044 * u, fyp(0.298, 0.0044 * u) + 0.0022 * u, Z(0.298)),
+                    (0.0052 * u, fyp(0.272, 0.0052 * u) + 0.0026 * u, Z(0.272)),
+                    0.0018 * u),
+        k=0.0035 * u,
+        mirror=True,
+    )
+    f.subk(  # mouth corners tuck back into the cheek
+        sdf.Ball((lip_w * 1.00, crest + 0.0044 * u, Z(zm) - 0.0016 * u), 0.0034 * u),
+        k=0.0038 * u,
         mirror=True,
     )
     if sag > 0.2:  # nasolabial fold
         f.subk(
-            sdf.Capsule((0.0125 * u, fy(Z(0.345)) + 0.002 * u, Z(0.342)),
-                        (0.0205 * u, fy(Z(0.230)) + 0.010 * u, Z(0.212)), 0.0050 * u),
+            sdf.Capsule(groove(0.0135 * u, 0.330, 0.0050 * u, 0.0016 * u),
+                        groove(0.0215 * u, 0.212, 0.0050 * u, 0.0024 * u), 0.0050 * u),
             k=0.0075 * u,
             mirror=True,
         )
@@ -385,9 +447,12 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
         )
 
     # ---- ears ------------------------------------------------------------ #
-    # the auricle has to clear the skull wall, or it reads as a dent
-    ear_x = prof.width(Z(0.470)) * 1.12
-    ear_y = 0.5 * (fy(Z(0.470)) + by(Z(0.470))) - 0.006 * u
+    # The auricle must be rooted a few millimetres *inside* the skull wall.  Sat
+    # entirely outside it, only the fillet holds it on and it reads as a flap
+    # stuck to the head, with the lobule trailing off as a separate drip.
+    skull_x = prof.width(Z(0.470))
+    ear_x = skull_x + 0.003 * u
+    ear_y = 0.5 * (fy(Z(0.470)) + by(Z(0.470))) - 0.005 * u
     ear_z = Z(0.470)
     ear_h = 0.029 * u
     tilt = np.deg2rad(14.0)
@@ -396,36 +461,48 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
         t = sdf.Transformed(prim, euler=(tilt, 0.0, 0.0), pivot=(ear_x, ear_y, ear_z))
         (f.subk if sub else f.addk)(t, k=k, mirror=True)
 
-    ear_put(sdf.Ellipsoid((ear_x, ear_y, ear_z), (0.0030 * u, ear_h * 0.56, ear_h)), 0.009 * u)
-    ang = np.linspace(-1.65, 2.25, 10)
-    pts = [
-        (ear_x + 0.0022 * u, ear_y - np.sin(a) * ear_h * 0.50, ear_z + np.cos(a) * ear_h * 0.86)
+    ear_put(  # the shell of the auricle
+        sdf.Ellipsoid((ear_x, ear_y, ear_z - ear_h * 0.05),
+                      (0.0070 * u, ear_h * 0.50, ear_h * 0.95)),
+        0.007 * u,
+    )
+    # helix: emerges at the front, sweeps over the top and down the back
+    ang = np.linspace(0.32, 4.55, 13)
+    rim = [
+        (ear_x + 0.0030 * u,
+         ear_y - np.cos(a) * ear_h * 0.44,
+         ear_z + np.sin(a) * ear_h * 0.82)
         for a in ang
     ]
-    for a, b in zip(pts[:-1], pts[1:]):
-        ear_put(sdf.Capsule(a, b, 0.0034 * u), 0.0030 * u)
+    for a, b in zip(rim[:-1], rim[1:]):
+        ear_put(sdf.Capsule(a, b, 0.0032 * u), 0.0026 * u)
+    ear_put(  # lobule, hanging off the end of the helix
+        sdf.Ellipsoid((ear_x + 0.0006 * u, ear_y - ear_h * 0.06, ear_z - ear_h * 0.84),
+                      (0.0044 * u, 0.0052 * u, 0.0058 * u)),
+        0.0040 * u,
+    )
     ear_put(  # antihelix
-        sdf.Capsule((ear_x + 0.0016 * u, ear_y - ear_h * 0.10, ear_z + ear_h * 0.40),
-                    (ear_x + 0.0016 * u, ear_y - ear_h * 0.20, ear_z - ear_h * 0.35),
-                    0.0024 * u),
-        0.0030 * u,
+        sdf.Capsule((ear_x + 0.0020 * u, ear_y - ear_h * 0.08, ear_z + ear_h * 0.44),
+                    (ear_x + 0.0020 * u, ear_y - ear_h * 0.18, ear_z - ear_h * 0.30),
+                    0.0026 * u),
+        0.0026 * u,
+    )
+    ear_put(  # tragus
+        sdf.Ellipsoid((ear_x + 0.0018 * u, ear_y - ear_h * 0.38, ear_z - ear_h * 0.20),
+                      (0.0026 * u, 0.0028 * u, 0.0040 * u)),
+        0.0026 * u,
     )
     ear_put(  # concha
-        sdf.Ellipsoid((ear_x + 0.0030 * u, ear_y + 0.0020 * u, ear_z + ear_h * 0.02),
-                      (0.0032 * u, ear_h * 0.24, ear_h * 0.36)),
-        0.0032 * u,
+        sdf.Ellipsoid((ear_x + 0.0044 * u, ear_y - ear_h * 0.06, ear_z - ear_h * 0.04),
+                      (0.0036 * u, ear_h * 0.20, ear_h * 0.30)),
+        0.0028 * u,
         sub=True,
     )
-    ear_put(
-        sdf.Ellipsoid((ear_x, ear_y - ear_h * 0.10, ear_z - ear_h * 0.88),
-                      (0.0030 * u, 0.0050 * u, 0.0062 * u)),
-        0.0045 * u,
-    )
     ear_put(  # crease where the auricle leaves the skull
-        sdf.Capsule((ear_x - 0.006 * u, ear_y + 0.009 * u, ear_z + ear_h * 0.62),
-                    (ear_x - 0.006 * u, ear_y + 0.009 * u, ear_z - ear_h * 0.55),
-                    0.0026 * u),
-        0.0034 * u,
+        sdf.Capsule((ear_x - 0.0058 * u, ear_y + 0.008 * u, ear_z + ear_h * 0.58),
+                    (ear_x - 0.0058 * u, ear_y + 0.008 * u, ear_z - ear_h * 0.50),
+                    0.0024 * u),
+        0.0030 * u,
         sub=True,
     )
 
