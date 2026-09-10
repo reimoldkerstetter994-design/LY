@@ -612,14 +612,14 @@ def build_hand(f: sdf.Field, P: Proportions, E, W):
     finger_len = hand_len - palm_len
     rel = (0.94, 1.0, 0.97, 0.80)
     rad = (0.0052, 0.0054, 0.0052, 0.0046)
-    flex = np.deg2rad((11.0, 33.0, 47.0))   # cumulative MCP / PIP / DIP flexion
+    flex = np.deg2rad((9.0, 25.0, 37.0))   # cumulative MCP / PIP / DIP flexion
     segs = (0.45, 0.31, 0.24)
     for i in range(4):
         root = heads[i]
         length = finger_len * rel[i]
         r0 = rad[i] * H
         # the fingers converge very slightly towards the middle of the hand
-        conv = row * (-0.09 * np.sign(lat[i]))
+        conv = row * (-0.15 * np.sign(lat[i]) * abs(lat[i]))
         p0 = root
         for j, sfrac in enumerate(segs):
             dirn = axis * np.cos(flex[j]) + nrm * np.sin(flex[j]) + conv
