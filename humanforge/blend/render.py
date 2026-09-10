@@ -49,7 +49,10 @@ def configure(scene: bpy.types.Scene, settings: RenderSettings) -> None:
     scene.cycles.transparent_max_bounces = 8
     scene.cycles.caustics_reflective = settings.caustics
     scene.cycles.caustics_refractive = settings.caustics
-    scene.cycles.blur_glossy = 1.2
+    # Filter Glossy trades noise for blur in glossy paths, and the specular
+    # breakup off sub-millimetre pore relief is exactly what it blurs away.  Low
+    # enough to keep that, high enough to keep the sebum coat from firefly-ing.
+    scene.cycles.blur_glossy = 0.4
     scene.cycles.sample_clamp_indirect = 12.0
 
     # Light tree importance sampling: with four area lights and a bright world it

@@ -363,19 +363,42 @@ class Shot:
     pitch: float = 2.0
     roll: float = 0.0
 
+    focus: tuple[str, ...] = ()
+    """Landmarks to focus on, nearest one winning; empty means the frame centre.
+
+    A face wants the near eye.  Focusing on what the frame is *centred* on puts the
+    sharp plane through the middle of the skull, which at a portrait aperture leaves
+    the eyes, nose and mouth all outside it -- and skin that is a millimetre out of
+    focus has no pores, however much relief the shader gives it.
+    """
+
+    fstop: float = 4.0
+
+
+EYES = ("eye_l", "eye_r")
 
 SHOTS = {
-    "full": Shot("full", "body", 1.0, focal=85.0, yaw=14.0, pitch=1.0),
-    "portrait": Shot("portrait", "head_centre", 0.34, focal=135.0, yaw=22.0, pitch=3.0),
-    "face": Shot("face", "eye_mid", 0.17, focal=135.0, yaw=12.0, pitch=2.0),
-    "hand": Shot("hand", "hand_l", 0.22, focal=135.0, yaw=28.0, pitch=14.0),
-    "torso": Shot("torso", "chest", 0.60, focal=105.0, yaw=20.0, pitch=2.0),
+    "full": Shot("full", "body", 1.0, focal=85.0, yaw=14.0, pitch=1.0, fstop=8.0),
+    "portrait": Shot(
+        "portrait", "head_centre", 0.34, focal=135.0, yaw=22.0, pitch=3.0,
+        focus=EYES, fstop=5.6,
+    ),
+    "face": Shot(
+        "face", "eye_mid", 0.17, focal=135.0, yaw=12.0, pitch=2.0,
+        focus=EYES, fstop=5.6,
+    ),
+    "hand": Shot("hand", "hand_l", 0.22, focal=135.0, yaw=28.0, pitch=14.0, fstop=5.6),
+    "torso": Shot("torso", "chest", 0.60, focal=105.0, yaw=20.0, pitch=2.0, fstop=6.3),
     # Orthogonal views for checking anatomy rather than for showing it off.
-    "front": Shot("front", "body", 1.0, focal=110.0, yaw=0.0, pitch=0.0),
-    "side": Shot("side", "body", 1.0, focal=110.0, yaw=90.0, pitch=0.0),
-    "back": Shot("back", "body", 1.0, focal=110.0, yaw=180.0, pitch=0.0),
-    "head_front": Shot("head_front", "head_centre", 0.30, focal=120.0, yaw=0.0),
-    "head_side": Shot("head_side", "head_centre", 0.30, focal=120.0, yaw=90.0),
+    "front": Shot("front", "body", 1.0, focal=110.0, yaw=0.0, pitch=0.0, fstop=8.0),
+    "side": Shot("side", "body", 1.0, focal=110.0, yaw=90.0, pitch=0.0, fstop=8.0),
+    "back": Shot("back", "body", 1.0, focal=110.0, yaw=180.0, pitch=0.0, fstop=8.0),
+    "head_front": Shot(
+        "head_front", "head_centre", 0.30, focal=120.0, yaw=0.0, focus=EYES, fstop=5.6
+    ),
+    "head_side": Shot(
+        "head_side", "head_centre", 0.30, focal=120.0, yaw=90.0, focus=EYES, fstop=5.6
+    ),
 }
 
 SENSOR_HEIGHT = 24.0
@@ -453,6 +476,24 @@ def framing(
     return centre, max(tall, wide)
 
 
+def _focus_distance(
+    figure: Figure, shot: Shot, location: np.ndarray, fallback: float
+) -> float:
+    """How far to focus: the nearest of ``shot.focus``, or the frame centre.
+
+    Nearest rather than any particular one so that no side has to be named, which
+    would only have to be got right again for every yaw.
+    """
+    reachable = [
+        np.asarray(figure.landmarks[name], dtype=float)
+        for name in shot.focus
+        if name in figure.landmarks
+    ]
+    if not reachable:
+        return fallback
+    return min(float(np.linalg.norm(point - location)) for point in reachable)
+
+
 def add_camera(
     figure: Figure,
     shot: Shot,
@@ -480,8 +521,8 @@ def add_camera(
     # A real portrait lens is shot near wide open; the shallow focus is part of
     # why a photograph of skin looks like one.
     camera.dof.use_dof = True
-    camera.dof.focus_distance = distance
-    camera.dof.aperture_fstop = 4.0 if shot.target == "body" else 2.8
+    camera.dof.focus_distance = _focus_distance(figure, shot, location, distance)
+    camera.dof.aperture_fstop = shot.fstop
 
     obj = bpy.data.objects.new(shot.name, camera)
     obj.location = tuple(location)

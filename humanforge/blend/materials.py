@@ -154,13 +154,11 @@ def _relief(graph: Graph, position, look: SkinLook):
     wrinkle = graph.noise(
         position, scale=320.0, detail=6.0, roughness=0.72, name="micro_wrinkle"
     )
-    # Pores read as pits, so the cell-centre peaks of an F1 Voronoi are inverted
-    # rather than used directly.
-    pores = graph.math(
-        "SUBTRACT",
-        1.0,
-        graph.voronoi(position, scale=1250.0, randomness=0.85, name="pores"),
-    )
+    # An F1 Voronoi's distance output is already zero at each cell centre and rises
+    # away from it, so it is a field of pits as it stands, which is what a pore is.
+    # Inverting it -- the obvious thing to reach for -- turns every pore into a bump
+    # and the skin into gooseflesh.
+    pores = graph.voronoi(position, scale=1250.0, randomness=0.85, name="pores")
 
     normal = graph.bump(
         slack,
@@ -171,12 +169,16 @@ def _relief(graph: Graph, position, look: SkinLook):
     normal = graph.bump(
         wrinkle,
         strength=0.42 + 0.28 * look.age,
-        distance=0.00035,
+        distance=0.00060,
         normal=normal,
         name="bump_wrinkle",
     )
+    # A pore is a couple of hundredths of a millimetre deep, but what has to read at
+    # portrait distance is the specular breakup rather than the depth, and at the
+    # true depth there is none: the cheek came back with no more high frequency
+    # detail than a sphere.  So this is exaggerated, and knowingly.
     normal = graph.bump(
-        pores, strength=0.34, distance=0.00012, normal=normal, name="bump_pore"
+        pores, strength=0.55, distance=0.00030, normal=normal, name="bump_pore"
     )
     return normal, wrinkle
 
@@ -358,8 +360,20 @@ def eye_material(name: str, look: EyeLook) -> bpy.types.Material:
             # Veins thin out over the cornea and gather towards the corners.
             graph.ramp(radial, (iris_edge, (0.0,) * 3), (0.95, (1.0,) * 3)),
         ),
-        srgb(232, 226, 219),
+        srgb(214, 205, 195),
         srgb(186, 108, 100),
+    )
+    # Shade the sclera down away from the gaze axis.  The eyeball is a whole sphere
+    # in a socket, so the further round it a point is, the deeper under the lids and
+    # into the corners it lies, and the less of the room reaches it.  Cycles gets
+    # some of this from the lids themselves, but nowhere near enough at a portrait
+    # aperture: left at one brightness the sclera reads as a white ball resting in
+    # an eye-shaped hole, which is most of what makes a rendered eye look glass.
+    sclera = graph.blend(
+        "MULTIPLY",
+        graph.ramp(radial, (iris_edge, (0.0,) * 3), (0.92, (1.0,) * 3)),
+        sclera,
+        (0.42, 0.40, 0.40, 1.0),
     )
 
     to_iris = graph.ramp(
