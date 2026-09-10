@@ -262,7 +262,7 @@ def _add_brows(
     p = skeleton.measures.params
     female = 1.0 if p.sex == "female" else (0.5 if p.sex == "neutral" else 0.0)
     weight = (1.0 - 0.30 * female) * (0.80 if p.age in ("child", "teen") else 1.0)
-    thick = 0.023 * h.height * weight
+    thick = 0.019 * h.height * weight
     ops: list[Op] = list(body.ops) if body is not None else []
     forward = normalize(h.orientation @ v3(0.0, 1.0, 0.0))
 
@@ -291,7 +291,10 @@ def _add_brows(
                     section=(0.42, 1.0),
                     frame=frame_with_axis(b - a, forward),
                 ),
-                blend=0.004 * h.height,
+                # Generous next to the segment radii, because the six stations are
+                # a polyline through a curve: blended tightly, every join stands as
+                # its own bead and the brow reads as a chain of sausages.
+                blend=0.013 * h.height,
                 name=f"brow_{tag}_{index}",
             )
 
