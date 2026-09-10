@@ -147,13 +147,14 @@ LANDMARK_HEIGHTS = {
     "ankle": 0.039,
 }
 
-GLABELLA_SPAN = 0.862
+GLABELLA_SPAN = 0.895
 """Fraction of the occiput-to-nose-tip span that lies behind the glabella.
 
 Head length is the glabella-to-occiput distance, so this is the factor between
-the measurement and the depth the face is actually laid out over; see
-:attr:`Measures.face_depth`.  The value is measured off the built head, so the
-two agree by construction.
+that measurement and the depth the face is actually laid out over; see
+:attr:`Measures.face_depth`.  The value is the glabella's own place in
+:data:`humanforge.head.FACE_Y`, so the table and the measurement agree by
+definition rather than by being tuned against each other.
 """
 
 # Horizontal breadths, again as a fraction of stature.
