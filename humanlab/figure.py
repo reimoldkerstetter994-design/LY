@@ -32,16 +32,18 @@ def _rotx(prim, angle, pivot):
 def front_groove(prof, z, r, depth, bulge=0.0, x=0.0):
     """Centre y for a cutter of radius r that leaves a groove `depth` deep.
 
-    The centre must stay closer to the skin than its own radius, otherwise the
-    cutter carves a sealed cavity and leaves a paper-thin wall behind.  `bulge`
+    A sphere of radius r whose centre sits a distance c *outside* the skin takes
+    out a cap (r - c) deep, so the centre belongs outside, not inside.  Put it
+    inside and the groove comes out (r + c) deep instead, which is how a 24 mm
+    cutter asked for a 3 mm crease ends up digging a 44 mm trench.  `bulge`
     accounts for muscle volume fused in front of the lofted torso, and `x` for
     how far the torso has already curved away at that lateral offset.
     """
-    return prof.front_at(x, z) - bulge + max(r - depth, 0.15 * r)
+    return prof.front_at(x, z) - bulge - max(r - depth, 0.0)
 
 
 def back_groove(prof, z, r, depth, bulge=0.0, x=0.0):
-    return prof.back_at(x, z) + bulge - max(r - depth, 0.15 * r)
+    return prof.back_at(x, z) + bulge + max(r - depth, 0.0)
 
 
 class TorsoProfile:
@@ -159,8 +161,8 @@ def build_torso(f: sdf.Field, P: Proportions, prof: TorsoProfile):
     gr = P.glute_r * H
     f.add(
         sdf.Ellipsoid(
-            (0.046 * H, prof.back(zg) - 0.66 * gr, zg),
-            (gr * 0.90, gr * 0.78, gr * 1.00 + 0.006 * H * P.sag),
+            (0.046 * H, prof.back_at(0.046 * H, zg) - 0.54 * gr, zg),
+            (gr * 0.90, gr * 0.80, gr * 1.00 + 0.006 * H * P.sag),
         ),
         k=0.060 * H,
         mirror=True,
@@ -168,11 +170,13 @@ def build_torso(f: sdf.Field, P: Proportions, prof: TorsoProfile):
     # gluteal cleft
     f.sub(
         sdf.Capsule(
-            (0.0, prof.back(zg) - 0.16 * gr, (P.z_crotch - 0.006) * H),
-            (0.0, prof.back(zg) - 0.30 * gr, zg + 0.55 * gr),
+            (0.0, back_groove(prof, (P.z_crotch - 0.002) * H, 0.014 * H, 0.011 * H),
+             (P.z_crotch - 0.002) * H),
+            (0.0, back_groove(prof, zg + 0.45 * gr, 0.014 * H, 0.009 * H),
+             zg + 0.45 * gr),
             0.014 * H,
         ),
-        k=0.022 * H,
+        k=0.020 * H,
     )
     # gluteal fold underneath
     f.sub(
@@ -231,44 +235,44 @@ def build_torso(f: sdf.Field, P: Proportions, prof: TorsoProfile):
         # A thin pancake fused onto the ribcage meets it at too steep an angle
         # and leaves a rim like a breastplate.  A fatter ellipsoid sunk into the
         # chest shows only its crown, so the pectoral emerges as a soft dome.
+        prx = (0.058 + 0.004 * mus) * H
+        pry = (0.021 + 0.010 * mus) * H
+        prz = (0.034 + 0.005 * mus) * H
+        pcy = prof.front_at(px, pz) + (0.017 + 0.006 * mus) * H
         f.add(
-            sdf.Ellipsoid(
-                (px, prof.front_at(px, pz) + (0.013 + 0.004 * mus) * H, pz),
-                ((0.056 + 0.004 * mus) * H, (0.021 + 0.008 * mus) * H,
-                 (0.033 + 0.005 * mus) * H),
-            ),
-            k=(0.070 - 0.024 * mus) * H,
+            sdf.Ellipsoid((px, pcy, pz), (prx, pry, prz)),
+            k=(0.080 - 0.020 * mus) * H,
             mirror=True,
         )
-        f.add(sdf.Ellipsoid((0.048 * H, prof.front_at(0.048 * H, zn) - 0.004 * H, zn),
-                            (0.0055 * H, 0.0035 * H, 0.0055 * H)), k=0.008 * H, mirror=True)
+
+        def pec_surface(x, z):
+            """Front y of the pectoral dome, for parking things on it."""
+            t = 1.0 - ((x - px) / prx) ** 2 - ((z - pz) / prz) ** 2
+            return pcy - pry * float(np.sqrt(max(t, 0.04)))
+
+        nx = 0.048 * H
+        npy = pec_surface(nx, zn)
+        f.add(sdf.Ellipsoid((nx, npy + 0.0030 * H, zn),
+                            (0.0100 * H, 0.0060 * H, 0.0100 * H)),
+              k=0.010 * H, mirror=True)   # areola, barely raised
+        f.add(sdf.Ellipsoid((nx, npy - 0.0010 * H, zn),
+                            (0.0038 * H, 0.0040 * H, 0.0038 * H)),
+              k=0.004 * H, mirror=True)
         if mus > 0.45:
-            # sternal furrow between the pectorals
+            # Sternal furrow between the pectorals.  The dome does not reach the
+            # midline, so there is little muscle bulge to allow for -- and the
+            # fillet has to stay well under the cutter radius, or the smooth
+            # subtraction spreads far past the cutter and digs a trench.
             f.sub(
                 sdf.Capsule(
-                    (0.0, front_groove(prof, zn, 0.010 * H, 0.004 * H, 0.006 * H),
+                    (0.0, front_groove(prof, zn, 0.013 * H, 0.0030 * H, 0.002 * H),
                      (P.z_nipple - 0.022) * H),
                     (0.0, front_groove(prof, (P.z_armpit + 0.004) * H,
-                                       0.010 * H, 0.004 * H, 0.006 * H),
+                                       0.013 * H, 0.0030 * H, 0.002 * H),
                      (P.z_armpit + 0.004) * H),
-                    0.010 * H,
+                    0.013 * H,
                 ),
-                k=0.036 * H,
-            )
-            # lower border of the pectoral: a hint, not an engraved line
-            za, zb = (P.z_nipple - 0.030) * H, (P.z_nipple - 0.014) * H
-            f.sub(
-                sdf.Capsule(
-                    (0.022 * H,
-                     front_groove(prof, za, 0.009 * H, 0.0025 * H, 0.012 * H, x=0.022 * H),
-                     za),
-                    (0.078 * H,
-                     front_groove(prof, zb, 0.009 * H, 0.0020 * H, 0.004 * H, x=0.078 * H),
-                     zb),
-                    0.009 * H,
-                ),
-                k=0.034 * H,
-                mirror=True,
+                k=0.022 * H,
             )
 
     # ---- abdominal wall --------------------------------------------------- #
@@ -313,27 +317,44 @@ def build_torso(f: sdf.Field, P: Proportions, prof: TorsoProfile):
     if mus > 0.35:
         f.add(
             sdf.Ellipsoid(
-                (prof.half_width(zl) * 0.80, prof.back(zl) - 0.020 * H, zl + 0.010 * H),
+                (prof.half_width(zl) * 0.80,
+                 prof.back_at(prof.half_width(zl) * 0.80, zl) - 0.016 * H,
+                 zl + 0.010 * H),
                 ((0.020 + 0.014 * mus) * H, (0.024 + 0.010 * mus) * H, 0.062 * H),
             ),
             k=0.06 * H,
             mirror=True,
         )
-    # spinal groove
+    # Erector spinae.  The spinal furrow is the valley left between these two
+    # columns, which reads far better than a groove cut into a flat back -- the
+    # same reason the rectus is built as pads rather than carved.
     zsp0 = (P.z_iliac - 0.030) * H
     zsp1 = (P.z_neck - 0.004) * H
+    ex = 0.022 * H
+    for zc0, half in ((0.5 * (zsp0 + P.z_ribs * H), 0.070 * H),
+                      (0.5 * (P.z_ribs * H + zsp1), 0.062 * H)):
+        f.add(
+            sdf.Ellipsoid(
+                (ex, prof.back_at(ex, zc0) - (0.014 + 0.005 * mus) * H, zc0),
+                (0.021 * H, (0.019 + 0.005 * mus) * H, half),
+            ),
+            k=0.055 * H,
+            mirror=True,
+        )
     f.sub(
-        sdf.Capsule((0.0, back_groove(prof, zsp0, 0.012 * H, 0.0045 * H), zsp0),
-                    (0.0, back_groove(prof, zsp1, 0.012 * H, 0.0055 * H, 0.004 * H), zsp1),
-                    0.012 * H),
-        k=0.030 * H,
+        sdf.Capsule((0.0, back_groove(prof, zsp0, 0.013 * H, 0.0055 * H, 0.004 * H), zsp0),
+                    (0.0, back_groove(prof, zsp1, 0.013 * H, 0.0060 * H, 0.005 * H), zsp1),
+                    0.013 * H),
+        k=0.024 * H,
     )
     # dimples of Venus
     if P.softness < 0.6:
+        zd = (P.z_iliac - 0.024) * H
         f.sub(
-            sdf.Ball((0.022 * H, prof.back(P.z_iliac * H) - 0.0055 * H, (P.z_iliac - 0.024) * H),
-                     0.011 * H),
-            k=0.018 * H,
+            sdf.Ball((0.017 * H,
+                      back_groove(prof, zd, 0.009 * H, 0.0028 * H, x=0.017 * H), zd),
+                     0.009 * H),
+            k=0.010 * H,
             mirror=True,
         )
     # Trapezius sweeping from the neck down to the acromion.  This yoke has to
@@ -427,10 +448,12 @@ def build_neck(f: sdf.Field, P: Proportions, prof: TorsoProfile):
         k=0.036 * H,
         mirror=True,
     )
-    if P.sex == "m":  # laryngeal prominence
-        zl = (P.z_chin - 0.030) * H
-        f.add(sdf.Ellipsoid((0.0, cy - P.neck_d * 0.95 * H, zl),
-                            (0.009 * H, 0.008 * H, 0.013 * H)), k=0.020 * H)
+    if P.sex == "m":
+        # Laryngeal prominence.  It stands only a few millimetres out of the
+        # neck; parked on the skin with its own radius on top it becomes a lump.
+        zl = (P.z_chin - 0.032) * H
+        f.add(sdf.Ellipsoid((0.0, cy - P.neck_d * 0.66 * H, zl),
+                            (0.0095 * H, 0.0095 * H, 0.0115 * H)), k=0.024 * H)
     if P.sag > 0.0:  # slack submandibular tissue
         f.add(
             sdf.Ellipsoid((0.0, cy - P.neck_d * 0.72 * H, (P.z_chin - 0.012) * H),

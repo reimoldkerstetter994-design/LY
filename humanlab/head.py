@@ -164,13 +164,14 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
         Two rules matter here.  The cutter has to be measured against the surface
         that actually exists at this point in the program -- brows, cheeks, chin
         and lips have already been fused on top of the skull loft, so the loft's
-        own surface is metres of nothing to do with the skin.  And the centre must
-        stay closer to that surface than its own radius, or it stops carving a
-        crease and hollows out a cavity under the skin instead.
+        own surface has nothing to do with the skin any more.  And the centre goes
+        ``r - depth`` *outside* that surface: a sphere centred outside removes a
+        cap (r - c) deep, whereas one centred inside removes (r + c), so putting
+        it inside turns every crease into a gouge.
         """
         p = project((x, sy(x, t), Z(t)), d)
         return tuple(p + np.asarray(d, np.float64) / np.linalg.norm(d)
-                     * -max(r - depth, 0.25 * r))
+                     * max(r - depth, 0.0))
 
     def fyp(t, x=0.0):
         """Front y of the surface as built so far, not of the bare skull loft.
@@ -393,8 +394,8 @@ def build_head(f: sdf.Field, P: Proportions, torso_prof):
     )
     if sag > 0.2:  # nasolabial fold
         f.subk(
-            sdf.Capsule(groove(0.0135 * u, 0.330, 0.0050 * u, 0.0016 * u),
-                        groove(0.0215 * u, 0.212, 0.0050 * u, 0.0024 * u), 0.0050 * u),
+            sdf.Capsule(groove(0.0135 * u, 0.330, 0.0050 * u, 0.0026 * u),
+                        groove(0.0215 * u, 0.212, 0.0050 * u, 0.0036 * u), 0.0050 * u),
             k=0.0075 * u,
             mirror=True,
         )
