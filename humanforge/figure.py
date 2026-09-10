@@ -21,6 +21,7 @@ import numpy as np
 
 from .anatomy import BodyParams, Measures
 from .extremities import build_foot, build_hand
+from .hair import build_hair
 from .head import build_head
 from .parts import Attachment
 from .sdf import (
@@ -78,6 +79,8 @@ class Figure:
     measures: Measures
     skeleton: Skeleton
     body: Field
+    hair: Field | None = None
+    """A second solid, meshed and shaded separately; ``None`` for a bald figure."""
 
     attachments: list[Attachment] = dataclass_field(default_factory=list)
     landmarks: dict[str, Vec3] = dataclass_field(default_factory=dict)
@@ -181,6 +184,7 @@ def build_figure(params: BodyParams) -> Figure:
         measures=m,
         skeleton=skeleton,
         body=body,
+        hair=build_hair(skeleton, params.hair),
         attachments=attachments,
         landmarks=landmarks,
     )

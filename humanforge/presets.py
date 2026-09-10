@@ -35,6 +35,7 @@ _CONTRAPPOSTO_R = Pose(
 PRESETS: dict[str, BodyParams] = {
     "male_average": BodyParams(
         name="male_average",
+        hair="short",
         height=1.760,
         sex="male",
         muscle=0.50,
@@ -47,6 +48,7 @@ PRESETS: dict[str, BodyParams] = {
     ),
     "male_athletic": BodyParams(
         name="male_athletic",
+        hair="cropped",
         height=1.820,
         sex="male",
         muscle=0.88,
@@ -58,6 +60,7 @@ PRESETS: dict[str, BodyParams] = {
     ),
     "male_lean": BodyParams(
         name="male_lean",
+        hair="short",
         height=1.790,
         sex="male",
         muscle=0.40,
@@ -70,6 +73,7 @@ PRESETS: dict[str, BodyParams] = {
     ),
     "male_heavy": BodyParams(
         name="male_heavy",
+        hair="thinning",
         height=1.745,
         sex="male",
         muscle=0.46,
@@ -82,6 +86,7 @@ PRESETS: dict[str, BodyParams] = {
     ),
     "female_average": BodyParams(
         name="female_average",
+        hair="bob",
         height=1.632,
         sex="female",
         muscle=0.42,
@@ -92,6 +97,7 @@ PRESETS: dict[str, BodyParams] = {
     ),
     "female_athletic": BodyParams(
         name="female_athletic",
+        hair="ponytail",
         height=1.702,
         sex="female",
         muscle=0.80,
@@ -104,6 +110,7 @@ PRESETS: dict[str, BodyParams] = {
     ),
     "female_curvy": BodyParams(
         name="female_curvy",
+        hair="long",
         height=1.655,
         sex="female",
         muscle=0.44,
@@ -117,6 +124,7 @@ PRESETS: dict[str, BodyParams] = {
     ),
     "elder_male": BodyParams(
         name="elder_male",
+        hair="receded",
         height=1.702,
         sex="male",
         age="elder",
@@ -137,6 +145,7 @@ PRESETS: dict[str, BodyParams] = {
     ),
     "elder_female": BodyParams(
         name="elder_female",
+        hair="bob",
         height=1.578,
         sex="female",
         age="elder",
@@ -157,6 +166,7 @@ PRESETS: dict[str, BodyParams] = {
     ),
     "teen_female": BodyParams(
         name="teen_female",
+        hair="long",
         height=1.585,
         sex="female",
         age="teen",
@@ -170,6 +180,7 @@ PRESETS: dict[str, BodyParams] = {
     ),
     "teen_male": BodyParams(
         name="teen_male",
+        hair="short",
         height=1.700,
         sex="male",
         age="teen",
@@ -182,6 +193,7 @@ PRESETS: dict[str, BodyParams] = {
     ),
     "child": BodyParams(
         name="child",
+        hair="short",
         height=1.215,
         sex="neutral",
         age="child",

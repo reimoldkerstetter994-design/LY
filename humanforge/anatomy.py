@@ -88,6 +88,9 @@ class BodyParams:
     stoop: float = 0.0
     """Thoracic kyphosis, i.e. a rounded upper back."""
 
+    hair: str | None = None
+    """Name of a style in :data:`humanforge.hair.STYLES`; ``None`` is bald."""
+
     seed: int = 7
     """Drives millimetre-scale left/right asymmetry."""
 
