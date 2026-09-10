@@ -175,6 +175,37 @@ class Slab(Prim):
         return np.abs(c - mid) - half
 
 
+def _smooth_table(z, v, n=512):
+    """Resample control values onto a dense grid with a Catmull-Rom spline.
+
+    Linear interpolation between sections leaves a tangent break at every
+    control height, which shows up on a smooth volume like the cranium as
+    horizontal ridges.  A C1 spline removes them.
+    """
+    z = np.asarray(z, np.float64)
+    v = np.asarray(v, np.float64)
+    if z.size < 3:
+        zz = np.linspace(z[0], z[-1], n)
+        return zz, np.interp(zz, z, v)
+    # centred differences give Catmull-Rom tangents, clamped at the ends
+    d = np.zeros_like(v)
+    d[1:-1] = (v[2:] - v[:-2]) / (z[2:] - z[:-2])
+    d[0] = (v[1] - v[0]) / (z[1] - z[0])
+    d[-1] = (v[-1] - v[-2]) / (z[-1] - z[-2])
+    zz = np.linspace(z[0], z[-1], n)
+    i = np.clip(np.searchsorted(z, zz) - 1, 0, z.size - 2)
+    h = z[i + 1] - z[i]
+    t = (zz - z[i]) / h
+    t2 = t * t
+    t3 = t2 * t
+    h00 = 2 * t3 - 3 * t2 + 1
+    h10 = t3 - 2 * t2 + t
+    h01 = -2 * t3 + 3 * t2
+    h11 = t3 - t2
+    out = h00 * v[i] + h10 * h * d[i] + h01 * v[i + 1] + h11 * h * d[i + 1]
+    return zz, out
+
+
 class Loft(Prim):
     """Generalised cylinder along Z with super-elliptical cross sections.
 
@@ -196,6 +227,15 @@ class Loft(Prim):
             [s[5] if len(s) > 5 else exponent for s in secs], np.float64
         )
         self.cap = float(cap_blend)
+        zz, self._rx = _smooth_table(self.z, self.rx)
+        _, self._ryf = _smooth_table(self.z, self.ryf)
+        _, self._ryb = _smooth_table(self.z, self.ryb)
+        _, self._cy = _smooth_table(self.z, self.cy)
+        _, self._ex = _smooth_table(self.z, self.ex)
+        self._zz = zz
+        self._rx = np.maximum(self._rx, 1e-4)
+        self._ryf = np.maximum(self._ryf, 1e-4)
+        self._ryb = np.maximum(self._ryb, 1e-4)
         rxm = float(self.rx.max())
         ymin = float((self.cy - self.ryf).min())
         ymax = float((self.cy + self.ryb).max())
@@ -208,11 +248,11 @@ class Loft(Prim):
     def eval(self, X, Y, Z):
         zf = np.ravel(Z)
         shp = [1, 1, zf.size]
-        rx = np.interp(zf, self.z, self.rx).reshape(shp)
-        ryf = np.interp(zf, self.z, self.ryf).reshape(shp)
-        ryb = np.interp(zf, self.z, self.ryb).reshape(shp)
-        cy = np.interp(zf, self.z, self.cy).reshape(shp)
-        ex = np.interp(zf, self.z, self.ex).reshape(shp)
+        rx = np.interp(zf, self._zz, self._rx).reshape(shp)
+        ryf = np.interp(zf, self._zz, self._ryf).reshape(shp)
+        ryb = np.interp(zf, self._zz, self._ryb).reshape(shp)
+        cy = np.interp(zf, self._zz, self._cy).reshape(shp)
+        ex = np.interp(zf, self._zz, self._ex).reshape(shp)
         yr = Y - cy
         # smooth front/back radius blend so the flanks stay tangent-continuous
         w = 0.5 * (1.0 - yr / np.sqrt(yr * yr + (0.35 * rx) ** 2))
@@ -297,18 +337,40 @@ class Mirrored(Prim):
 # CSG program
 # --------------------------------------------------------------------------- #
 class Field:
-    """Ordered list of smooth CSG operations."""
+    """Ordered list of smooth CSG operations.
 
-    def __init__(self):
+    ``blend_scale`` globally tightens or loosens every fillet, which is the
+    single most expressive knob in the whole system: low values give a lean,
+    defined body, high values a soft one.
+    """
+
+    def __init__(self, blend_scale=1.0):
         self.ops = []  # (prim, mode, k)
+        self.blend_scale = float(blend_scale)
 
     def add(self, prim, k=0.0, mirror=False):
+        k = float(k) * self.blend_scale
+        self.ops.append((prim, "union", k))
+        if mirror:
+            self.ops.append((Mirrored(prim), "union", k))
+        return self
+
+    def sub(self, prim, k=0.0, mirror=False):
+        k = float(k) * self.blend_scale
+        self.ops.append((prim, "sub", k))
+        if mirror:
+            self.ops.append((Mirrored(prim), "sub", k))
+        return self
+
+    # Faces need fillets set in absolute millimetres rather than scaled by the
+    # global build softness, so features keep their crispness on any body.
+    def addk(self, prim, k=0.0, mirror=False):
         self.ops.append((prim, "union", float(k)))
         if mirror:
             self.ops.append((Mirrored(prim), "union", float(k)))
         return self
 
-    def sub(self, prim, k=0.0, mirror=False):
+    def subk(self, prim, k=0.0, mirror=False):
         self.ops.append((prim, "sub", float(k)))
         if mirror:
             self.ops.append((Mirrored(prim), "sub", float(k)))
@@ -509,6 +571,41 @@ def polygonise(field, voxel=0.002, bounds=None, slab=48, verbose=False):
     good = ok.reshape(-1, 4).all(axis=1)
     quads = idx[good].astype(np.int32)
     return verts, quads
+
+
+def eval_points(field, pts):
+    """Evaluate a CSG program on an (N,3) point cloud (used for hair collision)."""
+    x = pts[:, 0]
+    y = pts[:, 1]
+    z = pts[:, 2]
+    d = np.full(len(pts), FAR, np.float64)
+    for prim, mode, k in field.ops:
+        dv = prim.eval(x, y, z)
+        if mode == "union":
+            d = smin(d, dv, k)
+        elif mode == "sub":
+            d = ssub(d, dv, k)
+        else:
+            d = smax(d, dv, k)
+    return d
+
+
+def push_outside(field, pts, margin=0.0, eps=0.002):
+    """Move points that are inside `field` out to its surface plus `margin`."""
+    d = eval_points(field, pts)
+    bad = d < margin
+    if not bad.any():
+        return pts
+    p = pts[bad]
+    g = np.empty_like(p)
+    for i in range(3):
+        o = np.zeros(3)
+        o[i] = eps
+        g[:, i] = eval_points(field, p + o) - eval_points(field, p - o)
+    n = np.linalg.norm(g, axis=1, keepdims=True)
+    n[n < 1e-9] = 1.0
+    pts[bad] = p + g / n * (margin - d[bad])[:, None]
+    return pts
 
 
 def laplacian_smooth(verts, quads, iterations=2, factor=0.5):

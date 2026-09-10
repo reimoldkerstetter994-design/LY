@@ -42,6 +42,29 @@ def mesh_from_arrays(name, verts, quads, collection=None):
     return ob
 
 
+def keep_largest_part(ob):
+    """Drop stray interior shells (a thin cutter can leave a sealed cavity)."""
+    bpy.ops.object.select_all(action="DESELECT")
+    ob.select_set(True)
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.mesh.separate(type="LOOSE")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    parts = [o for o in bpy.context.selected_objects if o.type == "MESH"]
+    if len(parts) <= 1:
+        return ob
+    parts.sort(key=lambda o: len(o.data.vertices), reverse=True)
+    keep = parts[0]
+    dropped = 0
+    for o in parts[1:]:
+        dropped += len(o.data.vertices)
+        bpy.data.objects.remove(o, do_unlink=True)
+    print(f"[bl] removed {len(parts) - 1} loose shells ({dropped} verts)", flush=True)
+    keep.name = ob.name
+    return keep
+
+
 def shade_smooth(ob):
     me = ob.data
     me.polygons.foreach_set("use_smooth", np.ones(len(me.polygons), np.int8))
