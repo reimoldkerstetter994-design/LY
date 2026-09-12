@@ -91,17 +91,22 @@ export function spawnNpcs(scene, interactables) {
   for (const mark of interactables.filter((m) => m.kind === "npc")) {
     const group = new THREE.Group();
     const body = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.32, 0.9, 4, 8),
-      new THREE.MeshStandardMaterial({ color: mark.id === "ada" ? 0x7be7dc : 0xe0a25a })
+      new THREE.CapsuleGeometry(0.22, 1.05, 6, 12),
+      new THREE.MeshStandardMaterial({ color: mark.id === "ada" ? 0x5ad4c8 : 0xd3924a, roughness: 0.45 })
     );
-    body.position.y = 0.85;
+    body.position.y = 0.74;
     const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.26, 12, 10),
-      new THREE.MeshStandardMaterial({ color: 0xf2d2b6 })
+      new THREE.SphereGeometry(0.22, 14, 12),
+      new THREE.MeshStandardMaterial({ color: 0xf2d2b6, roughness: 0.55 })
     );
-    head.position.y = 1.55;
-    group.add(body, head);
-    group.position.set(mark.pos[0], mark.pos[1], mark.pos[2]);
+    head.position.y = 1.48;
+    const visor = new THREE.Mesh(
+      new THREE.BoxGeometry(0.28, 0.08, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0x102028, emissive: 0x3be0d2, emissiveIntensity: 0.6 })
+    );
+    visor.position.set(0, 1.5, 0.16);
+    group.add(body, head, visor);
+    group.position.set(mark.pos[0], Math.max(0, mark.pos[1] - 0.15), mark.pos[2]);
     group.rotation.y = mark.yaw ?? 0;
     scene.add(group);
     npcs.push(group);

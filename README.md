@@ -2,6 +2,8 @@
 
 一款可以玩的第一人称 3D 开发世界。岛屿、建筑和道具在 **Blender 4.2 LTS** 里程序化建模，经 **glTF 2.0** 交给浏览器里的 **Three.js** 运行时：走路、跳跃、对话、除虫、点亮信标、修流水线，收集五枚令牌后重新编译这个世界。
 
+<img alt="源码岛标题画面" src="assets/previews/title_orbit.png" />
+
 ## 怎么玩
 
 ```bash

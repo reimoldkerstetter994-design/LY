@@ -7,24 +7,24 @@ export async function loadWorld(scene) {
     new GLTFLoader().loadAsync("/models/devworld.glb"),
   ]);
   gltf.scene.traverse((obj) => {
-    if (obj.isMesh) {
-      obj.castShadow = true;
-      obj.receiveShadow = true;
-      if (obj.geometry?.attributes?.color) {
+      if (obj.isMesh) {
+        obj.castShadow = true;
+        obj.receiveShadow = true;
         const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
         for (const m of mats) {
-          if (m) m.vertexColors = true;
+          if (!m) continue;
+          if (obj.geometry?.attributes?.color) m.vertexColors = true;
+          if (m.emissiveIntensity > 1.8) m.emissiveIntensity = 1.35;
+        }
+        if (
+          obj.name.startsWith("COL_") ||
+          obj.name.startsWith("Water") ||
+          obj.name === "GitTokenMesh" ||
+          obj.name === "Bloom"
+        ) {
+          obj.visible = false;
         }
       }
-      if (
-        obj.name.startsWith("COL_") ||
-        obj.name.startsWith("Water") ||
-        obj.name === "GitTokenMesh" ||
-        obj.name === "Bloom"
-      ) {
-        obj.visible = false;
-      }
-    }
   });
   scene.add(gltf.scene);
   let terrain = gltf.scene.getObjectByName("Terrain_Island");
