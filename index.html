@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KERNEL RIDGE · 源码岭</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600;700&family=Orbitron:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="view"></canvas>
+
+      <div id="loading" class="overlay">
+        <div class="brand">KERNEL RIDGE</div>
+        <div class="sub">源 码 岭 · 正在编译世界</div>
+        <div class="bar"><i id="loadbar"></i></div>
+        <div id="loadtxt">0%</div>
+      </div>
+
+      <div id="title" class="overlay hidden">
+        <div class="title-card">
+          <p class="kicker">OPEN WORLD / DEV ISLAND</p>
+          <h1>KERNEL RIDGE</h1>
+          <h2>源 码 岭</h2>
+          <p class="blurb">
+            内核碎成五块，散落在这座开发者之岛。探索包市场、版本峡谷、运行时竞技场、内存湖与空值之林，把核心带回编译之塔。
+          </p>
+          <button id="startBtn" type="button">进入源码岭</button>
+          <p class="hint">WASD 移动 · 鼠标视角 · 空格跳跃 · Shift 冲刺 · E 交互 · 左键驱虫</p>
+        </div>
+      </div>
+
+      <div id="hud" class="hidden">
+        <div class="top-left">
+          <div class="meters">
+            <label>生命 HP</label>
+            <div class="meter hp"><i id="hpbar"></i></div>
+            <label>耐力 ST</label>
+            <div class="meter st"><i id="stbar"></i></div>
+          </div>
+          <div id="quest" class="panel">与引导者对话，启动引导程序。</div>
+        </div>
+        <div class="top-right">
+          <div id="compass"><canvas id="minimap" width="176" height="176"></canvas></div>
+          <div id="cores">核心 0/5 · 提交 0/15</div>
+        </div>
+        <div id="prompt" class="hidden"></div>
+        <div id="toast"></div>
+        <div class="crosshair">+</div>
+      </div>
+
+      <div id="dialog" class="overlay hidden">
+        <div class="dialog-card">
+          <div id="dialogName"></div>
+          <p id="dialogText"></p>
+          <button id="dialogBtn" type="button">继续</button>
+        </div>
+      </div>
+
+      <div id="pause" class="overlay hidden">
+        <div class="title-card">
+          <h2>已暂停</h2>
+          <p class="blurb">Esc 返回。任务：收集五枚核心并在编译之塔链接。</p>
+          <button id="resumeBtn" type="button">继续编译</button>
+        </div>
+      </div>
+
+      <div id="dead" class="overlay hidden">
+        <div class="title-card">
+          <h2>进程已终止</h2>
+          <p class="blurb">空值虫撕碎了你的运行时。将在引导营地重新拉起。</p>
+          <button id="respawnBtn" type="button">重新启动</button>
+        </div>
+      </div>
+
+      <div id="win" class="overlay hidden">
+        <div class="title-card">
+          <p class="kicker">COMPILE COMPLETE</p>
+          <h1>KERNEL ONLINE</h1>
+          <h2>源码岭重新亮起</h2>
+          <p class="blurb" id="winStats"></p>
+          <button id="againBtn" type="button">再玩一局</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

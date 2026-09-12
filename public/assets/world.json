@@ -1,0 +1,97 @@
+{
+  "title": "KERNEL RIDGE",
+  "subtitle": "源码岭",
+  "waterLevel": 0.18,
+  "worldRadius": 90,
+  "sites": {
+    "boot": {
+      "x": 0.0,
+      "z": 54.0,
+      "title": "引导营地 BOOT CAMP"
+    },
+    "spire": {
+      "x": 0.0,
+      "z": -0.0,
+      "title": "编译之塔 COMPILER SPIRE"
+    },
+    "market": {
+      "x": 54.0,
+      "z": -10.0,
+      "title": "包市场 PACKAGE BAZAAR"
+    },
+    "canyon": {
+      "x": -52.0,
+      "z": -6.0,
+      "title": "版本峡谷 GIT CANYON"
+    },
+    "arena": {
+      "x": 4.0,
+      "z": -58.0,
+      "title": "运行时竞技场 RUNTIME ARENA"
+    },
+    "lake": {
+      "x": 44.0,
+      "z": -42.0,
+      "title": "内存湖 MEMORY LAKE"
+    },
+    "forest": {
+      "x": -42.0,
+      "z": -44.0,
+      "title": "空值之林 NULL FOREST"
+    }
+  },
+  "fragments": [
+    {
+      "id": "syntax",
+      "object": "FRAG_syntax",
+      "title": "语法核心 SYNTAX",
+      "hint": "包市场货仓屋顶上，琥珀光在呼吸。"
+    },
+    {
+      "id": "graph",
+      "object": "FRAG_graph",
+      "title": "图谱核心 GRAPH",
+      "hint": "版本峡谷的桥心，品红节点悬停在半空。"
+    },
+    {
+      "id": "runtime",
+      "object": "FRAG_runtime",
+      "title": "运行时核心 RUNTIME",
+      "hint": "北侧竞技场圆心，金色环正在空转。"
+    },
+    {
+      "id": "memory",
+      "object": "FRAG_memory",
+      "title": "内存核心 MEMORY",
+      "hint": "内存湖浮岛，青色倒影会出卖它。"
+    },
+    {
+      "id": "kernel",
+      "object": "FRAG_kernel",
+      "title": "内核核心 KERNEL",
+      "hint": "空值之林正中，红脉树木看守着最后一块。"
+    }
+  ],
+  "mentor": {
+    "object": "NPC_mentor",
+    "name": "引导者 · BOOT",
+    "lines": [
+      "欢迎回到源码岭。内核已经碎成五块，散落在岛上。",
+      "去包市场、版本峡谷、竞技场、内存湖和空值之林。",
+      "带回五枚核心，在编译之塔重新链接。小心空值虫。"
+    ]
+  },
+  "terminals": {
+    "TERM_boot": "BOOT：移动 WASD，鼠标视角，空格跳跃，Shift 冲刺，E 交互，左键驱虫。",
+    "TERM_spire": "SPIRE：把五枚核心带回这里，编译即可重建内核。",
+    "TERM_market": "REGISTRY：依赖像货物一样堆着。语法核心在东侧高仓。",
+    "TERM_canyon": "GIT：历史被切成两岸。走桥，别掉进未合并的深渊。",
+    "TERM_arena": "RUNTIME：每一帧都在决斗。圆心的金核属于最快的人。",
+    "TERM_lake": "HEAP：记忆会泄漏。跳上浮岛，别在数据里溺水。",
+    "TERM_forest": "NULL：未初始化的森林。红眼虫子会追着引用跑。"
+  },
+  "win": {
+    "object": "SPIRE_core",
+    "title": "编译内核"
+  }
+}

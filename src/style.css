@@ -1,0 +1,234 @@
+:root {
+  --bg: #070b12;
+  --cyan: #4df0ff;
+  --amber: #ffb14a;
+  --red: #ff4d6a;
+  --text: #e8f4ff;
+  --dim: #9bb0c7;
+  --glass: rgba(8, 16, 28, 0.72);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Noto Sans SC", system-ui, sans-serif;
+}
+
+#view {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(10, 24, 40, 0.55), rgba(3, 6, 12, 0.82));
+  z-index: 5;
+}
+
+.overlay.hidden,
+.hidden {
+  display: none !important;
+}
+
+.brand,
+h1,
+.kicker,
+#cores,
+#dialogName {
+  font-family: Orbitron, "Noto Sans SC", sans-serif;
+  letter-spacing: 0.14em;
+}
+
+.brand {
+  font-size: 28px;
+  color: var(--cyan);
+}
+
+.sub,
+.kicker {
+  color: var(--dim);
+  margin: 8px 0 18px;
+}
+
+.bar {
+  width: min(420px, 70vw);
+  height: 8px;
+  background: #1a2838;
+  border: 1px solid #2c4a62;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--cyan), #8dffb0);
+}
+
+#loadtxt {
+  margin-top: 10px;
+  color: var(--dim);
+}
+
+.title-card,
+.dialog-card {
+  width: min(640px, 92vw);
+  padding: 36px 40px;
+  background: var(--glass);
+  border: 1px solid rgba(77, 240, 255, 0.35);
+  box-shadow: 0 0 40px rgba(40, 180, 220, 0.15);
+  text-align: center;
+}
+
+h1 {
+  font-size: clamp(36px, 7vw, 64px);
+  margin: 0;
+  color: var(--cyan);
+}
+
+h2 {
+  margin: 8px 0 16px;
+  font-weight: 600;
+}
+
+.blurb,
+.hint {
+  color: var(--dim);
+  line-height: 1.7;
+}
+
+button {
+  margin-top: 8px;
+  padding: 12px 28px;
+  border: 1px solid var(--cyan);
+  background: rgba(77, 240, 255, 0.12);
+  color: var(--text);
+  font-family: Orbitron, sans-serif;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+}
+button:hover {
+  background: rgba(77, 240, 255, 0.28);
+}
+
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.top-left,
+.top-right {
+  position: absolute;
+  top: 18px;
+}
+.top-left {
+  left: 18px;
+  width: min(360px, 46vw);
+}
+.top-right {
+  right: 18px;
+  text-align: right;
+}
+
+.panel,
+#cores {
+  background: var(--glass);
+  border: 1px solid rgba(77, 240, 255, 0.25);
+  padding: 10px 12px;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.meters label {
+  font-size: 11px;
+  color: var(--dim);
+  letter-spacing: 0.12em;
+}
+.meter {
+  width: 220px;
+  height: 10px;
+  background: #182230;
+  margin: 4px 0 8px;
+  border: 1px solid #31475a;
+}
+.meter i {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+.hp i {
+  background: linear-gradient(90deg, #ff4d6a, #ff9aa8);
+}
+.st i {
+  background: linear-gradient(90deg, #4df0ff, #8dffd4);
+}
+
+#minimap {
+  border: 1px solid rgba(77, 240, 255, 0.4);
+  background: rgba(6, 12, 20, 0.7);
+}
+
+#prompt {
+  position: absolute;
+  bottom: 88px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 16px;
+  background: var(--glass);
+  border: 1px solid var(--amber);
+  pointer-events: none;
+}
+
+#toast {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--cyan);
+  font-family: Orbitron, sans-serif;
+  text-shadow: 0 0 12px #4df0ff;
+  font-size: 18px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+#toast.show {
+  opacity: 1;
+}
+
+.crosshair {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 18px;
+}
+
+#dialog {
+  z-index: 6;
+}
+#dialogName {
+  color: var(--cyan);
+  margin-bottom: 8px;
+}
+#dialogText {
+  text-align: left;
+  line-height: 1.7;
+  color: var(--text);
+}

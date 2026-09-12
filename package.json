@@ -1,0 +1,19 @@
+{
+  "name": "kernel-ridge",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "assets": "blender --background --python blender/generate_assets.py",
+    "audio": "python3 tools/generate_audio.py"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.3"
+  }
+}
