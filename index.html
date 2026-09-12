@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DevWorld 3D — 开发世界</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="ui-overlay">
+      <div id="crosshair"></div>
+      <div id="hud">
+        <div id="title">DevWorld 3D</div>
+        <div id="block-selector"></div>
+        <div id="info">
+          <span id="coords">X: 0 Y: 0 Z: 0</span>
+          <span id="block-count">方块: 0</span>
+        </div>
+        <div id="controls-hint">
+          WASD 移动 · 空格 跳跃 · 鼠标 视角 · 左键 放置 · 右键 拆除 · 1-8 选方块 · E 互动 · R 重置世界
+        </div>
+      </div>
+      <div id="start-screen">
+        <h1>DevWorld 3D</h1>
+        <p>在三维世界中自由建造你的开发乐园</p>
+        <button id="start-btn">进入世界</button>
+        <div class="features">
+          <div class="feature">🧱 8 种方块材质</div>
+          <div class="feature">🌲 Blender 生成 3D 资产</div>
+          <div class="feature">🔧 可放置工作台与装饰</div>
+          <div class="feature">💾 自动保存进度</div>
+        </div>
+      </div>
+      <div id="notification"></div>
+    </div>
+    <canvas id="game-canvas"></canvas>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
