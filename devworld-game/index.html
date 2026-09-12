@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DevWorld — 3D 开发世界</title>
+    <link rel="stylesheet" href="/src/styles/main.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas"></canvas>
+
+      <div id="hud">
+        <div id="crosshair"></div>
+        <div id="stats-panel">
+          <div class="stat"><span class="label">提交</span><span id="stat-commits">0</span></div>
+          <div class="stat"><span class="label">代码块</span><span id="stat-blocks">0</span></div>
+          <div class="stat"><span class="label">Bug</span><span id="stat-bugs">0</span></div>
+        </div>
+        <div id="quest-panel">
+          <h3>当前任务</h3>
+          <p id="quest-text">探索开发世界，找到终端并提交你的第一个 commit。</p>
+        </div>
+        <div id="hotbar">
+          <div class="slot active" data-block="grass">🌿</div>
+          <div class="slot" data-block="stone">🪨</div>
+          <div class="slot" data-block="code">💻</div>
+          <div class="slot" data-block="glass">🪟</div>
+        </div>
+        <div id="hint">点击画面开始 · WASD 移动 · 空格跳跃 · 鼠标环顾 · 左键放置 · 右键拆除 · E 交互 · 1-4 切换方块</div>
+      </div>
+
+      <div id="start-screen">
+        <div class="start-card">
+          <h1>DevWorld</h1>
+          <p class="subtitle">3D 开发世界 — 探索、编码、建造</p>
+          <ul class="features">
+            <li>🌍 探索由 Blender 资产驱动的浮岛世界</li>
+            <li>💻 在终端中编写代码解决谜题</li>
+            <li>🧱 放置方块建造你的开发基地</li>
+            <li>🐛 收集 Bug、提交 Commit、完成任务</li>
+          </ul>
+          <button id="start-btn">进入世界</button>
+        </div>
+      </div>
+
+      <div id="terminal-overlay" class="hidden">
+        <div class="terminal-window">
+          <div class="terminal-header">
+            <span>devworld-terminal</span>
+            <button id="terminal-close">✕</button>
+          </div>
+          <div id="terminal-output"></div>
+          <div class="terminal-input-row">
+            <span class="prompt">&gt;</span>
+            <input id="terminal-input" type="text" autocomplete="off" spellcheck="false" />
+          </div>
+        </div>
+      </div>
+
+      <div id="message-toast"></div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
