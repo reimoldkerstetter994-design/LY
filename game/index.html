@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>源码岛 Devworld</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+SC:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="game-root">
+      <canvas id="c"></canvas>
+      <div id="hud" class="hidden">
+        <div id="quest">
+          <div class="kicker">当前任务</div>
+          <div id="quest-title">与艾达对话</div>
+          <div id="quest-body">在终端广场找到内核守护者。</div>
+        </div>
+        <div id="tokens"></div>
+        <div id="minimap-wrap">
+          <canvas id="minimap" width="164" height="164"></canvas>
+          <div class="kicker">源码岛</div>
+        </div>
+        <div id="prompt" class="hidden"></div>
+        <div id="crosshair">+</div>
+        <div id="hint">WASD 移动 · 鼠标视角 · Shift 冲刺 · 空格跳跃 · E 交互 · F 手电 · Tab 任务</div>
+        <div id="log"></div>
+      </div>
+      <div id="title">
+        <div class="panel">
+          <div class="kicker">BLENDER × GLTF × THREE.JS</div>
+          <h1>源码岛</h1>
+          <div class="sub">DEVWORLD</div>
+          <p>
+            一次失败的发布熄灭了内核。你被唤醒为调试者：走遍这座 3D 开发世界，收集五枚令牌，重新编译一切。
+          </p>
+          <button id="start" type="button">进入世界</button>
+          <div class="controls">
+            移动 WASD　视角 鼠标／拖拽　交互 E　冲刺 Shift　跳跃 Space
+          </div>
+        </div>
+      </div>
+      <div id="pause" class="hidden">
+        <div class="panel">
+          <h2>暂停</h2>
+          <p>点击继续，或按 Esc 返回。任务进度不会丢失。</p>
+          <button id="resume" type="button">继续编译</button>
+        </div>
+      </div>
+      <div id="win" class="hidden">
+        <div class="panel">
+          <div class="kicker">BUILD SUCCESS</div>
+          <h1>世界已重新编译</h1>
+          <p id="win-body">五枚令牌归位，源码岛重新亮起。</p>
+          <button id="again" type="button">再玩一次</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
