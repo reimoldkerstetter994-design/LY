@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { Sky } from "three/addons/objects/Sky.js";
 import { Player } from "./player.js";
 import { createAudio } from "./audio.js";
 
@@ -62,11 +61,12 @@ export class Game {
       antialias: true,
       powerPreference: "high-performance",
     });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.6));
+    this.renderer.setPixelRatio(1);
     this.renderer.setSize(innerWidth, innerHeight);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.shadowMap.enabled = false;
 
     this.setupSky();
     const loader = new GLTFLoader();
@@ -114,26 +114,22 @@ export class Game {
     this.bindUi();
     window.addEventListener("resize", () => this.onResize());
     window.bytehaven = this;
+    this.playing = false;
+    this.camera.position.set(22, 14, 28);
+    this.camera.lookAt(0, 1.6, 0);
+    this.clock.start();
+    this.renderer.setAnimationLoop(() => this.tick());
     $("loader").classList.add("hidden");
   }
 
   setupSky() {
-    const sky = new Sky();
-    sky.scale.setScalar(2500);
-    this.scene.add(sky);
-    const u = sky.material.uniforms;
-    u.turbidity.value = 4;
-    u.rayleigh.value = 2.2;
-    u.mieCoefficient.value = 0.004;
-    u.mieDirectionalG.value = 0.7;
-    const sun = new THREE.Vector3();
-    sun.setFromSphericalCoords(1, THREE.MathUtils.degToRad(82), THREE.MathUtils.degToRad(160));
-    u.sunPosition.value.copy(sun);
-    this.scene.add(new THREE.HemisphereLight(0xb7e0ff, 0x3d4a32, 0.85));
-    const dir = new THREE.DirectionalLight(0xfff1d0, 1.35);
-    dir.position.copy(sun).multiplyScalar(80);
+    this.scene.background = new THREE.Color(0x8ec8e4);
+    this.scene.fog = new THREE.Fog(0x8ec8e4, 55, 175);
+    this.scene.add(new THREE.HemisphereLight(0xb7e0ff, 0x3d4a32, 1.05));
+    const dir = new THREE.DirectionalLight(0xfff1d0, 1.15);
+    dir.position.set(-40, 60, 20);
     this.scene.add(dir);
-    this.scene.add(new THREE.AmbientLight(0x88a0b8, 0.28));
+    this.scene.add(new THREE.AmbientLight(0x88a0b8, 0.35));
   }
 
   findKit(scene, names) {
@@ -223,10 +219,6 @@ export class Game {
       metalness: 0.2,
     });
     const m = new THREE.Mesh(g, mat);
-    if (item.kind === "fragment") {
-      const glow = new THREE.PointLight(colors.fragment, 1.6, 8);
-      m.add(glow);
-    }
     return m;
   }
 
@@ -254,6 +246,12 @@ export class Game {
 
   bindUi() {
     $("start-btn").addEventListener("click", () => this.start());
+    window.addEventListener("keydown", (e) => {
+      if (!this.playing && (e.code === "Enter" || e.code === "Space")) {
+        e.preventDefault();
+        this.start();
+      }
+    });
     $("again-btn").addEventListener("click", () => {
       $("win-screen").classList.add("hidden");
       $("view").requestPointerLock();
@@ -269,12 +267,10 @@ export class Game {
   start() {
     $("title-screen").classList.add("hidden");
     $("hud").classList.remove("hidden");
+    this.playing = true;
     this.audio = createAudio();
     this.audio.resume();
     this.audio.ambient();
-    $("view").requestPointerLock();
-    this.clock.start();
-    this.renderer.setAnimationLoop(() => this.tick());
   }
 
   buildQuestList() {
@@ -410,13 +406,12 @@ export class Game {
 
   restore() {
     this.state.restored = true;
+    this.state.dialogue = null;
+    $("dialogue").classList.add("hidden");
     this.audio?.win();
     $("win-stats").textContent = `提交 ${this.state.commits} · 咖啡 ${this.state.coffees}`;
     $("win-screen").classList.remove("hidden");
     document.exitPointerLock();
-    const burst = new THREE.PointLight(0xffd45a, 8, 40);
-    burst.position.set(0, 4, 0);
-    this.scene.add(burst);
   }
 
   currentDistrict() {
@@ -477,6 +472,13 @@ export class Game {
 
   tick() {
     const dt = Math.min(0.05, this.clock.getDelta());
+    const t = this.clock.elapsedTime;
+    if (!this.playing) {
+      this.camera.position.set(Math.cos(t * 0.12) * 28, 13, Math.sin(t * 0.12) * 28);
+      this.camera.lookAt(0, 1.8, 0);
+      this.renderer.render(this.scene, this.camera);
+      return;
+    }
     if (!this.state.dialogue) {
       const info = this.player.update(dt);
       if (info.moving && info.onGround) this.audio?.step(dt, info.sprint);
@@ -493,7 +495,6 @@ export class Game {
       $("prompt").classList.add("hidden");
     }
     this.maybeRestore();
-    const t = this.clock.elapsedTime;
     for (const it of this.interactables) {
       if (it.taken) continue;
       it.mesh.rotation.y += dt * (it.data.kind === "fragment" ? 1.4 : 0.8);

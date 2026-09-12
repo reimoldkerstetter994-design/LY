@@ -186,7 +186,7 @@ canvas#view {
 }
 
 #title-screen {
-  background: linear-gradient(180deg, rgba(4, 16, 24, 0.2), rgba(4, 10, 16, 0.72));
+  background: linear-gradient(180deg, rgba(4, 16, 24, 0.08), rgba(4, 10, 16, 0.55));
 }
 
 #loader {
@@ -198,9 +198,10 @@ canvas#view {
 .panel {
   width: min(560px, 92vw);
   padding: 36px 40px;
-  background: rgba(7, 16, 24, 0.82);
+  background: rgba(7, 16, 24, 0.72);
   border: 1px solid rgba(92, 232, 255, 0.35);
   text-align: center;
+  backdrop-filter: blur(10px);
 }
 
 .panel.slim {
@@ -264,7 +265,9 @@ kbd {
 
 #dialogue {
   background: transparent;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: flex-end;
+  flex-direction: column;
   padding-bottom: 90px;
 }
 

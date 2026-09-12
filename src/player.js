@@ -12,7 +12,7 @@ export class Player {
     this.pos = new THREE.Vector3(...world.spawn);
     this.vel = new THREE.Vector3();
     this.yaw = Math.PI;
-    this.pitch = -0.12;
+    this.pitch = 0.05;
     this.onGround = true;
     this.stamina = 1;
     this.keys = new Set();
@@ -108,8 +108,7 @@ export class Player {
 
     this.camera.position.set(this.pos.x, this.pos.y - this.height + this.eye, this.pos.z);
     this.camera.rotation.order = "YXZ";
-    this.camera.rotation.y = this.yaw;
-    this.camera.rotation.x = this.pitch;
+    this.camera.rotation.set(this.pitch, this.yaw, 0);
     return { moving: wish.lengthSq() > 0, sprint, onGround: this.onGround };
   }
 }
