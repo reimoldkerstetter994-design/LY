@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DevForge · 源码港</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="view"></canvas>
+
+      <div id="loader">
+        <div class="brand">DevForge</div>
+        <div class="sub">源码港 · 3D 开发世界</div>
+        <div class="bar"><i id="load-bar"></i></div>
+        <p id="load-text">正在从 Blender 资产装载世界…</p>
+      </div>
+
+      <div id="title" class="hidden">
+        <div class="title-card">
+          <p class="kicker">BLENDER × THREE.JS × glTF</p>
+          <h1>DevForge</h1>
+          <h2>源码港</h2>
+          <p class="lead">
+            一座可以走进去的游戏工作室。捡齐 commit、编译引擎、烘焙美术、squash bug，然后把 v1.0 送上线。
+          </p>
+          <button id="btn-start" type="button">进入开发世界</button>
+          <ul class="controls">
+            <li><kbd>W A S D</kbd> 移动 · <kbd>Shift</kbd> 冲刺 · <kbd>空格</kbd> 跳</li>
+            <li><kbd>鼠标</kbd> / <kbd>← →</kbd> 视角 · <kbd>E</kbd> 交互</li>
+            <li><kbd>鼠标左键</kbd> 调试器 · <kbd>Esc</kbd> 暂停</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="hud" class="hidden">
+        <div class="hud-top">
+          <div class="focus" id="focus" aria-label="专注"></div>
+          <div class="quest" id="quest"></div>
+        </div>
+        <div class="crosshair" id="crosshair"></div>
+        <div class="prompt hidden" id="prompt"></div>
+        <div class="progress hidden" id="progress">
+          <span id="progress-label">处理中</span>
+          <div class="bar"><i id="progress-bar"></i></div>
+        </div>
+        <aside class="log" id="log"></aside>
+        <canvas id="minimap" width="180" height="180"></canvas>
+        <div class="stats">
+          <span id="stat-commits">Commit 0/6</span>
+          <span id="stat-bugs">Bug 0/10</span>
+        </div>
+      </div>
+
+      <div id="dialogue" class="hidden">
+        <p class="who" id="dlg-who"></p>
+        <p class="line" id="dlg-line"></p>
+        <p class="hint">按 E / 空格 / 点击 继续</p>
+      </div>
+
+      <div id="pause" class="hidden">
+        <div class="panel">
+          <h3>暂停</h3>
+          <p>源码港不会自己发版。深呼吸，然后回来。</p>
+          <button id="btn-resume" type="button">继续值班</button>
+        </div>
+      </div>
+
+      <div id="win" class="hidden">
+        <div class="panel win-panel">
+          <p class="kicker">BUILD SHIPPED</p>
+          <h3>v1.0 已上线</h3>
+          <p id="win-stats"></p>
+          <button id="btn-again" type="button">再值一班</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
