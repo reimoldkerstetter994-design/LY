@@ -289,8 +289,13 @@ export class Gameplay {
 
   launch() {
     this.won = true;
+    this.dialogue = null;
+    this.busy = null;
     this.player.enabled = false;
     document.exitPointerLock?.();
+    this.ui.hideDialogue();
+    this.ui.setBusy(false);
+    this.ui.setPrompt("");
     this.audio.win();
     const minutes = ((performance.now() - this.startedAt) / 60000).toFixed(1);
     const duck = this.done.has("DUCK") ? "橡胶鸭已随机构建。" : "橡胶鸭还在灌木里。";
