@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>源码港 Bytehaven</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="game-root">
+      <canvas id="view"></canvas>
+      <div id="hud" class="hidden">
+        <div id="crosshair"></div>
+        <div id="compass"><span id="compass-n">N</span></div>
+        <div id="district-chip">编译广场</div>
+        <aside id="quest-log">
+          <h2>任务</h2>
+          <p id="quest-title">重新编译世界</p>
+          <ul id="fragment-list"></ul>
+          <p class="muted">提交 <b id="commit-count">0</b> · 咖啡 <b id="coffee-count">0</b></p>
+        </aside>
+        <div id="stamina-wrap"><div id="stamina"></div></div>
+        <div id="prompt" class="hidden"></div>
+        <canvas id="minimap" width="180" height="180"></canvas>
+        <div id="toast"></div>
+      </div>
+      <div id="dialogue" class="hidden">
+        <div class="who"><span id="npc-name"></span><span id="npc-title"></span></div>
+        <p id="npc-line"></p>
+        <p class="hint">E / 点击 继续</p>
+      </div>
+      <div id="title-screen">
+        <div class="panel">
+          <p class="kicker">Blender × Three.js 开放世界</p>
+          <h1>源码港</h1>
+          <h2>BYTEHAVEN</h2>
+          <p class="lead">
+            内核碎成六片。走遍这座会编译的岛屿，把源码碎片带回喷泉。
+          </p>
+          <button id="start-btn" type="button">点击进入世界</button>
+          <ul class="controls">
+            <li><kbd>W A S D</kbd> 移动</li>
+            <li><kbd>鼠标拖动</kbd> 或 <kbd>← →</kbd> 视角</li>
+            <li><kbd>Shift</kbd> 奔跑 · <kbd>空格</kbd> 跳跃</li>
+            <li><kbd>E</kbd> 交互 / 对话</li>
+            <li><kbd>H</kbd> 帮助</li>
+          </ul>
+        </div>
+      </div>
+      <div id="win-screen" class="hidden">
+        <div class="panel">
+          <p class="kicker">KERNEL RESTORED</p>
+          <h1>世界已编译</h1>
+          <p class="lead">六枚碎片归位。源码港重新亮了起来。</p>
+          <p id="win-stats"></p>
+          <button id="again-btn" type="button">继续漫游</button>
+        </div>
+      </div>
+      <div id="help" class="hidden">
+        <div class="panel slim">
+          <h2>操作</h2>
+          <p>在六个区域寻找发光碎片：前端霓虹、后端机房、着色花园、引擎铸造厂、终端洞窟、依赖森林。</p>
+          <p>碎片要带回广场喷泉。咖啡回复体力，提交点会增加编译分数。</p>
+          <button id="help-close" type="button">关闭</button>
+        </div>
+      </div>
+      <div id="loader">正在从 Blender 资产唤醒岛屿…</div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
