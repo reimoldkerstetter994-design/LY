@@ -1,0 +1,19 @@
+{
+  "name": "devworld-3d",
+  "version": "1.0.0",
+  "description": "可玩的 3D 开发世界游戏 — Three.js + Blender 资产管线",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.170.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3"
+  }
+}

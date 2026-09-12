@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DevWorld — 3D 开发世界</title>
+    <link rel="stylesheet" href="/src/styles/main.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas"></canvas>
+
+      <div id="start-screen" class="overlay">
+        <div class="panel">
+          <h1>DevWorld</h1>
+          <p class="subtitle">3D 开发世界 — 探索、建造、创造</p>
+          <ul class="features">
+            <li>第一人称自由移动与跳跃</li>
+            <li>放置与拆除方块，打造你的世界</li>
+            <li>多种材质：草地、石头、木材、玻璃、金属</li>
+            <li>自动存档，随时继续创作</li>
+          </ul>
+          <button id="start-btn" class="btn-primary">点击进入世界</button>
+          <p class="hint">使用 WASD 移动 · 空格跳跃 · 鼠标左键放置 · 右键拆除 · 1-5 切换方块</p>
+        </div>
+      </div>
+
+      <div id="hud" class="hidden">
+        <div id="crosshair"></div>
+        <div id="toolbar">
+          <div class="tool-slot active" data-block="grass" title="草地 (1)">
+            <span class="swatch grass"></span><span>草地</span>
+          </div>
+          <div class="tool-slot" data-block="stone" title="石头 (2)">
+            <span class="swatch stone"></span><span>石头</span>
+          </div>
+          <div class="tool-slot" data-block="wood" title="木材 (3)">
+            <span class="swatch wood"></span><span>木材</span>
+          </div>
+          <div class="tool-slot" data-block="glass" title="玻璃 (4)">
+            <span class="swatch glass"></span><span>玻璃</span>
+          </div>
+          <div class="tool-slot" data-block="metal" title="金属 (5)">
+            <span class="swatch metal"></span><span>金属</span>
+          </div>
+        </div>
+        <div id="status-bar">
+          <span id="block-count">方块: 0</span>
+          <span id="position-display">位置: 0, 0, 0</span>
+          <span class="save-indicator" id="save-indicator">已保存</span>
+        </div>
+      </div>
+
+      <div id="pause-menu" class="overlay hidden">
+        <div class="panel">
+          <h2>游戏暂停</h2>
+          <button id="resume-btn" class="btn-primary">继续游戏</button>
+          <button id="reset-btn" class="btn-secondary">重置世界</button>
+          <button id="export-btn" class="btn-secondary">导出存档</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
