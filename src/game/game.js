@@ -99,7 +99,7 @@ export class Game {
     try {
       this.composer = new EffectComposer(this.renderer);
       this.composer.addPass(new RenderPass(this.scene, this.camera));
-      this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.38, 0.72, 0.22);
+      this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.22, 0.6, 0.38);
       this.composer.addPass(this.bloom);
       this.composer.addPass(new OutputPass());
     } catch (err) {
@@ -185,6 +185,7 @@ export class Game {
 
       if (obj.name.startsWith("COL_")) {
         obj.visible = false;
+        if (obj.name.startsWith("COL_tree") || obj.name === "COL_spire") return;
         obj.geometry.computeBoundingBox();
         const box = new THREE.Box3().setFromObject(obj);
         const size = new THREE.Vector3();
@@ -286,7 +287,7 @@ export class Game {
 
   _makePlayer(model) {
     this.playerRig = new THREE.Group();
-    model.scale.setScalar(1);
+    model.scale.setScalar(1.12);
     model.traverse((o) => {
       if (o.isMesh) o.castShadow = true;
     });
@@ -302,7 +303,7 @@ export class Game {
     const forest = sites.forest;
     const canyon = sites.canyon;
     const lake = sites.lake;
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 5; i++) {
       const a = (i / 8) * Math.PI * 2;
       homes.push([forest.x + Math.cos(a) * 9, forest.z + Math.sin(a) * 9]);
     }
@@ -338,6 +339,7 @@ export class Game {
     el("title").classList.add("hidden");
     el("hud").classList.remove("hidden");
     this.playing = true;
+    this._updateCamera(0.016, true);
     this.canvas.requestPointerLock?.();
     this.toast("找到引导者 BOOT");
   }
@@ -391,7 +393,17 @@ export class Game {
 
   _loop = () => {
     requestAnimationFrame(this._loop);
-    const dt = Math.min(0.05, this.clock.getDelta());
+    let acc = Math.min(0.25, this.clock.getDelta());
+    while (acc > 0) {
+      const dt = Math.min(0.05, acc);
+      this._step(dt);
+      acc -= dt;
+    }
+    if (this.playing && !this.paused && !this.dialogOpen && !this.won) this._updateHud();
+    this.composer.render();
+  };
+
+  _step(dt) {
     this.waterMat.uniforms.uTime.value = this.clock.elapsedTime;
     this._spinPickups(dt);
 
@@ -399,7 +411,6 @@ export class Game {
       const t = this.clock.elapsedTime * 0.13;
       this.camera.position.set(Math.cos(t) * 78, 32, Math.sin(t) * 78);
       this.camera.lookAt(0, 10, 0);
-      this.composer.render();
       return;
     }
 
@@ -407,7 +418,7 @@ export class Game {
       this.setPaused(!this.paused);
     }
     if (this.paused || this.dialogOpen || this.won) {
-      this.composer.render();
+      if (this.dialogOpen && this.input.takeInteract()) this.advanceDialog();
       return;
     }
 
@@ -415,10 +426,8 @@ export class Game {
     this._updateEnemies(dt);
     this._updateInteract(dt);
     this._updateCamera(dt);
-    this._updateHud();
     this.sun.position.set(this.playerPos.x + 40, 62, this.playerPos.z + 24);
-    this.composer.render();
-  };
+  }
 
   _spinPickups(dt) {
     const t = this.clock.elapsedTime;
@@ -571,7 +580,7 @@ export class Game {
       e.mesh.position.copy(e.pos);
       e.mesh.rotation.y = Math.atan2(dirx, dirz);
       if (dist < 1.35 && e.cooldown <= 0) {
-        this.hurt(16);
+        this.hurt(12);
         e.cooldown = 1.05;
       }
     }
@@ -580,7 +589,7 @@ export class Game {
   hurt(n) {
     if (this.invuln > 0 || this.won) return;
     this.hp -= n;
-    this.invuln = 0.7;
+    this.invuln = 0.85;
     this.audio.play("hurt", { volume: 0.45 });
     if (this.hp <= 0) {
       this.hp = 0;
@@ -602,20 +611,33 @@ export class Game {
 
   _updateInteract(dt) {
     let best = null;
-    let bestD = 3.2;
+    let bestScore = Infinity;
     for (const obj of this.interactables) {
       if (!obj.visible) continue;
       if (obj.name.startsWith("NPC_") && obj.name.includes("body")) continue;
       if (obj.name === "SPIRE_core") continue;
       obj.getWorldPosition(TMP);
-      const d = TMP.distanceTo(this.playerPos);
-      if (obj.name.startsWith("STAR_") && d < 1.5) {
+      const dx = TMP.x - this.playerPos.x;
+      const dz = TMP.z - this.playerPos.z;
+      const dXZ = Math.hypot(dx, dz);
+      if (obj.name.startsWith("STAR_") && dXZ < 1.6) {
         this._collectStar(obj);
         continue;
       }
-      if (d < bestD) {
+      if (obj.name.startsWith("FRAG_") && this.talked && dXZ < 2.3 && Math.abs(TMP.y - this.playerPos.y) < 4) {
+        this._use(obj);
+        continue;
+      }
+      let prio = 4;
+      if (obj.name.startsWith("FRAG_")) prio = 0;
+      else if (obj.name.startsWith("CHEST_")) prio = 1;
+      else if (obj.name.startsWith("NPC_")) prio = 2;
+      else if (obj.name === "TERM_spire" && this.fragments.size >= 5) prio = 0;
+      else if (obj.name.startsWith("TERM_")) prio = 5;
+      const score = prio * 12 + dXZ;
+      if (dXZ < 3.6 && score < bestScore) {
         best = obj;
-        bestD = d;
+        bestScore = score;
       }
     }
     const prompt = el("prompt");
@@ -724,17 +746,18 @@ export class Game {
     document.exitPointerLock?.();
   }
 
-  _updateCamera(dt) {
-    const dist = 7.2;
-    const height = 2.35;
+  _updateCamera(dt, snap = false) {
+    const dist = 6.35;
+    const height = 2.15;
     const yaw = this.input.yaw;
     const pitch = this.input.pitch;
     const ox = Math.sin(yaw) * Math.cos(pitch) * dist;
     const oy = Math.sin(pitch) * dist + height;
     const oz = Math.cos(yaw) * Math.cos(pitch) * dist;
     const ideal = TMP.set(this.playerPos.x + ox, this.playerPos.y + oy, this.playerPos.z + oz);
-    this.camera.position.lerp(ideal, 1 - Math.exp(-dt * 9));
-    const look = TMP2.set(this.playerPos.x, this.playerPos.y + 1.45, this.playerPos.z);
+    if (snap) this.camera.position.copy(ideal);
+    else this.camera.position.lerp(ideal, 1 - Math.exp(-dt * 10));
+    const look = TMP2.set(this.playerPos.x, this.playerPos.y + 1.35, this.playerPos.z);
     this.camera.lookAt(look);
   }
 

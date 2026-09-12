@@ -45,13 +45,13 @@
       "id": "syntax",
       "object": "FRAG_syntax",
       "title": "语法核心 SYNTAX",
-      "hint": "包市场货仓屋顶上，琥珀光在呼吸。"
+      "hint": "包市场广场正中，琥珀光在呼吸。"
     },
     {
       "id": "graph",
       "object": "FRAG_graph",
       "title": "图谱核心 GRAPH",
-      "hint": "版本峡谷的桥心，品红节点悬停在半空。"
+      "hint": "版本峡谷北岸，品红节点就在桥头。"
     },
     {
       "id": "runtime",
@@ -63,7 +63,7 @@
       "id": "memory",
       "object": "FRAG_memory",
       "title": "内存核心 MEMORY",
-      "hint": "内存湖浮岛，青色倒影会出卖它。"
+      "hint": "内存湖南岸浮台，青色倒影会出卖它。"
     },
     {
       "id": "kernel",

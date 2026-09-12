@@ -3,7 +3,7 @@ export class Input {
     this.canvas = canvas;
     this.keys = new Set();
     this.yaw = 0;
-    this.pitch = 0.18;
+    this.pitch = 0.12;
     this.dragging = false;
     this.consumeAttack = false;
     this.interact = false;

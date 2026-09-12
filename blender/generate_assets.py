@@ -402,7 +402,7 @@ def build_market(materials: dict) -> None:
             (0.8, 0.8, 0.8),
             materials["amber"],
         )
-    ico("FRAG_syntax", (x + 5.8, y - 3.4, h + 5.7), 0.48, materials["frag_syntax"], subdivisions=1, scale=(0.7, 0.7, 1.6))
+    ico("FRAG_syntax", (x + 9.5, y + 1.2, h + 1.55), 0.48, materials["frag_syntax"], subdivisions=1, scale=(0.7, 0.7, 1.6))
     cube("TERM_market", (x - 0.4, y + 1.2, h + 1.3), (1.1, 0.6, 1.5), materials["terminal"])
     cube("CHEST_market", (x - 6.8, y + 5.0, h + 0.55), (0.9, 0.7, 0.7), materials["amber"])
 
@@ -428,7 +428,7 @@ def build_canyon(materials: dict) -> None:
     collider("COL_bridge_deck", (x, y, h + 3.6), (4.2, 16.5, 0.5))
     cube("BRIDGE_rail_a", (x - 1.9, y, h + 4.2), (0.16, 16.5, 0.7), materials["cyan"])
     cube("BRIDGE_rail_b", (x + 1.9, y, h + 4.2), (0.16, 16.5, 0.7), materials["cyan"])
-    ico("FRAG_graph", (x, y, h + 4.6), 0.48, materials["frag_graph"], subdivisions=1, scale=(0.7, 0.7, 1.6))
+    ico("FRAG_graph", (x, y + 11.5, h + 1.55), 0.48, materials["frag_graph"], subdivisions=1, scale=(0.7, 0.7, 1.6))
     cube("TERM_canyon", (x + 3.8, y + 8.2, h + 1.5), (1.1, 0.6, 1.5), materials["terminal"])
     for i, t in enumerate((-4.5, -1.5, 1.5, 4.5)):
         cube(f"COMMIT_{i}", (x + t, y - 10, h + 1.0 + i * 0.4), (0.7, 0.7, 0.7), materials["magenta"])
@@ -459,7 +459,7 @@ def build_lake(materials: dict) -> None:
         hh = max(0.35, height_at(x + dx, y + dy)[0])
         cylinder(f"ISLE_{i}", (x + dx, y + dy, hh), s, 0.7, materials["stone"], verts=8)
         collider(f"COL_isle_{i}", (x + dx, y + dy, hh), (s * 1.6, s * 1.6, 1.2))
-    ico("FRAG_memory", (x + 0.4, y + 6.2, 2.4), 0.5, materials["frag_memory"], subdivisions=1, scale=(0.7, 0.7, 1.6))
+    ico("FRAG_memory", (x - 6.5, y - 5.2, 1.85), 0.5, materials["frag_memory"], subdivisions=1, scale=(0.7, 0.7, 1.6))
     cube("TERM_lake", (x - 6.5, y - 5.2, 1.6), (1.1, 0.6, 1.5), materials["terminal"])
     for i in range(8):
         ang = i / 8 * math.tau
@@ -649,13 +649,13 @@ def write_world_json() -> None:
                 "id": "syntax",
                 "object": "FRAG_syntax",
                 "title": "语法核心 SYNTAX",
-                "hint": "包市场货仓屋顶上，琥珀光在呼吸。",
+                "hint": "包市场广场正中，琥珀光在呼吸。",
             },
             {
                 "id": "graph",
                 "object": "FRAG_graph",
                 "title": "图谱核心 GRAPH",
-                "hint": "版本峡谷的桥心，品红节点悬停在半空。",
+                "hint": "版本峡谷北岸，品红节点就在桥头。",
             },
             {
                 "id": "runtime",
@@ -667,7 +667,7 @@ def write_world_json() -> None:
                 "id": "memory",
                 "object": "FRAG_memory",
                 "title": "内存核心 MEMORY",
-                "hint": "内存湖浮岛，青色倒影会出卖它。",
+                "hint": "内存湖南岸浮台，青色倒影会出卖它。",
             },
             {
                 "id": "kernel",

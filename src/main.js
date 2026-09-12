@@ -2,6 +2,7 @@ import { Game } from "./game/game.js";
 
 const canvas = document.getElementById("view");
 const game = new Game(canvas);
+window.game = game;
 game.load().catch((err) => {
   console.error(err);
   const t = document.getElementById("loadtxt");

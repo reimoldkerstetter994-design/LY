@@ -8,12 +8,14 @@
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 4173",
     "assets": "blender --background --python blender/generate_assets.py",
-    "audio": "python3 tools/generate_audio.py"
+    "audio": "python3 tools/generate_audio.py",
+    "test:play": "node tools/playtest.mjs"
   },
   "dependencies": {
     "three": "^0.170.0"
   },
   "devDependencies": {
+    "puppeteer-core": "^25.10.0",
     "vite": "^6.0.3"
   }
 }

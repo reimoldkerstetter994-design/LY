@@ -4,12 +4,16 @@
 
 ## 怎么玩
 
+本地运行：
+
 ```bash
 npm install
 npm run dev
 ```
 
 打开提示的本地地址。点击 **进入源码岭**。
+
+有 Blender 时可用 `npm run assets` 重建模型，`npm run audio` 重建音效。有 Chrome 时可用 `npm run test:play` 自动走一遍主线。
 
 | 操作 | 作用 |
 | --- | --- |
