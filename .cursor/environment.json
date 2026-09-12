@@ -1,0 +1,17 @@
+{
+  "name": "Dev World 3D",
+  "install": "sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender && cd game && npm install",
+  "start": "cd game && npm run dev",
+  "terminals": [
+    {
+      "name": "game-server",
+      "command": "cd game && npm run dev"
+    }
+  ],
+  "ports": [
+    {
+      "name": "game",
+      "port": 5173
+    }
+  ]
+}

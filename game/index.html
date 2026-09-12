@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dev World 3D — 3D 开发世界</title>
+    <link rel="stylesheet" href="/src/styles/main.css" />
+  </head>
+  <body>
+    <div id="overlay">
+      <div id="start-screen">
+        <h1>Dev World 3D</h1>
+        <p class="subtitle">3D 开发世界 — 建造、探索、创造</p>
+        <button id="play-btn">开始游戏</button>
+        <div class="controls-hint">
+          <h3>操作说明</h3>
+          <div class="control-grid">
+            <span>W A S D</span><span>移动</span>
+            <span>鼠标</span><span>视角</span>
+            <span>空格</span><span>跳跃 / 上升</span>
+            <span>Shift</span><span>下降（飞行模式）</span>
+            <span>左键</span><span>破坏方块</span>
+            <span>右键</span><span>放置方块</span>
+            <span>1-9</span><span>选择方块</span>
+            <span>E</span><span>切换飞行</span>
+            <span>F</span><span>快速放置</span>
+            <span>R</span><span>重置世界</span>
+            <span>Ctrl+S</span><span>保存世界</span>
+          </div>
+        </div>
+      </div>
+      <div id="hud" class="hidden">
+        <div id="crosshair"></div>
+        <div id="hotbar"></div>
+        <div id="info-panel">
+          <span id="mode-label">行走模式</span>
+          <span id="pos-label">0, 0, 0</span>
+          <span id="block-label">草方块</span>
+        </div>
+        <div id="toast"></div>
+      </div>
+    </div>
+    <canvas id="game-canvas"></canvas>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
