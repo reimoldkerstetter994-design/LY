@@ -36,6 +36,7 @@ export class UI {
   ready() {
     this.loader.classList.add("hidden");
     this.title.classList.remove("hidden");
+    document.getElementById("btn-start")?.focus();
   }
 
   enterPlay() {

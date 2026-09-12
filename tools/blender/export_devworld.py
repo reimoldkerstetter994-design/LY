@@ -412,7 +412,7 @@ def lamp(i, x, y, cols, mats):
     ico(f"LampBulb{i}", 0.12, (x, y, 3.38), cols["props"], mats["neon_amber"], subdiv=1)
     data = bpy.data.lights.new(f"LampLight{i}", "POINT")
     data.color = (1.0, 0.72, 0.42)
-    data.energy = 180
+    data.energy = 12
     data.shadow_soft_size = 0.6
     obj = bpy.data.objects.new(f"LampLight{i}", data)
     obj.location = (x, y, 3.3)
@@ -507,7 +507,7 @@ def hall(cfg, cols, mats, colliders, interacts, npcs_meta):
         )
         data = bpy.data.lights.new(f"{name}DeskLight{idx}", "POINT")
         data.color = (0.45, 0.9, 1.0)
-        data.energy = 40
+        data.energy = 8
         lamp_obj = bpy.data.objects.new(f"{name}DeskLight{idx}", data)
         lamp_obj.location = (px, py, 1.5)
         cols["lights"].objects.link(lamp_obj)
@@ -570,7 +570,7 @@ def ship_dock(cols, mats, colliders, interacts):
     box("ShipScreen", (1.4, 0.06, 0.5), (cx, cy + 5.5, 1.25), cols["interiors"], mats["screen"])
     data = bpy.data.lights.new("ShipBeacon", "POINT")
     data.color = (0.3, 0.9, 1.0)
-    data.energy = 400
+    data.energy = 30
     beacon = bpy.data.objects.new("ShipBeacon", data)
     beacon.location = (cx, cy, 5.5)
     cols["lights"].objects.link(beacon)
@@ -719,7 +719,7 @@ def commits_and_secret(cols, mats, collects, secret):
 def sun_and_moon(cols):
     sun = bpy.data.lights.new("Sun", "SUN")
     sun.color = (1.0, 0.55, 0.32)
-    sun.energy = 4.5
+    sun.energy = 1.15
     sun.angle = math.radians(6)
     sun_obj = bpy.data.objects.new("Sun", sun)
     sun_obj.location = (18, -22, 28)
@@ -728,7 +728,7 @@ def sun_and_moon(cols):
 
     moon = bpy.data.lights.new("Moon", "SUN")
     moon.color = (0.45, 0.62, 1.0)
-    moon.energy = 0.9
+    moon.energy = 0.22
     moon.angle = math.radians(12)
     moon_obj = bpy.data.objects.new("Moon", moon)
     moon_obj.location = (-20, 18, 24)

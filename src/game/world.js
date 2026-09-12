@@ -22,17 +22,23 @@ export class World {
     this.meta = meta;
     this.root = gltf.scene;
     this.root.traverse((obj) => {
-      obj.castShadow = true;
-      obj.receiveShadow = true;
-      if (obj.isMesh) {
-        obj.frustumCulled = true;
-        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-        for (const m of mats) {
-          if (!m) continue;
-          if (m.emissive && m.emissiveIntensity > 0) m.toneMapped = true;
-        }
-      }
       if (obj.name) this.named.set(obj.name, obj);
+      if (obj.isMesh) {
+        obj.castShadow = false;
+        obj.receiveShadow = false;
+        obj.frustumCulled = true;
+      }
+      if (obj.isDirectionalLight) {
+        const moon = /moon/i.test(obj.name);
+        obj.intensity = moon ? 0.28 : 1.05;
+        obj.castShadow = false;
+      }
+      if (obj.isPointLight) {
+        obj.intensity = /beacon|desk/i.test(obj.name) ? 4.5 : 7.5;
+        obj.distance = 18;
+        obj.decay = 2;
+        obj.castShadow = false;
+      }
     });
     this.scene.add(this.root);
     this.colliders = (meta.colliders || []).filter((c) => {
@@ -52,11 +58,8 @@ export class World {
   addAtmosphere() {
     this.scene.background = new THREE.Color(0x0a1420);
     this.scene.fog = new THREE.FogExp2(0x0b1522, 0.016);
-    const hemi = new THREE.HemisphereLight(0x9ecbff, 0x1a120c, 0.55);
+    const hemi = new THREE.HemisphereLight(0x8eb7e6, 0x1a140f, 0.42);
     this.scene.add(hemi);
-    const fill = new THREE.DirectionalLight(0x7aa4ff, 0.35);
-    fill.position.set(-20, 18, 12);
-    this.scene.add(fill);
   }
 
   pulseCollects(t) {

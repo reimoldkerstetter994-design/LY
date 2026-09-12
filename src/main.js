@@ -20,9 +20,8 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
 renderer.setSize(window.innerWidth, window.innerHeight, false);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMappingExposure = 0.92;
+renderer.shadowMap.enabled = false;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.08, 180);
@@ -55,6 +54,7 @@ async function init() {
   ui.ready();
   mode = "title";
   bind();
+  window.DevForge = { get mode() { return mode; }, player, gameplay, world, start };
 }
 
 function bind() {
@@ -72,8 +72,9 @@ function start() {
   audio.ui();
   mode = "play";
   player.enabled = true;
+  player.resetPose(world.meta.playerSpawn, world.meta.playerYaw ?? 0);
   ui.enterPlay();
-  canvas.requestPointerLock?.();
+  setTimeout(() => canvas.requestPointerLock?.(), 400);
 }
 
 function resume() {

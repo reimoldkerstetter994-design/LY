@@ -93,7 +93,7 @@ export class Gameplay {
 
   prompt() {
     if (this.dialogue) {
-      this.ui.setPrompt("继续对话");
+      this.ui.setPrompt("");
       return;
     }
     if (this.busy) {

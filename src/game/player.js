@@ -15,11 +15,22 @@ export class Player {
     this.keys = new Set();
     this.locked = false;
     this.enabled = false;
+    this.ignoreMouseUntil = 0;
     this._onKey = (e) => this.onKey(e);
     this._onMove = (e) => this.onMouse(e);
     this._onLock = () => {
       this.locked = document.pointerLockElement === document.getElementById("view");
+      if (this.locked) this.ignoreMouseUntil = performance.now() + 350;
     };
+  }
+
+  resetPose(spawn, yaw = 0) {
+    this.position.set(spawn[0], this.eye, spawn[2]);
+    this.velocity.set(0, 0, 0);
+    this.yaw = yaw;
+    this.pitch = 0;
+    this.ignoreMouseUntil = performance.now() + 350;
+    this.syncCamera();
   }
 
   attach() {
@@ -48,9 +59,10 @@ export class Player {
 
   onMouse(e) {
     if (!this.enabled || !this.locked) return;
-    this.yaw -= e.movementX * 0.0022;
-    this.pitch -= e.movementY * 0.0022;
-    this.pitch = Math.max(-1.2, Math.min(1.2, this.pitch));
+    if (performance.now() < this.ignoreMouseUntil) return;
+    this.yaw -= e.movementX * 0.0016;
+    this.pitch -= e.movementY * 0.0016;
+    this.pitch = Math.max(-0.85, Math.min(0.75, this.pitch));
   }
 
   wish() {
@@ -71,7 +83,11 @@ export class Player {
     if (!this.locked) {
       const turn = (this.keys.has("ArrowLeft") ? 1 : 0) - (this.keys.has("ArrowRight") ? 1 : 0);
       this.yaw += turn * 1.8 * dt;
-      if (this.keys.has("ArrowDown")) this.pitch = Math.min(1.2, this.pitch + dt);
+      if (this.keys.has("KeyQ")) this.pitch = Math.min(0.75, this.pitch + 0.9 * dt);
+      if (this.keys.has("KeyZ")) this.pitch = Math.max(-0.85, this.pitch - 0.9 * dt);
+    }
+    if (this.keys.has("KeyR")) {
+      this.pitch = 0;
     }
 
     const wish = this.wish();
@@ -109,8 +125,7 @@ export class Player {
   syncCamera() {
     this.camera.position.copy(this.position);
     this.camera.rotation.order = "YXZ";
-    this.camera.rotation.y = this.yaw;
-    this.camera.rotation.x = this.pitch;
+    this.camera.rotation.set(this.pitch, this.yaw, 0);
   }
 
   forward() {
