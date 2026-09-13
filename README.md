@@ -1,20 +1,27 @@
-# Moonlit Silver
+# LY Dynamic Wallpapers
 
-4K 动态二次元壁纸：月光卧室、银发角色、花瓣与尘埃粒子、窗帘摇曳、镜头缓推和鼠标视差。
+一组可全屏播放的二次元动态壁纸。五张不同场景，动作更重：暴雨雷电、樱花吹雪、连发烟火、海浪飞沫，以及原来的月光卧室。
 
-## 本地预览
+## 预览
 
 ```bash
 ./start-wallpaper.sh
 ```
 
-浏览器打开 [http://127.0.0.1:4173](http://127.0.0.1:4173)
+打开 [http://127.0.0.1:4173](http://127.0.0.1:4173)
 
-- 双击或按 `F` 进入全屏
-- 移动鼠标产生轻微视差
+- `1`–`5` 或底部缩略图切换
+- `←` `→` 上一张 / 下一张
+- 空格开关自动轮播
+- `F` 或双击全屏
+- 移动鼠标产生视差
 
-## Wallpaper Engine
+## 场景
 
-把 `wallpaper/` 目录作为 Web 壁纸导入：入口是 `index.html`，预览图是 `assets/preview.jpg`。
+1. **Storm Neon** 暴雨天台
+2. **Sakura Tempest** 神社夜樱
+3. **Hanabi Night** 夏日祭烟火
+4. **Tidebreaker** 暴月海岸
+5. **Moonlit Silver** 月光卧室
 
-分辨率素材为 3840×2160，页面会按屏幕等比铺满。
+Wallpaper Engine 可导入 `wallpaper/` 作为 Web 壁纸。
