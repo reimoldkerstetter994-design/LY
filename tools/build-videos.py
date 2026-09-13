@@ -17,27 +17,27 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 SCENES = {
     "storm": {
-        "beat": [0, 1, 2, 1, 3, 4, 3, 1, 0],
+        "beat": [0, 1, 2, 3, 4],
         "sizeL": (1280, 720),
         "sizeP": (720, 1280),
     },
     "sakura": {
-        "beat": [0, 1, 2, 3, 2, 4, 1, 0],
+        "beat": [0, 1, 2, 3, 4],
         "sizeL": (1280, 720),
         "sizeP": (720, 1280),
     },
     "hanabi": {
-        "beat": [0, 1, 2, 3, 2, 4, 0],
+        "beat": [0, 1, 2, 3, 4],
         "sizeL": (1280, 720),
         "sizeP": (720, 1280),
     },
     "tide": {
-        "beat": [0, 1, 2, 3, 2, 4, 1, 0],
+        "beat": [0, 1, 2, 3, 4],
         "sizeL": (1280, 720),
         "sizeP": (720, 1280),
     },
     "moonlit": {
-        "beat": [0, 1, 0, 2, 3, 2, 4, 0],
+        "beat": [0, 1, 2, 3, 4],
         "sizeL": (1280, 720),
         "sizeP": (720, 1280),
     },
@@ -65,9 +65,8 @@ def write_sequence(scene: str, orient: str, dest: Path) -> int:
     for pose in beat:
         src = ACT / f"{scene}-{orient}-{pose + 1}.jpg"
         im = cover(Image.open(src).convert("RGB"), size)
-        for _ in range(2):
-            n += 1
-            im.save(dest / f"{n:03d}.jpg", "JPEG", quality=90)
+        n += 1
+        im.save(dest / f"{n:03d}.jpg", "JPEG", quality=90)
     return n
 
 
@@ -79,7 +78,7 @@ def encode(seq_dir: Path, out_file: Path, size: tuple[int, int]) -> None:
     )
     cmd = [
         "ffmpeg", "-y",
-        "-framerate", "2.5",
+        "-framerate", "1.2",
         "-i", str(seq_dir / "%03d.jpg"),
         "-vf", vf,
         "-c:v", "libx264",

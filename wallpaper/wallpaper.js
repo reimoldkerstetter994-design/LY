@@ -102,7 +102,7 @@
     if (incoming.getAttribute("src") !== url) incoming.src = url;
     incoming.load();
     const start = () => {
-      incoming.playbackRate = 1;
+      incoming.playbackRate = 0.72;
       incoming.play().catch(() => {});
       incoming.style.opacity = "1";
       outgoing.style.opacity = "0";
