@@ -1,6 +1,7 @@
 (() => {
   const scenes = window.WALLPAPER_SCENES;
   const stage = document.getElementById("stage");
+  const frame = document.getElementById("frame");
   const parallax = document.getElementById("parallax");
   const sceneWrap = document.getElementById("sceneWrap");
   const sceneImg = document.getElementById("scene");
@@ -9,11 +10,27 @@
   const hudTitle = document.getElementById("hudTitle");
   const hudSub = document.getElementById("hudSub");
   const picker = document.getElementById("picker");
-  const flash = document.getElementById("flash");
-  const ctx = canvas.getContext("2d", { alpha: true });
+  const orientBtn = document.getElementById("orientBtn");
+  const fpsEl = document.getElementById("fps");
 
+  let ctx;
+  try {
+    ctx = canvas.getContext("2d", { alpha: true, desynchronized: true });
+  } catch {
+    ctx = canvas.getContext("2d", { alpha: true });
+  }
+
+  const LEVELS = {
+    high: { rain: 64, petals: 28, spray: 36, sparks: 16, burst: 32, bursts: 3, dpr: 1.25 },
+    med: { rain: 40, petals: 18, spray: 22, sparks: 10, burst: 22, bursts: 2, dpr: 1 },
+    low: { rain: 22, petals: 12, spray: 14, sparks: 6, burst: 14, bursts: 2, dpr: 1 },
+  };
+
+  const nativePortrait = window.matchMedia("(orientation: portrait)").matches;
   const state = {
     index: 0,
+    phone: nativePortrait,
+    quality: "high",
     w: 0,
     h: 0,
     dpr: 1,
@@ -28,9 +45,31 @@
     bursts: [],
     nextBurst: 0,
     nextFlash: 0,
-    auto: true,
-    autoAt: performance.now() + 14000,
+    flash: 0,
+    auto: false,
+    autoAt: 0,
+    running: true,
+    frames: 0,
+    fps: 60,
+    lastFps: performance.now(),
+    slow: 0,
+    fast: 0,
   };
+
+  const TWO_PI = Math.PI * 2;
+  const petalSprite = document.createElement("canvas");
+  petalSprite.width = 28;
+  petalSprite.height = 28;
+  {
+    const pctx = petalSprite.getContext("2d");
+    pctx.translate(14, 14);
+    pctx.fillStyle = "rgba(255, 150, 180, 0.95)";
+    pctx.beginPath();
+    pctx.moveTo(0, -11);
+    pctx.quadraticCurveTo(9, -2, 0, 10);
+    pctx.quadraticCurveTo(-9, -2, 0, -11);
+    pctx.fill();
+  }
 
   function rand(min, max) {
     return min + Math.random() * (max - min);
@@ -40,10 +79,22 @@
     return scenes[state.index];
   }
 
+  function isPhone() {
+    return state.phone;
+  }
+
+  function asset(scene) {
+    return isPhone()
+      ? { src: scene.portrait, thumb: scene.thumbP, origin: scene.originP }
+      : { src: scene.landscape, thumb: scene.thumbL, origin: scene.originL };
+  }
+
   function resize() {
-    state.dpr = Math.min(window.devicePixelRatio || 1, 2);
-    state.w = window.innerWidth;
-    state.h = window.innerHeight;
+    const q = LEVELS[state.quality];
+    const rect = frame.getBoundingClientRect();
+    state.dpr = Math.min(window.devicePixelRatio || 1, q.dpr);
+    state.w = Math.max(1, Math.floor(rect.width));
+    state.h = Math.max(1, Math.floor(rect.height));
     canvas.width = Math.floor(state.w * state.dpr);
     canvas.height = Math.floor(state.h * state.dpr);
     canvas.style.width = `${state.w}px`;
@@ -53,76 +104,87 @@
   }
 
   function seed() {
-    const area = Math.max(1, state.w * state.h);
-    state.rain = Array.from({ length: Math.floor(area / 4500) }, () => makeRain(true));
-    state.petals = Array.from({ length: Math.floor(area / 16000) }, () => makePetal(true));
-    state.sparks = Array.from({ length: 70 }, () => makeSpark(true));
-    state.spray = Array.from({ length: Math.floor(area / 9000) }, () => makeSpray(true));
+    const q = LEVELS[state.quality];
+    const fx = current().fx;
+    state.rain = fx === "storm" ? Array.from({ length: q.rain }, () => makeRain(true)) : [];
+    state.petals = fx === "sakura" || fx === "moonlit"
+      ? Array.from({ length: q.petals }, () => makePetal(true))
+      : [];
+    state.sparks = fx === "hanabi" || fx === "storm" || fx === "tide"
+      ? Array.from({ length: q.sparks }, () => makeSpark(true))
+      : [];
+    state.spray = fx === "tide" ? Array.from({ length: q.spray }, () => makeSpray(true)) : [];
     state.bursts = [];
     state.nextBurst = 0;
-    state.nextFlash = performance.now() + 700;
+    state.nextFlash = performance.now() + 800;
+    state.flash = 0;
   }
 
   function makeRain(anywhere) {
     return {
-      x: rand(-40, state.w + 40),
-      y: anywhere ? rand(-state.h, state.h) : rand(-180, -10),
-      len: rand(18, 46),
-      vy: rand(18, 34),
-      vx: rand(-10, -4),
-      w: rand(1.1, 2.2),
-      a: rand(0.28, 0.7),
+      x: rand(-20, state.w + 20),
+      y: anywhere ? rand(-state.h, state.h) : rand(-120, -8),
+      len: rand(16, 34),
+      vy: rand(16, 26),
+      vx: -7,
+      a: rand(0.3, 0.62),
     };
   }
 
   function makePetal(anywhere) {
-    const sakura = current().fx === "sakura";
     return {
       x: rand(0, state.w),
-      y: anywhere ? rand(-40, state.h) : -rand(10, 160),
-      r: sakura ? rand(11, 24) : rand(8, 18),
-      vx: rand(-1.2, 2.4),
-      vy: rand(0.9, 2.6),
-      rot: rand(0, Math.PI * 2),
-      vr: rand(-0.08, 0.08),
-      sway: rand(0, Math.PI * 2),
-      hue: sakura ? rand(328, 350) : rand(336, 356),
-      a: rand(0.62, 0.98),
+      y: anywhere ? rand(-30, state.h) : -rand(8, 90),
+      s: rand(0.7, 1.25),
+      vx: rand(-0.6, 1.4),
+      vy: rand(0.7, 1.8),
+      rot: rand(0, TWO_PI),
+      vr: rand(-0.05, 0.05),
+      sway: rand(0, TWO_PI),
     };
   }
 
   function makeSpark(anywhere) {
     return {
       x: rand(0, state.w),
-      y: anywhere ? rand(0, state.h * 0.75) : rand(0, state.h * 0.45),
-      r: rand(1.2, 3.4),
-      a: rand(0.25, 0.85),
-      pulse: rand(0, Math.PI * 2),
-      speed: rand(1.4, 3.2),
+      y: anywhere ? rand(0, state.h * 0.7) : rand(0, state.h * 0.4),
+      r: rand(1.1, 2.4),
+      pulse: rand(0, TWO_PI),
+      speed: rand(1.2, 2.4),
     };
   }
 
   function makeSpray(anywhere) {
     return {
-      x: rand(state.w * 0.15, state.w * 0.95),
-      y: anywhere ? rand(state.h * 0.35, state.h + 20) : state.h + rand(0, 40),
-      vx: rand(-2.5, 6),
-      vy: rand(-10, -3.5),
-      r: rand(1.4, 4.2),
-      life: anywhere ? rand(0.2, 1) : 1,
+      x: rand(state.w * 0.12, state.w * 0.95),
+      y: anywhere ? rand(state.h * 0.4, state.h + 10) : state.h + 8,
+      vx: rand(-1.6, 4.2),
+      vy: rand(-8, -3),
+      r: rand(1.2, 3.1),
+      life: anywhere ? rand(0.25, 1) : 1,
     };
   }
 
-  function spawnBurst(now) {
-    const x = rand(state.w * 0.45, state.w * 0.92);
-    const y = rand(state.h * 0.05, state.h * 0.42);
-    const colors = ["#ffd56a", "#ff5a7a", "#7ee8ff", "#ff9a3c", "#f4f1ff"];
+  function recycleRain(d) {
+    d.x = rand(-20, state.w + 20);
+    d.y = rand(-120, -8);
+  }
+
+  function recyclePetal(p) {
+    p.x = rand(0, state.w);
+    p.y = -rand(8, 90);
+  }
+
+  function spawnBurst() {
+    const q = LEVELS[state.quality];
+    const x = rand(state.w * 0.2, state.w * 0.9);
+    const y = rand(state.h * 0.06, state.h * 0.38);
+    const colors = ["#ffd56a", "#ff5a7a", "#7ee8ff", "#ff9a3c"];
     const color = colors[(Math.random() * colors.length) | 0];
-    const n = 90;
     const parts = [];
-    for (let i = 0; i < n; i += 1) {
-      const ang = (Math.PI * 2 * i) / n + rand(-0.08, 0.08);
-      const spd = rand(1.6, 7.2);
+    for (let i = 0; i < q.burst; i += 1) {
+      const ang = (TWO_PI * i) / q.burst;
+      const spd = rand(1.4, 5.4);
       parts.push({
         x,
         y,
@@ -130,189 +192,239 @@
         vy: Math.sin(ang) * spd,
         life: 1,
         color,
-        r: rand(1.3, 2.8),
+        r: 1.8,
       });
     }
-    state.bursts.push({ parts, born: now });
-    if (state.bursts.length > 6) state.bursts.shift();
+    state.bursts.push(parts);
+    if (state.bursts.length > q.bursts) state.bursts.shift();
   }
 
-  function drawPetal(p) {
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    ctx.rotate(p.rot);
-    ctx.globalAlpha = p.a;
-    ctx.fillStyle = `hsla(${p.hue}, 82%, 68%, 0.95)`;
-    ctx.beginPath();
-    ctx.moveTo(0, -p.r);
-    ctx.quadraticCurveTo(p.r * 0.9, -p.r * 0.1, 0, p.r * 0.85);
-    ctx.quadraticCurveTo(-p.r * 0.9, -p.r * 0.1, 0, -p.r);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function drawFx(now) {
+  function drawFx(now, dt) {
     const fx = current().fx;
     ctx.clearRect(0, 0, state.w, state.h);
 
     if (fx === "storm") {
       if (now > state.nextFlash) {
-        flash.classList.remove("on");
-        void flash.offsetWidth;
-        flash.classList.add("on");
-        state.nextFlash = now + rand(900, 2200);
+        state.flash = 0.55;
+        state.nextFlash = now + rand(1200, 2600);
       }
-      ctx.strokeStyle = "rgba(210, 232, 255, 0.85)";
-      for (const d of state.rain) {
-        d.x += d.vx;
-        d.y += d.vy;
-        if (d.y > state.h + 20 || d.x < -60) Object.assign(d, makeRain(false));
-        ctx.globalAlpha = d.a;
-        ctx.lineWidth = d.w;
-        ctx.beginPath();
+      ctx.strokeStyle = "rgba(210,232,255,0.72)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      for (let i = 0; i < state.rain.length; i += 1) {
+        const d = state.rain[i];
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        if (d.y > state.h + 16) recycleRain(d);
         ctx.moveTo(d.x, d.y);
-        ctx.lineTo(d.x + d.vx * 1.1, d.y + d.len);
-        ctx.stroke();
+        ctx.lineTo(d.x - 8, d.y + d.len);
       }
-      ctx.globalAlpha = 0.35;
-      ctx.fillStyle = "rgba(180, 220, 255, 0.18)";
-      ctx.fillRect(0, 0, state.w, state.h * 0.18);
+      ctx.stroke();
     }
 
     if (fx === "sakura" || fx === "moonlit") {
-      for (const p of state.petals) {
-        p.sway += 0.05;
-        p.x += p.vx + Math.sin(p.sway) * (fx === "sakura" ? 1.6 : 0.9);
-        p.y += p.vy;
-        p.rot += p.vr;
-        if (p.y > state.h + 30 || p.x < -50 || p.x > state.w + 50) {
-          Object.assign(p, makePetal(false));
-        }
-        drawPetal(p);
+      const wind = fx === "sakura" ? 1.2 : 0.7;
+      for (let i = 0; i < state.petals.length; i += 1) {
+        const p = state.petals[i];
+        p.sway += 0.04 * dt;
+        p.x += (p.vx + Math.sin(p.sway) * wind) * dt;
+        p.y += p.vy * dt;
+        p.rot += p.vr * dt;
+        if (p.y > state.h + 20 || p.x < -40 || p.x > state.w + 40) recyclePetal(p);
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.scale(p.s, p.s);
+        ctx.drawImage(petalSprite, -14, -14);
+        ctx.restore();
       }
     }
 
     if (fx === "hanabi") {
       if (now > state.nextBurst) {
-        spawnBurst(now);
-        if (Math.random() > 0.45) spawnBurst(now + 80);
-        state.nextBurst = now + rand(380, 820);
+        spawnBurst();
+        state.nextBurst = now + rand(520, 980);
       }
-      for (const burst of state.bursts) {
-        for (const p of burst.parts) {
-          p.x += p.vx;
-          p.y += p.vy;
-          p.vy += 0.045;
-          p.life -= 0.012;
+      for (let b = 0; b < state.bursts.length; b += 1) {
+        const parts = state.bursts[b];
+        for (let i = 0; i < parts.length; i += 1) {
+          const p = parts[i];
           if (p.life <= 0) continue;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.vy += 0.035 * dt;
+          p.life -= 0.01 * dt;
           ctx.globalAlpha = Math.max(0, p.life);
           ctx.fillStyle = p.color;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.fillRect(p.x, p.y, 2.2, 2.2);
         }
       }
-      for (const s of state.sparks) {
-        s.y += 1.8;
-        s.x += rand(-0.4, 0.4);
-        s.pulse += 0.1;
-        if (s.y > state.h) Object.assign(s, makeSpark(false), { y: -10 });
-        ctx.globalAlpha = 0.25 + 0.6 * Math.abs(Math.sin(s.pulse));
-        ctx.fillStyle = "rgba(255, 220, 140, 0.95)";
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      ctx.globalAlpha = 1;
     }
 
     if (fx === "tide") {
-      for (const s of state.spray) {
-        s.x += s.vx;
-        s.y += s.vy;
-        s.vy += 0.16;
-        s.life -= 0.012;
-        if (s.life <= 0 || s.y > state.h + 30) Object.assign(s, makeSpray(false));
-        ctx.globalAlpha = Math.max(0, s.life) * 0.85;
-        ctx.fillStyle = "rgba(230, 246, 255, 0.95)";
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fill();
+      ctx.fillStyle = "rgba(230,246,255,0.88)";
+      ctx.beginPath();
+      for (let i = 0; i < state.spray.length; i += 1) {
+        const s = state.spray[i];
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+        s.vy += 0.14 * dt;
+        s.life -= 0.01 * dt;
+        if (s.life <= 0 || s.y > state.h + 20) {
+          s.x = rand(state.w * 0.12, state.w * 0.95);
+          s.y = state.h + 8;
+          s.vx = rand(-1.6, 4.2);
+          s.vy = rand(-8, -3);
+          s.life = 1;
+        }
+        ctx.moveTo(s.x + s.r, s.y);
+        ctx.arc(s.x, s.y, s.r, 0, TWO_PI);
       }
-      ctx.globalAlpha = 0.16 + 0.1 * Math.sin(now * 0.01);
-      ctx.fillStyle = "rgba(180, 230, 255, 0.35)";
-      ctx.fillRect(0, state.h * 0.72, state.w, state.h * 0.28);
+      ctx.fill();
     }
 
-    if (fx === "storm" || fx === "tide" || fx === "sakura") {
-      for (const s of state.sparks) {
-        s.pulse += 0.08 * s.speed;
-        const glow = 0.2 + 0.8 * Math.abs(Math.sin(s.pulse));
-        ctx.globalAlpha = s.a * glow * 0.65;
-        ctx.fillStyle = fx === "sakura" ? "rgba(255, 210, 230, 0.9)" : "rgba(220, 238, 255, 0.95)";
-        ctx.beginPath();
-        ctx.arc(s.x + Math.sin(s.pulse) * 8, s.y, s.r, 0, Math.PI * 2);
-        ctx.fill();
+    if (state.sparks.length) {
+      ctx.fillStyle = fx === "hanabi" ? "rgba(255,220,140,0.85)" : "rgba(220,238,255,0.8)";
+      ctx.beginPath();
+      for (let i = 0; i < state.sparks.length; i += 1) {
+        const s = state.sparks[i];
+        s.pulse += 0.07 * s.speed * dt;
+        if (fx === "hanabi") {
+          s.y += 1.4 * dt;
+          if (s.y > state.h) s.y = -8;
+        }
+        const x = s.x + Math.sin(s.pulse) * 6;
+        ctx.moveTo(x + s.r, s.y);
+        ctx.arc(x, s.y, s.r, 0, TWO_PI);
       }
+      ctx.fill();
     }
 
-    ctx.globalAlpha = 1;
+    if (state.flash > 0.02) {
+      ctx.globalAlpha = state.flash;
+      ctx.fillStyle = "#e8f3ff";
+      ctx.fillRect(0, 0, state.w, state.h);
+      ctx.globalAlpha = 1;
+      state.flash *= 0.72;
+    }
   }
 
+  let last = performance.now();
   function tick(now) {
-    const t = now * 0.001;
-    const idleX = Math.sin(t * 0.85) * 0.7;
-    const idleY = Math.cos(t * 0.62) * 0.45;
-    state.mx += (state.tx + idleX - state.mx) * 0.08;
-    state.my += (state.ty + idleY - state.my) * 0.08;
-    parallax.style.transform = `translate3d(${state.mx * 42}px, ${state.my * 26}px, 0)`;
-    drawFx(now);
-
-    if (state.auto && now > state.autoAt) {
-      show((state.index + 1) % scenes.length, true);
+    if (!state.running) {
+      requestAnimationFrame(tick);
+      return;
     }
+    const rawDt = Math.min(32, now - last);
+    last = now;
+    const dt = rawDt / 16.67;
+
+    state.frames += 1;
+    if (now - state.lastFps > 500) {
+      state.fps = Math.round((state.frames * 1000) / (now - state.lastFps));
+      state.frames = 0;
+      state.lastFps = now;
+      fpsEl.textContent = `${state.fps} FPS · ${state.quality === "high" ? "高" : state.quality === "med" ? "中" : "低"}`;
+      if (state.fps < 48) state.slow += 1;
+      else state.slow = 0;
+      if (state.fps > 57) state.fast += 1;
+      else state.fast = 0;
+      if (state.slow >= 2 && state.quality !== "low") {
+        state.quality = state.quality === "high" ? "med" : "low";
+        resize();
+      } else if (state.fast >= 6 && state.quality !== "high") {
+        state.quality = state.quality === "low" ? "med" : "high";
+        resize();
+      }
+    }
+
+    const t = now * 0.001;
+    state.mx += (state.tx + Math.sin(t * 0.55) * 0.35 - state.mx) * 0.06;
+    state.my += (state.ty + Math.cos(t * 0.4) * 0.22 - state.my) * 0.06;
+    parallax.style.transform = `translate3d(${state.mx * 22}px, ${state.my * 14}px, 0)`;
+    drawFx(now, dt);
+
+    if (state.auto && now > state.autoAt) show((state.index + 1) % scenes.length, true);
     requestAnimationFrame(tick);
+  }
+
+  function applyOrient() {
+    const phone = isPhone();
+    stage.classList.toggle("phone", phone && window.innerWidth > window.innerHeight);
+    orientBtn.classList.toggle("on", phone);
+    orientBtn.textContent = phone ? "竖版" : "横版";
+    buildPicker();
+    show(state.index);
+    requestAnimationFrame(resize);
   }
 
   function show(index, fromAuto) {
     state.index = (index + scenes.length) % scenes.length;
     const scene = current();
+    const a = asset(scene);
     stage.dataset.theme = scene.id;
-    sceneWrap.style.setProperty("--origin", scene.origin);
-    sceneImg.src = scene.src;
+    sceneWrap.style.setProperty("--origin", a.origin);
+    if (sceneImg.getAttribute("src") !== a.src) sceneImg.src = a.src;
     sceneImg.alt = scene.title;
     hudTitle.textContent = scene.title;
-    hudSub.textContent = `${scene.sub} · 数字键 1–5 切换 · 空格${state.auto ? "停止" : "开启"}轮播`;
+    hudSub.textContent = `${scene.sub} · ${isPhone() ? "竖版" : "横版"} · P 切换方向`;
     hud.classList.remove("dim");
-    document.querySelectorAll(".pick").forEach((btn, i) => {
+    picker.querySelectorAll(".pick").forEach((btn, i) => {
       btn.classList.toggle("active", i === state.index);
     });
     seed();
-    state.autoAt = performance.now() + (fromAuto ? 14000 : 16000);
-    history.replaceState(null, "", `#${scene.id}`);
-    setTimeout(() => hud.classList.add("dim"), 2600);
+    state.autoAt = performance.now() + (fromAuto ? 16000 : 18000);
+    const hash = `${scene.id}${isPhone() ? "/p" : ""}`;
+    history.replaceState(null, "", `#${hash}`);
+    setTimeout(() => hud.classList.add("dim"), 2400);
   }
 
   function buildPicker() {
-    picker.innerHTML = scenes.map((scene, i) => `
-      <button class="pick${i === 0 ? " active" : ""}" type="button" data-i="${i}" title="${scene.title}">
-        <img src="${scene.thumb}" alt="${scene.title}" />
-      </button>
-    `).join("");
-    picker.addEventListener("click", (e) => {
-      const btn = e.target.closest(".pick");
-      if (!btn) return;
-      state.auto = false;
-      show(Number(btn.dataset.i));
+    picker.innerHTML = scenes.map((scene, i) => {
+      const a = asset(scene);
+      return `<button class="pick${i === state.index ? " active" : ""}" type="button" data-i="${i}" title="${scene.title}">
+        <img src="${a.thumb}" alt="${scene.title}" />
+      </button>`;
+    }).join("");
+  }
+
+  function preload() {
+    scenes.forEach((scene) => {
+      [scene.landscape, scene.portrait, scene.thumbL, scene.thumbP].forEach((src) => {
+        const img = new Image();
+        img.src = src;
+      });
     });
   }
 
-  function onMove(x, y) {
-    state.tx = (x / state.w - 0.5) * 2;
-    state.ty = (y / state.h - 0.5) * 2;
+  function togglePhone() {
+    state.phone = !state.phone;
+    applyOrient();
   }
 
-  window.addEventListener("resize", resize);
-  window.addEventListener("mousemove", (e) => onMove(e.clientX, e.clientY));
+  picker.addEventListener("click", (e) => {
+    const btn = e.target.closest(".pick");
+    if (!btn) return;
+    state.auto = false;
+    show(Number(btn.dataset.i));
+  });
+  orientBtn.addEventListener("click", togglePhone);
+
+  window.addEventListener("resize", () => {
+    clearTimeout(state.resizeT);
+    state.resizeT = setTimeout(resize, 80);
+  });
+  window.addEventListener("mousemove", (e) => {
+    const r = frame.getBoundingClientRect();
+    if (!r.width) return;
+    state.tx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+    state.ty = ((e.clientY - r.top) / r.height - 0.5) * 2;
+  });
+  document.addEventListener("visibilitychange", () => {
+    state.running = document.visibilityState === "visible";
+    last = performance.now();
+  });
   window.addEventListener("keydown", (e) => {
     if (e.key >= "1" && e.key <= "5") {
       state.auto = false;
@@ -330,22 +442,24 @@
       e.preventDefault();
       state.auto = !state.auto;
       state.autoAt = performance.now() + 4000;
-      hudSub.textContent = `${current().sub} · 轮播已${state.auto ? "开启" : "关闭"}`;
+      hudSub.textContent = `轮播已${state.auto ? "开启" : "关闭"}`;
       hud.classList.remove("dim");
     }
-    if (e.key === "f" || e.key === "F") toggleFullscreen();
+    if (e.key === "p" || e.key === "P") togglePhone();
+    if (e.key === "f" || e.key === "F") {
+      if (!document.fullscreenElement) stage.requestFullscreen?.().catch(() => {});
+      else document.exitFullscreen?.();
+    }
   });
 
-  stage.addEventListener("dblclick", toggleFullscreen);
-
-  function toggleFullscreen() {
-    if (!document.fullscreenElement) stage.requestFullscreen?.().catch(() => {});
-    else document.exitFullscreen?.();
-  }
-
+  const hash = location.hash.replace("#", "");
+  const [id, orient] = hash.split("/");
+  const boot = scenes.findIndex((s) => s.id === id);
+  if (orient === "p") state.phone = true;
+  if (orient === "l") state.phone = false;
+  preload();
   buildPicker();
-  const boot = scenes.findIndex((s) => s.id === location.hash.replace("#", ""));
-  resize();
-  show(boot >= 0 ? boot : 0);
+  applyOrient();
+  if (boot >= 0) show(boot);
   requestAnimationFrame(tick);
 })();

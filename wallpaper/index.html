@@ -8,32 +8,33 @@
 </head>
 <body>
   <div id="stage" class="stage" data-theme="storm">
-    <div class="flash" id="flash"></div>
-    <div class="parallax" id="parallax">
-      <div class="scene-wrap" id="sceneWrap">
-        <img class="scene" id="scene" src="assets/storm.jpg" alt="" draggable="false" />
-        <div class="light-wash"></div>
-        <div class="moon-beams"></div>
-        <div class="window-glow"></div>
-        <div class="lamp-bloom"></div>
-        <div class="curtain curtain-left"></div>
-        <div class="curtain curtain-right"></div>
-        <div class="wind-veil"></div>
+    <div class="frame" id="frame">
+      <div class="parallax" id="parallax">
+        <div class="scene-wrap" id="sceneWrap">
+          <img class="scene" id="scene" src="assets/storm.jpg" alt="" draggable="false" />
+          <div class="light-wash"></div>
+          <div class="moon-beams"></div>
+          <div class="window-glow"></div>
+          <div class="lamp-bloom"></div>
+          <div class="curtain curtain-left"></div>
+          <div class="curtain curtain-right"></div>
+          <div class="wind-veil"></div>
+        </div>
       </div>
+      <canvas id="fx" class="fx"></canvas>
+      <div class="vignette"></div>
+      <div class="hud" id="hud">
+        <div class="hud-kicker">LY DYNAMIC</div>
+        <div class="hud-title" id="hudTitle">Storm Neon</div>
+        <div class="hud-sub" id="hudSub">更露服装 · P 竖/横 · 数字键切换</div>
+      </div>
+      <nav class="picker" id="picker"></nav>
     </div>
 
-    <canvas id="fx" class="fx"></canvas>
-    <div class="vignette"></div>
-    <div class="grain"></div>
-    <div class="letterbox"></div>
-
-    <div class="hud" id="hud">
-      <div class="hud-kicker">LY DYNAMIC</div>
-      <div class="hud-title" id="hudTitle">Storm Neon</div>
-      <div class="hud-sub" id="hudSub">暴雨天台 · 数字键 1–5 切换 · 空格自动轮播</div>
+    <div class="chrome">
+      <button class="chip" id="orientBtn" type="button">竖版</button>
+      <div class="fps" id="fps">-- FPS</div>
     </div>
-
-    <nav class="picker" id="picker"></nav>
   </div>
 
   <script src="scenes.js"></script>
