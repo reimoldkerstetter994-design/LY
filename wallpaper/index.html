@@ -11,23 +11,35 @@
     <div class="frame" id="frame">
       <div class="parallax" id="parallax">
         <div class="scene-wrap" id="sceneWrap">
-          <img class="scene actor" id="actorA" src="assets/act/storm-l-1.jpg" alt="" draggable="false" />
-          <img class="scene actor actor-b" id="actorB" src="assets/act/storm-l-2.jpg" alt="" draggable="false" />
+          <video
+            class="scene clip"
+            id="clipA"
+            muted
+            playsinline
+            autoplay
+            loop
+            preload="auto"
+          ></video>
+          <video
+            class="scene clip clip-b"
+            id="clipB"
+            muted
+            playsinline
+            autoplay
+            loop
+            preload="auto"
+          ></video>
           <div class="light-wash"></div>
-          <div class="moon-beams"></div>
           <div class="window-glow"></div>
           <div class="lamp-bloom"></div>
-          <div class="curtain curtain-left"></div>
-          <div class="curtain curtain-right"></div>
-          <div class="wind-veil"></div>
         </div>
       </div>
       <canvas id="fx" class="fx"></canvas>
       <div class="vignette"></div>
       <div class="hud" id="hud">
-        <div class="hud-kicker">LY DYNAMIC</div>
+        <div class="hud-kicker">LY VIDEO</div>
         <div class="hud-title" id="hudTitle">Storm Neon</div>
-        <div class="hud-sub" id="hudSub">人物动作时间轴 · P 竖/横</div>
+        <div class="hud-sub" id="hudSub">30fps 循环视频壁纸 · P 竖/横</div>
       </div>
       <nav class="picker" id="picker"></nav>
     </div>

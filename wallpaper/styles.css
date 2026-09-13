@@ -69,7 +69,11 @@ body {
   pointer-events: none;
 }
 
-.actor-b {
+.clip {
+  background: #05070d;
+}
+
+.clip-b {
   opacity: 0;
 }
 

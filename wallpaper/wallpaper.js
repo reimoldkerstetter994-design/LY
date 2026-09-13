@@ -4,8 +4,8 @@
   const frame = document.getElementById("frame");
   const parallax = document.getElementById("parallax");
   const sceneWrap = document.getElementById("sceneWrap");
-  const actorA = document.getElementById("actorA");
-  const actorB = document.getElementById("actorB");
+  const clipA = document.getElementById("clipA");
+  const clipB = document.getElementById("clipB");
   const canvas = document.getElementById("fx");
   const hud = document.getElementById("hud");
   const hudTitle = document.getElementById("hudTitle");
@@ -55,14 +55,8 @@
     lastFps: performance.now(),
     slow: 0,
     fast: 0,
-    act: {
-      step: 0,
-      from: 0,
-      to: 0,
-      phase: "hold",
-      t0: 0,
-      ready: false,
-    },
+    live: clipA,
+    next: clipB,
   };
 
   const TWO_PI = Math.PI * 2;
@@ -94,77 +88,30 @@
 
   function asset(scene) {
     return isPhone()
-      ? { src: scene.portrait, thumb: scene.thumbP, origin: scene.originP, frames: scene.framesP }
-      : { src: scene.landscape, thumb: scene.thumbL, origin: scene.originL, frames: scene.framesL };
+      ? { src: scene.portrait, thumb: scene.thumbP, origin: scene.originP, video: scene.videoP }
+      : { src: scene.landscape, thumb: scene.thumbL, origin: scene.originL, video: scene.videoL };
   }
 
-  function ease(t) {
-    return t * t * (3 - 2 * t);
-  }
-
-  function frameSrc(scene, i) {
-    const list = asset(scene).frames;
-    return list[i] || list[0];
-  }
-
-  function resetActor() {
-    const scene = current();
-    const first = scene.beat[0];
-    const second = scene.beat[1] ?? first;
-    actorA.src = frameSrc(scene, first);
-    actorB.src = frameSrc(scene, second);
-    actorA.style.opacity = "1";
-    actorB.style.opacity = "0";
-    state.act = {
-      step: 0,
-      from: first,
-      to: second,
-      phase: "hold",
-      t0: performance.now(),
-      ready: true,
-    };
-  }
-
-  function tickActor(now) {
-    const scene = current();
-    const act = state.act;
-    if (!act.ready) return;
-    const i = act.step % scene.beat.length;
-    const hold = scene.hold[i];
-    const fade = scene.fade[i];
-    const elapsed = now - act.t0;
-
-    if (act.phase === "hold") {
-      actorA.style.opacity = "1";
-      actorB.style.opacity = "0";
-      if (elapsed >= hold) {
-        const next = scene.beat[(i + 1) % scene.beat.length];
-        act.from = scene.beat[i];
-        act.to = next;
-        actorA.src = frameSrc(scene, act.from);
-        actorB.src = frameSrc(scene, act.to);
-        act.phase = "fade";
-        act.t0 = now;
-      }
+  function playClip(url) {
+    if (state.live.getAttribute("src") === url && !state.live.paused) {
+      state.live.play().catch(() => {});
       return;
     }
-
-    const u = Math.min(1, elapsed / fade);
-    const a = ease(u);
-    actorA.style.opacity = String(1 - a);
-    actorB.style.opacity = String(a);
-    if (u >= 1) {
-      actorA.src = frameSrc(scene, act.to);
-      actorA.style.opacity = "1";
-      actorB.style.opacity = "0";
-      act.step = (i + 1) % scene.beat.length;
-      const nxt = scene.beat[(act.step + 1) % scene.beat.length];
-      actorB.src = frameSrc(scene, nxt);
-      act.from = act.to;
-      act.to = nxt;
-      act.phase = "hold";
-      act.t0 = now;
-    }
+    const incoming = state.next;
+    const outgoing = state.live;
+    if (incoming.getAttribute("src") !== url) incoming.src = url;
+    incoming.load();
+    const start = () => {
+      incoming.playbackRate = 1;
+      incoming.play().catch(() => {});
+      incoming.style.opacity = "1";
+      outgoing.style.opacity = "0";
+      outgoing.pause();
+      state.live = incoming;
+      state.next = outgoing;
+    };
+    if (incoming.readyState >= 2) start();
+    else incoming.addEventListener("canplay", start, { once: true });
   }
 
   function resize() {
@@ -417,8 +364,7 @@
     const t = now * 0.001;
     state.mx += (state.tx + Math.sin(t * 0.55) * 0.35 - state.mx) * 0.06;
     state.my += (state.ty + Math.cos(t * 0.4) * 0.22 - state.my) * 0.06;
-    parallax.style.transform = `translate3d(${state.mx * 16}px, ${state.my * 10}px, 0)`;
-    tickActor(now);
+    parallax.style.transform = `translate3d(${state.mx * 10}px, ${state.my * 6}px, 0)`;
     drawFx(now, dt);
 
     if (state.auto && now > state.autoAt) show((state.index + 1) % scenes.length, true);
@@ -441,8 +387,7 @@
     const a = asset(scene);
     stage.dataset.theme = scene.id;
     sceneWrap.style.setProperty("--origin", a.origin);
-    actorA.alt = scene.title;
-    resetActor();
+    playClip(a.video);
     hudTitle.textContent = scene.title;
     hudSub.textContent = `${scene.sub} · ${isPhone() ? "竖版" : "横版"} · P 切换方向`;
     hud.classList.remove("dim");
@@ -467,9 +412,15 @@
 
   function preload() {
     scenes.forEach((scene) => {
-      [scene.landscape, scene.portrait, scene.thumbL, scene.thumbP, ...scene.framesL, ...scene.framesP].forEach((src) => {
+      [scene.thumbL, scene.thumbP].forEach((src) => {
         const img = new Image();
         img.src = src;
+      });
+      [scene.videoL, scene.videoP].forEach((src) => {
+        const v = document.createElement("video");
+        v.preload = "auto";
+        v.muted = true;
+        v.src = src;
       });
     });
   }
