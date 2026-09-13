@@ -53,19 +53,24 @@ body {
 
 .scene-wrap {
   position: absolute;
-  inset: -8%;
+  inset: -4%;
   transform-origin: var(--origin, 50% 42%);
-  animation: kenburns 14s ease-in-out infinite alternate;
-  will-change: transform;
 }
 
-.scene {
+.scene,
+.actor {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: var(--origin, 50% 42%);
   user-select: none;
   pointer-events: none;
+}
+
+.actor-b {
+  opacity: 0;
 }
 
 .light-wash,
