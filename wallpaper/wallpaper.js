@@ -21,16 +21,16 @@
   }
 
   const LEVELS = {
-    high: { rain: 64, petals: 28, spray: 36, sparks: 16, burst: 32, bursts: 3, dpr: 1.25 },
-    med: { rain: 40, petals: 18, spray: 22, sparks: 10, burst: 22, bursts: 2, dpr: 1 },
-    low: { rain: 22, petals: 12, spray: 14, sparks: 6, burst: 14, bursts: 2, dpr: 1 },
+    high: { rain: 48, petals: 20, spray: 28, sparks: 12, burst: 24, bursts: 2 },
+    med: { rain: 28, petals: 14, spray: 18, sparks: 8, burst: 16, bursts: 2 },
+    low: { rain: 16, petals: 8, spray: 10, sparks: 5, burst: 10, bursts: 1 },
   };
 
   const nativePortrait = window.matchMedia("(orientation: portrait)").matches;
   const state = {
     index: 0,
     phone: nativePortrait,
-    quality: "high",
+    quality: "med",
     w: 0,
     h: 0,
     dpr: 1,
@@ -90,16 +90,17 @@
   }
 
   function resize() {
-    const q = LEVELS[state.quality];
     const rect = frame.getBoundingClientRect();
-    state.dpr = Math.min(window.devicePixelRatio || 1, q.dpr);
     state.w = Math.max(1, Math.floor(rect.width));
     state.h = Math.max(1, Math.floor(rect.height));
-    canvas.width = Math.floor(state.w * state.dpr);
-    canvas.height = Math.floor(state.h * state.dpr);
+    const maxEdge = state.quality === "high" ? 1280 : state.quality === "med" ? 960 : 720;
+    const scale = Math.min(1, maxEdge / Math.max(state.w, state.h));
+    canvas.width = Math.max(1, Math.floor(state.w * scale));
+    canvas.height = Math.max(1, Math.floor(state.h * scale));
     canvas.style.width = `${state.w}px`;
     canvas.style.height = `${state.h}px`;
-    ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    stage.classList.toggle("lite", state.quality !== "high");
     seed();
   }
 
@@ -231,12 +232,8 @@
         p.y += p.vy * dt;
         p.rot += p.vr * dt;
         if (p.y > state.h + 20 || p.x < -40 || p.x > state.w + 40) recyclePetal(p);
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rot);
-        ctx.scale(p.s, p.s);
-        ctx.drawImage(petalSprite, -14, -14);
-        ctx.restore();
+        ctx.globalAlpha = 0.9;
+        ctx.drawImage(petalSprite, p.x - 10 * p.s, p.y - 10 * p.s, 20 * p.s, 20 * p.s);
       }
     }
 
@@ -326,15 +323,15 @@
       state.frames = 0;
       state.lastFps = now;
       fpsEl.textContent = `${state.fps} FPS · ${state.quality === "high" ? "高" : state.quality === "med" ? "中" : "低"}`;
-      if (state.fps < 48) state.slow += 1;
+      if (state.fps < 50) state.slow += 1;
       else state.slow = 0;
-      if (state.fps > 57) state.fast += 1;
+      if (state.fps > 56) state.fast += 1;
       else state.fast = 0;
       if (state.slow >= 2 && state.quality !== "low") {
         state.quality = state.quality === "high" ? "med" : "low";
         resize();
-      } else if (state.fast >= 6 && state.quality !== "high") {
-        state.quality = state.quality === "low" ? "med" : "high";
+      } else if (state.fast >= 8 && state.quality === "low") {
+        state.quality = "med";
         resize();
       }
     }
