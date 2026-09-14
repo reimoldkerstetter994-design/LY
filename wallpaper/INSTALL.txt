@@ -1,0 +1,21 @@
+NIGHTFALL — Wallpaper Engine
+
+1. Open Wallpaper Engine → Workshop / Create → Open in Editor
+2. File → Load this folder (the one that contains index.html and project.json)
+3. Confirm type is Web, rating Mature
+4. Preview, then File → Export / Publish to Workshop
+
+Properties in the editor:
+  Scene              switch among 5 illustrations
+  Effect intensity   rain / petals / spray / fireworks
+  Mouse parallax
+  Show title
+  Auto cycle scenes
+
+Do not upload the leftover folders assets/act or assets/vid.
+They are old pose-morph experiments and are not part of this product.
+
+Browser preview (this PC):
+  ./start-wallpaper.sh
+  http://127.0.0.1:4173
+  http://127.0.0.1:4173/?we=1   (Workshop look, no picker)

@@ -3,53 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LY Dynamic Wallpapers</title>
+  <title>NIGHTFALL</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div id="stage" class="stage lite" data-theme="storm">
+  <div id="stage" class="stage" data-theme="storm">
     <div class="frame" id="frame">
       <div class="parallax" id="parallax">
         <div class="scene-wrap" id="sceneWrap">
-          <video
-            class="scene clip"
-            id="clipA"
-            muted
-            playsinline
-            autoplay
-            loop
-            preload="auto"
-          ></video>
-          <video
-            class="scene clip clip-b"
-            id="clipB"
-            muted
-            playsinline
-            autoplay
-            loop
-            preload="auto"
-          ></video>
-          <div class="light-wash"></div>
-          <div class="window-glow"></div>
-          <div class="lamp-bloom"></div>
+          <img class="scene" id="scene" src="assets/storm.jpg" alt="" draggable="false" />
+          <div class="wash"></div>
         </div>
       </div>
       <canvas id="fx" class="fx"></canvas>
       <div class="vignette"></div>
       <div class="hud" id="hud">
-        <div class="hud-kicker">LY VIDEO</div>
-        <div class="hud-title" id="hudTitle">Storm Neon</div>
-        <div class="hud-sub" id="hudSub">30fps 循环视频壁纸 · P 竖/横</div>
+        <div class="brand">NIGHTFALL</div>
+        <div class="title" id="hudTitle">Storm Neon</div>
       </div>
+      <div class="hint" id="hint">1–5 场景 · P 竖屏 · F 全屏</div>
       <nav class="picker" id="picker"></nav>
     </div>
-
-    <div class="chrome">
-      <button class="chip" id="orientBtn" type="button">竖版</button>
-      <div class="fps" id="fps">-- FPS</div>
-    </div>
   </div>
-
   <script src="scenes.js"></script>
   <script src="wallpaper.js"></script>
 </body>

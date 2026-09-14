@@ -1,11 +1,55 @@
 {
   "file": "index.html",
-  "general": {
-    "properties": {},
-    "supportsaudioprocessing": false
-  },
-  "preview": "assets/storm-p-thumb.jpg",
-  "title": "LY Dynamic Anime Wallpapers",
+  "title": "NIGHTFALL — Anime Girl Collection",
   "type": "web",
-  "version": 3
+  "preview": "preview.jpg",
+  "contentrating": "Mature",
+  "description": "Five mature anime scenes as a Wallpaper Engine web wallpaper. Storm rooftop, shrine sakura, festival fireworks, moonlit coast, bedroom. Mouse parallax, scene picker, portrait and landscape.",
+  "tags": ["Anime", "Girls", "Animated", "Scenic"],
+  "version": 4,
+  "general": {
+    "supportsaudioprocessing": false,
+    "properties": {
+      "schemecolor": {
+        "text": "ui_browse_properties_scheme_color",
+        "type": "color",
+        "value": "0.05 0.07 0.1"
+      },
+      "scene": {
+        "text": "Scene",
+        "type": "combo",
+        "value": "storm",
+        "options": [
+          { "label": "Storm Neon", "value": "storm" },
+          { "label": "Sakura Tempest", "value": "sakura" },
+          { "label": "Hanabi Night", "value": "hanabi" },
+          { "label": "Tidebreaker", "value": "tide" },
+          { "label": "Moonlit Silver", "value": "moonlit" }
+        ]
+      },
+      "intensity": {
+        "text": "Effect intensity",
+        "type": "slider",
+        "min": 0,
+        "max": 100,
+        "fraction": false,
+        "value": 70
+      },
+      "parallax": {
+        "text": "Mouse parallax",
+        "type": "bool",
+        "value": true
+      },
+      "showtitle": {
+        "text": "Show title",
+        "type": "bool",
+        "value": false
+      },
+      "autocycle": {
+        "text": "Auto cycle scenes",
+        "type": "bool",
+        "value": false
+      }
+    }
+  }
 }
