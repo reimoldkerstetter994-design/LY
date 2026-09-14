@@ -177,7 +177,7 @@
 
     if (fx === "storm") {
       if (now > state.nextFlash) {
-        state.flash = 0.46 * state.intensity;
+        state.flash = 0.2 * state.intensity;
         state.bolt = makeBolt();
         state.nextFlash = now + 1400 + Math.random() * 1600;
       }
@@ -318,21 +318,21 @@
     stage.dataset.theme = scene.id;
     sceneWrap.style.setProperty("--origin", a.origin);
     sceneImg.style.setProperty("--origin", a.origin);
-    if (sceneImg.getAttribute("src") !== a.src) {
+    const reveal = () => { sceneImg.style.opacity = "1"; };
+    if (sceneImg.getAttribute("src") === a.src) {
+      reveal();
+    } else {
       sceneImg.style.opacity = "0";
-      const on = () => {
-        sceneImg.style.opacity = "1";
-        sceneImg.removeEventListener("load", on);
-      };
-      sceneImg.addEventListener("load", on);
+      sceneImg.onload = reveal;
       sceneImg.src = a.src;
+      if (sceneImg.complete && sceneImg.naturalWidth) reveal();
     }
     hudTitle.textContent = scene.title;
     hud.classList.toggle("show", state.showTitle);
     hud.classList.toggle("force", we && state.showTitle);
     picker.querySelectorAll(".pick").forEach((el, n) => el.classList.toggle("active", n === state.index));
     seed();
-    history.replaceState(null, "", `#${scene.id}${isPhone() ? "/p" : ""}`);
+    history.replaceState(null, "", `${location.pathname}${location.search}#${scene.id}${isPhone() ? "/p" : ""}`);
   }
 
   function applyOrient() {
