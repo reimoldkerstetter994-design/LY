@@ -25,3 +25,6 @@ dist-ssr
 
 # Vitest / coverage
 coverage
+
+# TypeScript incremental build info
+*.tsbuildinfo
