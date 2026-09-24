@@ -1,0 +1,177 @@
+<p align="center">
+  <a href="https://github.com/dsh-tauri/deepseek-harness-desktop">
+    <img src="public/favicon.svg" width="96" alt="DeepSeek Harness Desktop" />
+  </a>
+</p>
+
+<h1 align="center">DeepSeek Harness Desktop</h1>
+
+<p align="center">
+  Run <a href="https://github.com/deepseek-ai/deepseek-harness">DeepSeek Harness</a> on your desktop, instantly —<br />
+  no Node.js, no pnpm, no Docker. Download, install, go.
+</p>
+
+<p align="center">
+  <a href="https://github.com/dsh-tauri/deepseek-harness-desktop/releases">
+    <img src="https://img.shields.io/github/v/release/dsh-tauri/deepseek-harness-desktop?style=flat-square&label=release&color=4D6BFE" alt="Release" />
+  </a>
+  <img src="https://img.shields.io/github/downloads/dsh-tauri/deepseek-harness-desktop/total?style=flat-square&label=downloads&color=4D6BFE" alt="Downloads" />
+  <img src="https://img.shields.io/github/stars/dsh-tauri/deepseek-harness-desktop?style=flat-square&label=stars&color=4D6BFE" alt="Stars" />
+  <img src="https://img.shields.io/github/license/dsh-tauri/deepseek-harness-desktop?style=flat-square&label=license&color=4D6BFE" alt="MIT License" />
+  <img src="https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux-black?style=flat-square" alt="Windows | macOS | Linux" />
+  <img src="https://img.shields.io/badge/dsh-0.1.7--alpha.1-4D6BFE?style=flat-square" alt="dsh 0.1.7-alpha.1" />
+</p>
+
+<p align="center">
+  <samp><strong>English</strong> · <a href="./README.es.md">Español</a> · <a href="https://dshtauri.mintlify.site">Docs</a> · <a href="./README.md">中文</a></samp>
+</p>
+
+<p align="center">
+ <a href="https://trendshift.io/repositories/151676?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-151676" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/151676/daily?language=Rust" alt="dsh-tauri%2Fdeepseek-harness-desktop | Trendshift" width="250" height="55"/></a>
+</p>
+
+<p align="center">
+  <a href="docs/PREVIEW.md">
+    <img src="./docs/images/hero-en.png" width="100%" alt="DSH Desktop English promotional banner" />
+  </a>
+</p>
+
+## Features
+
+- ⚡️ **Zero setup** — First launch needs no Node runtime or Harness core; uses the local environment by default and does not modify your existing system environment.
+- 🔄 **Core update** — Syncs the latest upstream Harness version in-app, so upstream updates take effect without reinstalling; supports managing multiple core versions.
+- 🖥️ **Config** — One dialog for Debug / Profiles / Plugins / Core, with bilingual (zh/en) UI labels and dark-mode support.
+- 🗂️ **Profile isolation** — Profiles are isolated from each other in the config; plugins, patches, and settings stay independent and do not interfere.
+- 🧩 **Plugin management** — The plugin panel manages installed plugins; when something misbehaves it offers upgrade / uninstall entry points plus error details.
+- 🎁 **Built-in plugins** — Ships with bundled plugins; more high-quality built-in plugins are coming in the future.
+- 🪶 **Native & lightweight** — A Tauri 2 shell (not Electron): smaller installers, lower memory, native windows.
+- ⌨️ **CLI integration** — Install automatically registers the `dsh` command, ready in a new terminal; does not overwrite your existing shell config.
+- 🧭 **Launch wizard** — On first launch, choose recommended plugins, or re-select them later in config.
+- 🚀 **Self-update** — In-app updates; no need to re-download.
+- 🐾 **Desktop pets** — Manage Pets and Codex sources with presets that work out of the box (streamed from their upstream asset hosts, no download step), import Codex `.zip` packs, and show activity states from conversations.
+
+## Presets
+
+Plugins offered in the first-run wizard; select what you need and install on demand:
+
+- [DSH Market](https://github.com/dsh-market/dsh-market) — browse, search, and one-click install community plugins (Recommended)
+- [DSH Better Sidebar](https://github.com/omdsh-dev/DSH-better-sidebar) — a VSCode-like right sidebar, isolated per session (Recommended)
+- [DSH Rewind](https://github.com/SiriLee/dsh-rewind) — in-window conversation rewind that never forks a new session, plus a lightweight workspace backup that restores files along with the rewind (Recommended)
+- [DSH-IM](https://github.com/xmanrui/dsh-im) — connect WeChat, Feishu, DingTalk, WeCom, QQ, Slack, Telegram, Discord, WhatsApp, iMessage and more to your local Harness, managed from an "IM" sidebar panel (Recommended)
+
+> The preset list is maintained by the desktop project. To request a new or updated preset, open an issue in [deepseek-harness-desktop](https://github.com/dsh-tauri/deepseek-harness-desktop/issues).
+
+## Built-in plugins
+
+First-party plugins bundled with the installer:
+
+- [DSH Tauri](https://github.com/dsh-tauri/deepseek-harness-desktop/tree/main/packages/dsh-tauri) — provides a communication channel with the Tauri 2 shell, and lets the cross-origin sandboxed WebView reach the loopback Host by overriding the desktop carrier's two authentication gates on the `connection` service
+- [DSH Tauri UI](https://github.com/dsh-tauri/deepseek-harness-desktop/tree/main/packages/dsh-tauri-ui) — provides a custom settings sidebar for the Tauri 2 shell
+- [DSH Tauri Worktree](https://github.com/dsh-tauri/deepseek-harness-desktop/tree/main/packages/dsh-tauri-worktree) — creates an isolated Git worktree per session, with checkout to a local branch or archive-and-abandon flows
+- [DSH Tauri Panel Extension](https://github.com/dsh-tauri/deepseek-harness-desktop/tree/main/packages/dsh-tauri-panel-extension) — Skills and MCP management with skill repository import, plus an embedded plugin market panel
+- [DSH Tauri Panel Scheduler](https://github.com/dsh-tauri/deepseek-harness-desktop/tree/main/packages/dsh-tauri-panel-scheduler) — creates daily, interval, weekday, and weekly scheduled tasks; runs them in independent Agent sessions and retains run history
+- [DSH Running Changes](https://github.com/dsh-tauri/deepseek-harness-desktop/tree/main/packages/dsh-tauri-running-changes) — records private Git snapshots per Agent turn and shows a running-changes chip above the input while a turn is in flight; restoring files is handled by the recommended dsh-rewind plugin
+- [DSH Tauri Session](https://github.com/dsh-tauri/deepseek-harness-desktop/tree/main/packages/dsh-tauri-session) — replaces workspace deletion with archiving and adds an Archived Chats settings page with search, sorting, grouping, project filtering, and unarchive support
+- [DSH Tauri Pet](https://github.com/dsh-tauri/deepseek-harness-desktop/tree/main/packages/dsh-tauri-pet) — manages Chat / Codex pets, preset downloads, resource-pack imports, and conversation activity states
+- [DSH Tauri Rightclick](https://github.com/dsh-tauri/deepseek-harness-desktop/tree/main/packages/dsh-tauri-rightclick) — native-style right-click context menus for sessions, workspaces, conversation text, links, and inputs
+- [DSH Tauri Model Config](https://github.com/dsh-tauri/deepseek-harness-desktop/tree/main/packages/dsh-tauri-model-config) — provides model selection and parameter configuration
+- More plugins coming soon...
+
+## Quick Start
+
+Download the installer for your platform from [Releases](https://github.com/dsh-tauri/deepseek-harness-desktop/releases), install, and launch.
+
+**macOS (Homebrew):** you can also install it in one command via Homebrew:
+
+```bash
+brew install dsh-tauri/desktop/deepseek-harness
+```
+
+The first run downloads the Node runtime and Harness core (if `dsh` is already installed, the installed version is used), then takes you straight into the harness at `http://127.0.0.1:3080`; after that everything runs locally — no network required.
+
+**System requirements:** Windows 10+ · macOS 10.15+ · Linux (AppImage / .deb) · network on first launch · Harness core **0.1.5-rc.1** or later
+
+> **Linux Wayland note (PikaOS / GNOME Wayland / Ubuntu 22.04+):** AppImage may crash or render black on Wayland due to WebKitGTK; the app auto-fixes the common case. <details><summary>If it still crashes / renders black:</summary><br>**Prefer `.deb`** (verified on PikaOS 4 Wayland), or manually run `WEBKIT_DISABLE_COMPOSITING_MODE=1 WEBKIT_DISABLE_DMABUF_RENDERER=1 GDK_BACKEND=x11 ./AppImage`. If icons do not appear, copy the app's `hicolor` icons to `~/.local/share/icons` and run `update-desktop-database`.<br></details>
+>
+> **Rolling-release Linux starts and dies at once (Arch / CachyOS / Fedora, …):** older AppImages bundled the build image's (Ubuntu 22.04) display-stack libs such as `libwayland-client`. A newer host Mesa is ABI-incompatible with them, so `WebKitWebProcess` calls `abort()` — the app shows **no window and no logs at all**. The build now strips these libs (see `.github/workflows/build-linux.yml` and `scripts/fix-appimage-host-libs.sh`); use a release built after that change. If you are still affected, use the `.deb`, or `LD_PRELOAD=/usr/lib/libwayland-client.so.0 ./AppImage` (adjust the path for your distro).
+
+## Community
+
+- [Join the Discord community](https://discord.gg/RT9As6Cj8B)
+
+<table>
+  <tr>
+    <td align="center"><strong>QQ Group</strong><br /><img src="./docs/images/community/qq-qrcode.jpg" width="360" alt="QQ group QR code" /></td>
+    <td align="center"><strong>WeChat Group</strong><br /><img src="./docs/images/community/wx-qrcode.png" width="360" alt="WeChat group QR code" /></td>
+  </tr>
+</table>
+
+## Dev
+
+Want to get involved in development? See [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md).
+
+## How It Works
+
+```text
+┌──────────────────────────────────────────────┐
+│ Tauri WebView (React)                        │
+│   setup state machine → progress → iframe    │
+│   loads the dsh web UI + sidebar controls    │
+└──────────────────────┬───────────────────────┘
+                       │ invoke commands + events
+┌──────────────────────┴───────────────────────┐
+│ Tauri Rust backend                           │
+│   service/download  installer + extraction   │
+│   service/core      Harness core versions    │
+│   service/profile   dsh profile management   │
+│   service/plugin    plugin remove / upgrade  │
+│   service/cli       dsh command shim + PATH  │
+│   service/update    desktop self-update      │
+│   service/workflow  dsh process lifecycle    │
+│   task              dsh health checks        │
+└──────┬───────────────────────────┬───────────┘
+       │                           │
+  runtime/ (Node.js v22.22.0)   dependencies/dsh/ (prebuilt bundle)
+       └─────────────┬─────────────┘
+                     ▼
+   dsh --profile <profile> --host 127.0.0.1 --port 3080
+                     │  DSH_HOME=~/.dsh
+                     ▼
+        http://127.0.0.1:3080/  ← embedded UI
+```
+
+The prebuilt Harness bundle is published by [deepseek-harness-pkg](https://github.com/dsh-tauri/deepseek-harness-pkg). Every launch compares against the latest release and prompts you to download the update when the local one is outdated — keeping the local install when GitHub is unreachable. A local core installed globally via the CLI is preferred when present.
+
+## Notes
+
+> [!WARNING]
+> **Developer preview** — upstream `dsh` is evolving fast with breaking changes; this project tracks it closely.
+
+> [!NOTE]
+> **Security** — `dsh` can execute code locally. For learning / research / testing only; run it in a trusted, isolated environment.
+
+## Related
+
+- [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) — the upstream `dsh` agent platform
+- [deepseek-harness-pkg](https://github.com/dsh-tauri/deepseek-harness-pkg) — prebuilt Harness bundles consumed by this app
+
+### Plugin data sources
+
+Remote assets and upstream catalogs that plugins reference at runtime:
+
+- [PC2005-cloud/dsh-pet](https://github.com/PC2005-cloud/dsh-pet) — preset pet media (WebM motions, preview GIFs, `config.jsonc`); `preset-pets.json` pins `e1ff8c1`
+- [dsh-tauri/dsh-pet-mov](https://github.com/dsh-tauri/dsh-pet-mov) — macOS HEVC-alpha `.mov` mirror (WKWebView does not support VP9-alpha), pinned to `be0f3bb`
+- [hairyf/dsh-pet-component](https://github.com/hairyf/dsh-pet-component) — pet rendering component (npm `dsh-pet-component`)
+
+### Plugin sub-repositories
+
+Reference repositories cloned under `source/` as plugins need them; most are not committed to this repository:
+
+- [PC2005-cloud/dsh-pet](https://github.com/PC2005-cloud/dsh-pet) — pet motion weights, continuous playback and bubble styling (submodule)
+- [Skylarking/dsh-plugin-codex-pets](https://github.com/Skylarking/dsh-plugin-codex-pets) — Codex pet atlases and session state mapping (submodule)
+- [ayangweb/BongoCat](https://github.com/ayangweb/BongoCat) — baseline for Tauri pet window, native dragging, DPI and mouse passthrough (submodule)
+- [QCYTSN/dsh-dafeiyu](https://github.com/QCYTSN/dsh-dafeiyu) — pet bubble copy and status priority reference (submodule)
+
+## License
+
+[MIT](./LICENSE) with a [Non-Commercial Condition](./LICENSE.details) © deepseek-harness-desktop contributors

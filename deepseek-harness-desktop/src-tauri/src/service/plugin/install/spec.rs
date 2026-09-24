@@ -1,0 +1,372 @@
+//! 安装 spec 准备：内置插件捆绑目录解析（`link:` 本地依赖——pnpm 对 `file:` 的
+//! 盘符绝对路径会按相对解析）、GitHub 简写规范化（绕开 pnpm 的 HTTPS→SSH 回退
+//! 缺陷）与 Windows 下含空格 spec 的引号化（dsh CLI 只在 win32 用 shell 拼接参数）。
+
+use std::path::PathBuf;
+use tauri::AppHandle;
+
+use super::bundled_dep_spec;
+use super::bundled_plugin_dir;
+use super::PreinstallPluginInfo;
+
+/// 内置插件才需要解析捆绑目录（普通插件无此概念），避免无谓的资源探测
+pub(super) fn bundled_dir_of(
+    app_handle: &AppHandle,
+    preset: &PreinstallPluginInfo,
+) -> Option<PathBuf> {
+    if !preset.internal {
+        return None;
+    }
+    bundled_plugin_dir(app_handle, &preset.id)
+}
+
+/// 解析某预设的安装 spec（纯函数，便于单测）：内置插件固定为随包捆绑目录的
+/// `link:` 本地依赖（pnpm 对 `file:` 的盘符绝对路径会按相对解析，故用 `link:`；
+/// 路径正确性由 [`crate::service::plugin::internal::ensure`] 启动自愈核对）；
+/// 普通插件沿用清单声明。
+///
+/// 捆绑目录缺失时返回错误：内置插件缺失意味着构建期 build:plugins 未执行或产物
+/// 被删，属发布缺陷而非用户侧的普通安装失败，错误前缀便于区分。
+pub(super) fn preset_spec_for_install(
+    preset: &PreinstallPluginInfo,
+    bundled_dir: Option<PathBuf>,
+) -> Result<String, String> {
+    if !preset.internal {
+        return Ok(preset.spec.clone());
+    }
+    let dir = bundled_dir.ok_or_else(|| {
+        format!(
+            "BUNDLED_PLUGIN_MISSING: no bundled dir for internal plugin {} (run pnpm build:plugins at build time)",
+            preset.id
+        )
+    })?;
+    Ok(bundled_dep_spec(&dir))
+}
+
+/// 把 `github:owner/repo[#ref]` 与裸 `git+ssh://git@github.com/...` 一类的
+/// GitHub 依赖 spec 规范为显式 HTTPS 依赖形式
+/// （`git+https://github.com/owner/repo.git[#ref]`）。
+///
+/// 动机：pnpm 解析 GitHub 简写时，「HTTPS 可达性探测一旦失败就回退 git+ssh」
+/// 是已知缺陷（issue #3948 / #7243 / #13276，官方已 accepted 仍未修）。公开仓库
+/// 一旦落进 git+ssh，在无 SSH 配置的桌面机上（非交互子进程无法应答 known_hosts
+/// 询问）必然硬失败。规范为显式 `git+https:` 后 pnpm 直接走 HTTPS 克隆，绕开该
+/// 回退。
+///
+/// 同时覆盖上游依赖锁定的裸 `git+ssh://git@github.com/owner/repo[.git][#ref]`
+/// spec（如 pnpm-lock 里 `github:` 被解析成的形态）：这类公开仓库经 SSH 拉取在
+/// 无 SSH 密钥的桌面机上同样必败（issue #369 的次要问题），一并改写为 HTTPS。
+/// 非 GitHub 形式（纯 npm 包名 / 其他主机的 git spec）原样返回。
+pub(super) fn normalize_git_spec(spec: &str) -> String {
+    // 兼容带 `#ref` fragment 的两种宿主形态：`github:owner/repo` 简写与
+    // `git+ssh://git@github.com/owner/repo[.git]` 裸 SSH URL
+    let rest = spec
+        .strip_prefix("github:")
+        .or_else(|| spec.strip_prefix("git+ssh://git@github.com/"));
+    let Some(rest) = rest else {
+        return spec.to_string();
+    };
+    let (path, fragment) = match rest.split_once('#') {
+        Some((p, f)) => (p.trim_end_matches('/'), Some(f)),
+        None => (rest.trim_end_matches('/'), None),
+    };
+    let mut repo = path.to_string();
+    if !repo.ends_with(".git") {
+        repo.push_str(".git");
+    }
+    let mut url = format!("git+https://github.com/{repo}");
+    if let Some(fragment) = fragment {
+        url.push('#');
+        url.push_str(fragment);
+    }
+    url
+}
+
+/// `dsh plugin` 仍把 pnpm 参数拼进 shell 的最后一个核心版本（开区间上界）。
+///
+/// 该版本起 `dsh plugin` 改经 `@deepseek-ai/dsh-plugin-manager`、用 execa 以
+/// **argv 数组**启动 pnpm，并在 Windows 上自行按 cmd 规则转义参数
+/// （`arguments/command-file.js`），spec 因此必须原样透传。
+const SHELL_JOINED_PNPM_CLI_BELOW: &str = "0.1.6-alpha.2";
+
+/// 活动核心的 `dsh plugin` 是否把 pnpm 参数拼成命令行交给 shell。
+///
+/// - `< 0.1.6-alpha.2`（0.1.5-rc.2 / 0.1.6-alpha.1 等）：JS 里
+///   `spawnSync("pnpm", args, { shell: process.platform === "win32" })`，Node 对
+///   `shell:true` 只按空格拼接、不做引号转义（DEP0190），含空格的 spec 不预加引号
+///   就会被切碎成多个 spec。
+/// - `>= 0.1.6-alpha.2`：参数作为单个 argv 直达 pnpm，spec 里的字面 `"` 会被当成
+///   包名的一部分 → `ERR_PNPM_SPEC_NOT_SUPPORTED_BY_ANY_RESOLVER`（issue #647）。
+///
+/// 版本读不到 / 解析失败时按新核心处理：预加引号对新核心是**必然失败**，不预加
+/// 引号只在「老核心 + 含空格安装路径」这一组合下失败。
+pub(super) fn joins_pnpm_args_in_shell(core_version: Option<&str>) -> bool {
+    let Ok(threshold) = semver::Version::parse(SHELL_JOINED_PNPM_CLI_BELOW) else {
+        return false;
+    };
+    core_version
+        .and_then(|version| semver::Version::parse(version).ok())
+        .is_some_and(|actual| actual < threshold)
+}
+
+/// 给含空白字符的依赖 spec 加内嵌双引号，使其在 shell 拼接后仍保持单一 token。
+///
+/// 只对「把参数拼进 shell 的老核心」且「Windows」成立：老核心在 win32 用
+/// `shell:true` 启动 pnpm，内置插件的 `link:<应用安装目录>` 一旦含空格就会被切碎
+/// （pnpm 报 `ERR_PNPM_SPEC_NOT_SUPPORTED`），包一层双引号让 cmd 把整条 spec 视为
+/// 单一 token；pnpm 解析后自行剥离引号，落盘 `package.json` 的值仍是不带引号的
+/// `link:<路径>`（与 [`bundled_dep_spec`] 的内核对账一致）。
+///
+/// 新核心与 macOS / Linux（老核心在 mac 上也是 `shell:false`）都是 argv 数组直达
+/// pnpm、空格天然保留，加引号反而把字面 `"` 当成包名的一部分传给 pnpm → 非法
+/// spec → exit 1，这是 issue #104 的根因（内置插件指向 `/Applications/Deepseek
+/// Harness Desktop.app/...`）。因此调用方必须经 [`spec_argument`] 按核心版本决定。
+pub(super) fn shell_quote_spec(spec: &str) -> String {
+    #[cfg(windows)]
+    {
+        if spec.chars().any(|c| c == ' ' || c == '\t') {
+            return format!("\"{spec}\"");
+        }
+    }
+    spec.to_string()
+}
+
+/// 传给 `dsh plugin add` 的最终参数：只有把参数拼进 shell 的老核心才预加引号
+/// （见 [`joins_pnpm_args_in_shell`] 与 [`shell_quote_spec`]）。
+pub(super) fn spec_argument(spec: &str, core_version: Option<&str>) -> String {
+    if joins_pnpm_args_in_shell(core_version) {
+        shell_quote_spec(spec)
+    } else {
+        spec.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    /// 构造预设条目的测试助手（internal 由各用例显式指定）
+    fn preset(id: &str, spec: &str, internal: bool) -> PreinstallPluginInfo {
+        PreinstallPluginInfo {
+            id: id.into(),
+            spec: spec.into(),
+            package: None,
+            name: String::new(),
+            description: String::new(),
+            repo_url: String::new(),
+            recommended: false,
+            fix: false,
+            default_checked: false,
+            default_unchecked: false,
+            dsh_supported_version: None,
+            version: None,
+            win_only: false,
+            internal,
+        }
+    }
+
+    #[test]
+    fn install_spec_passthrough_for_regular_preset() {
+        // 普通插件：spec 原样返回，与捆绑目录无关
+        let p = preset("dshmarket", "dshmarket", false);
+        assert_eq!(preset_spec_for_install(&p, None).unwrap(), "dshmarket");
+        assert_eq!(
+            preset_spec_for_install(&p, Some(PathBuf::from("/ignored"))).unwrap(),
+            "dshmarket"
+        );
+    }
+
+    #[test]
+    fn install_spec_uses_bundled_dir_for_internal_preset() {
+        // 内置插件：安装依赖为 link:<捆绑目录>（正斜杠规范形；pnpm 对
+        // `file:D:/...` 的盘符绝对路径会按相对解析，必须用 `link:`）
+        let p = preset("dsh-tauri", "dsh-tauri@0.2.0", true);
+        let dir = PathBuf::from("C:\\Apps\\dsh\\resources\\internal-plugins\\dsh-tauri");
+        assert_eq!(
+            preset_spec_for_install(&p, Some(dir)).unwrap(),
+            "link:C:/Apps/dsh/resources/internal-plugins/dsh-tauri"
+        );
+    }
+
+    #[test]
+    fn install_spec_errors_when_internal_bundle_missing() {
+        // 内置插件捆绑目录缺失：发布缺陷，显式报错而非静默走 npm/git spec
+        let p = preset("dsh-tauri", "dsh-tauri@0.2.0", true);
+        let err = preset_spec_for_install(&p, None).unwrap_err();
+        assert!(err.starts_with("BUNDLED_PLUGIN_MISSING"));
+        assert!(err.contains("dsh-tauri"));
+    }
+
+    // ---- git GitHub 简写规范化（issue #51 根因绕行）----
+
+    #[test]
+    fn normalize_github_shorthand_to_git_https() {
+        assert_eq!(
+            normalize_git_spec("github:baihejiangnan/dsh-session-context-menu"),
+            "git+https://github.com/baihejiangnan/dsh-session-context-menu.git"
+        );
+    }
+
+    #[test]
+    fn normalize_github_shorthand_preserves_ref_and_dedup_git_suffix() {
+        assert_eq!(
+            normalize_git_spec("github:omdsh-dev/DSH-better-sidebar#next"),
+            "git+https://github.com/omdsh-dev/DSH-better-sidebar.git#next"
+        );
+        // 已带 .git 不重复追加
+        assert_eq!(
+            normalize_git_spec("github:user/repo.git"),
+            "git+https://github.com/user/repo.git"
+        );
+        // 尾部多余斜杠剥掉
+        assert_eq!(
+            normalize_git_spec("github:user/repo/"),
+            "git+https://github.com/user/repo.git"
+        );
+    }
+
+    #[test]
+    fn normalize_ssh_github_url_to_git_https() {
+        // issue #369：裸 git+ssh://git@github.com/... spec（pnpm-lock 常见形态）
+        // 同样改写为 HTTPS，避免公开仓库经 SSH 拉取在无密钥桌面机上必败
+        assert_eq!(
+            normalize_git_spec("git+ssh://git@github.com/omdsh-dev/DSH-better-sidebar.git"),
+            "git+https://github.com/omdsh-dev/DSH-better-sidebar.git"
+        );
+        // 带 #ref 与不带 .git 后缀
+        assert_eq!(
+            normalize_git_spec("git+ssh://git@github.com/omdsh-dev/DSH-better-sidebar#next"),
+            "git+https://github.com/omdsh-dev/DSH-better-sidebar.git#next"
+        );
+    }
+
+    #[test]
+    fn normalize_non_github_spec_passes_through() {
+        assert_eq!(normalize_git_spec("dshmarket"), "dshmarket");
+        assert_eq!(
+            normalize_git_spec("git+https://github.com/foo/bar.git"),
+            "git+https://github.com/foo/bar.git"
+        );
+        // 非 GitHub 主机的 SSH spec 不受影响（只规范 GitHub 公开仓库）
+        assert_eq!(
+            normalize_git_spec("git+ssh://git@gitlab.com/foo/bar.git"),
+            "git+ssh://git@gitlab.com/foo/bar.git"
+        );
+    }
+
+    // ---- spec 引号化（仅老核心 + Windows：dsh CLI 只在 win32 用 shell 拼接参数）----
+
+    #[cfg(windows)]
+    #[test]
+    fn shell_quote_quotes_spec_containing_spaces() {
+        // 安装目录含空格（如 G:\Deepseek Harness Desktop）：整条 spec 加双引号，
+        // 使 dsh CLI 的 shell:true 拼接后仍被 shell 视为单一 token（DEP0190：
+        // Node 对 shell:true 只拼接不转义）
+        assert_eq!(
+            shell_quote_spec(
+                "link:G:/Deepseek Harness Desktop/resources/internal-plugins/dsh-tauri"
+            ),
+            "\"link:G:/Deepseek Harness Desktop/resources/internal-plugins/dsh-tauri\""
+        );
+        // 制表符同样触发
+        assert_eq!(shell_quote_spec("link:C:/x\ty"), "\"link:C:/x\ty\"");
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn shell_quote_leaves_space_path_untouched_on_non_windows() {
+        // 回归（issue #104）：macOS/Linux 上 dsh CLI 直接 spawnSync（shell:false），
+        // spec 作为一个 argv 传递、空格天然保留，绝不能加引号——字面 `"` 会成为
+        // 包名的一部分，pnpm 报非法 spec → exit 1 → 内置插件每次启动重装都失败。
+        assert_eq!(
+            shell_quote_spec("link:/Applications/Deepseek Harness Desktop.app/Contents/Resources/resources/internal-plugins/dsh-tauri-ui"),
+            "link:/Applications/Deepseek Harness Desktop.app/Contents/Resources/resources/internal-plugins/dsh-tauri-ui"
+        );
+        assert_eq!(
+            shell_quote_spec("link:/Users/me/my plugins/dsh-tauri"),
+            "link:/Users/me/my plugins/dsh-tauri"
+        );
+    }
+
+    #[test]
+    fn shell_quote_leaves_space_free_spec_untouched() {
+        // 普通 npm 包名 / git HTTPS spec 无空格：原样透传，不引入多余引号
+        assert_eq!(shell_quote_spec("dshmarket"), "dshmarket");
+        assert_eq!(
+            shell_quote_spec("git+https://github.com/omdsh-dev/DSH-better-sidebar.git#next"),
+            "git+https://github.com/omdsh-dev/DSH-better-sidebar.git#next"
+        );
+        // 无空格的内置插件路径同样不被改动（保持与 internal.rs expected 一致）
+        assert_eq!(
+            shell_quote_spec("link:C:/Apps/dsh/resources/internal-plugins/dsh-tauri"),
+            "link:C:/Apps/dsh/resources/internal-plugins/dsh-tauri"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn shell_quote_preserves_link_prefix_semantics() {
+        // 引号只包 path 部分也不影响 pnpm 解析（落盘值仍为不带引号的 link: 规范形）
+        let quoted = shell_quote_spec(
+            "link:G:/Deepseek Harness Desktop/resources/internal-plugins/dsh-tauri",
+        );
+        assert!(quoted.starts_with('"'));
+        assert!(quoted.ends_with('"'));
+        assert!(quoted.contains("Deepseek Harness Desktop"));
+    }
+
+    // ---- 引号化随核心版本（issue #647：0.1.6-alpha.2 起 pnpm 由 argv 数组启动）----
+
+    #[test]
+    fn shell_join_gate_boundary_versions() {
+        // 0.1.6-alpha.1 仍是 spawnSync + shell:true（首个 argv 数组版是 alpha.2）
+        assert!(joins_pnpm_args_in_shell(Some("0.1.5-rc.2")));
+        assert!(joins_pnpm_args_in_shell(Some("0.1.6-alpha.1")));
+        assert!(!joins_pnpm_args_in_shell(Some("0.1.6-alpha.2")));
+        assert!(!joins_pnpm_args_in_shell(Some("0.1.6")));
+        assert!(!joins_pnpm_args_in_shell(Some("0.1.7")));
+        assert!(!joins_pnpm_args_in_shell(Some("1.0.0")));
+        // 版本未知 / 非法：按新核心处理（预加引号对新核心必然失败）
+        assert!(!joins_pnpm_args_in_shell(None));
+        assert!(!joins_pnpm_args_in_shell(Some("")));
+        assert!(!joins_pnpm_args_in_shell(Some("not-a-version")));
+    }
+
+    #[test]
+    fn spec_argument_keeps_space_spec_bare_for_argv_cores() {
+        // issue #647：0.1.6-alpha.2 起 spec 作为单个 argv 直达 pnpm，Windows 上的
+        // cmd 转义由 CLI 自己完成，预加引号会让 pnpm 收到带字面引号的 spec
+        let spec = "link:D:/Deepseek Harness Desktop/resources/node_modules/dsh-tauri";
+        assert_eq!(spec_argument(spec, Some("0.1.6-alpha.2")), spec);
+        assert_eq!(spec_argument(spec, None), spec);
+        assert_eq!(spec_argument(spec, Some("not-a-version")), spec);
+        // 无空格 spec 与版本无关，始终原样透传
+        assert_eq!(spec_argument("dshmarket", Some("0.1.5-rc.2")), "dshmarket");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn spec_argument_quotes_space_spec_for_shell_joining_cores() {
+        // 回归：老核心把参数拼进 cmd，含空格的安装路径必须预加引号才不被切碎
+        let spec = "link:G:/Deepseek Harness Desktop/resources/internal-plugins/dsh-tauri";
+        assert_eq!(
+            spec_argument(spec, Some("0.1.5-rc.2")),
+            format!("\"{spec}\"")
+        );
+        assert_eq!(
+            spec_argument(spec, Some("0.1.6-alpha.1")),
+            format!("\"{spec}\"")
+        );
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn spec_argument_never_quotes_on_non_windows() {
+        // issue #104：macOS/Linux 上 dsh 直接 spawnSync（shell:false），spec 作为
+        // 单个 argv 传递、空格天然保留，老核心也不得加引号
+        let spec = "link:/Users/me/my plugins/dsh-tauri";
+        assert_eq!(spec_argument(spec, Some("0.1.5-rc.2")), spec);
+        assert_eq!(spec_argument(spec, Some("0.1.6-alpha.2")), spec);
+    }
+}
