@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" translate="no" class="notranslate">
 <head>
   <meta charset="UTF-8" />
+  <meta name="google" content="notranslate" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>夜窗 · 动态壁纸</title>
   <style>
@@ -363,6 +364,7 @@
 
     function showUi() {
       if (viewport.classList.contains("clean")) return;
+      hint.style.opacity = "0";
       panel.classList.add("show");
       window.clearTimeout(uiTimer);
       uiTimer = window.setTimeout(() => panel.classList.remove("show"), 2400);
