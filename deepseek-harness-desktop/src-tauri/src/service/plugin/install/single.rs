@@ -1,0 +1,744 @@
+//! 单插件升级/卸载：`dsh plugin --profile <当前档案> update/remove <id>`。
+//! 与安装共用环境准备（shim、pnpm 选版、停止服务）与 allowBuilds 重试；
+//! 卸载后核验 profile 清单，插件仍被引用时走离线卸载兜底（受保护包除外）。
+//! 另含启动期弃用插件自动卸载（`uninstall_deprecated_plugins`）。
+
+use std::collections::HashSet;
+use std::ffi::OsString;
+use std::path::Path;
+use tauri::{AppHandle, Emitter, Manager};
+
+use crate::config;
+use crate::service::cli;
+use crate::service::core;
+use crate::service::profile::active_profile;
+use crate::service::workflow;
+
+use super::artifact::{ensure_plugin_entry_built, installed_package_name};
+use super::build_plugin_envs;
+use super::diagnose::{
+    git_transport_hint, network_error_hint, pick_error_message, store_mismatch_hint,
+};
+use super::errors;
+use super::installed_name;
+use super::is_actionable_plugin_ref;
+use super::is_installed;
+use super::load_deprecated_ids;
+use super::load_presets;
+use super::new_process_owner;
+use super::pnpm::ensure_pnpm;
+use super::profile_dir;
+use super::run_plugin_with_allow_build_retry;
+use super::uninstall_recovery;
+use super::PreinstallPluginInfo;
+use super::{PreinstallLogPayload, PREINSTALL_LOG_EVENT};
+
+pub async fn update(app_handle: &AppHandle, id: &str) -> Result<(), String> {
+    run_single_plugin_command(app_handle, id, "update", &update_pnpm_args(id)).await
+}
+
+/// 升级时转发给 pnpm 的参数：`update <id> --latest`。
+///
+/// `--latest` 不能省：profile 里的依赖 spec 通常是范围（`catalog:` 或 `^x.y.z`），
+/// 裸 `pnpm update` 只在声明范围内取值——档案的 spec 是 `catalog:` 时范围来自
+/// `pnpm-workspace.yaml` 的 catalog 条目，条目钉在旧版本上（`^0.18.1` 之于 0.19.0，
+/// 0.x 的 caret 不含次版本）就会直接打印 `Already up to date` 并以 0 退出，桌面端
+/// 据此报「升级成功」而版本纹丝不动。加 `--latest` 才允许 pnpm 越过声明范围，并由
+/// pnpm 自己把 catalog 条目改写到新版本；git spec 不受影响（`--latest` 不会把
+/// `github:owner/repo` 退化成 semver 范围，实测原样保留）。
+fn update_pnpm_args(id: &str) -> Vec<String> {
+    vec!["update".to_string(), id.to_string(), "--latest".to_string()]
+}
+
+/// 依赖的「解析指纹」：profile `pnpm-lock.yaml` 当前 importer（`importers["."]`）
+/// 中该直接依赖的 `specifier @ version`；该依赖不在 lock 里时回落到
+/// `node_modules/<id>/package.json` 的实际版本。
+///
+/// 用途是核验升级是否真的落地（见 [`run_single_plugin_command`]）：pnpm 可能以 0
+/// 退出却什么都没装，而「什么都没装」在两种依赖上表现不同——registry 依赖是版本号
+/// 不变，git 依赖是版本号本来就可能不变（插件不 bump version）而只有 lock 里的
+/// codeload 提交变化。因此指纹取 lock 的解析结果，两种依赖都能识别。
+/// 两侧都读不到时返回 `None`，调用方跳过核验：绝不用不确定的读数误报升级失败。
+fn dependency_fingerprint(profile: &Path, id: &str) -> Option<String> {
+    if let Some(entry) = lock_dependency_entry(profile, id) {
+        return Some(entry);
+    }
+    installed_package_version(profile, id).map(|version| format!("{id}@{version}"))
+}
+
+/// `pnpm-lock.yaml` 当前 importer 中该直接依赖的 `specifier @ version`。
+///
+/// 必须经 importer 归属（与 [`super::update`] 读取 Git 锁定提交的口径一致）：全局
+/// 扫描会把同名传递依赖的解析结果算进来，指纹就会因无关依赖变动而抖动。
+/// lock 缺失、损坏或结构不是预期形态时返回 `None`（交由调用方跳过核验）。
+fn lock_dependency_entry(profile: &Path, id: &str) -> Option<String> {
+    let text = std::fs::read_to_string(profile.join("pnpm-lock.yaml")).ok()?;
+    let lockfile: serde_yaml::Value = serde_yaml::from_str(&text).ok()?;
+    let dependency = lockfile
+        .get("importers")?
+        .get(".")?
+        .get("dependencies")?
+        .get(id)?;
+    let specifier = dependency
+        .get("specifier")
+        .and_then(serde_yaml::Value::as_str)
+        .unwrap_or_default();
+    let version = dependency
+        .get("version")
+        .and_then(serde_yaml::Value::as_str)
+        .unwrap_or_default();
+    Some(format!("{specifier} @ {version}"))
+}
+
+/// `node_modules/<id>/package.json` 声明的版本（缺失或损坏返回 `None`）。
+fn installed_package_version(profile: &Path, id: &str) -> Option<String> {
+    let path = profile.join("node_modules").join(id).join("package.json");
+    let content = std::fs::read_to_string(path).ok()?;
+    let manifest: serde_json::Value = serde_json::from_str(&content).ok()?;
+    manifest.get("version")?.as_str().map(String::from)
+}
+
+/// 卸载单个插件：`dsh plugin --profile <当前档案> remove <id>`
+pub async fn remove(app_handle: &AppHandle, id: &str) -> Result<(), String> {
+    let command_result = run_single_plugin_command(
+        app_handle,
+        id,
+        "remove",
+        &["remove".to_string(), id.to_string()],
+    )
+    .await;
+    // `dsh plugin remove` 以子进程退出码为准，可能出现「命令成功但插件仍在」的
+    // 边界（如 bundle 层残留、pnpm 静默失败）；node_modules / lockfile 损坏时
+    // （典型：安装只写入了 profile 清单而产物缺失，见 issue #90）pnpm 甚至会
+    // 直接失败。两种情形统一核验 profile 清单：只要插件仍被引用就回落离线卸载
+    // （直接改清单 + 删目录 + 清 lockfile），确保插件真正移除
+    // （参考 dsh-market 的「卸载后核验」约定：确认插件离开 profile 才算成功）。
+    if is_installed(app_handle, id) {
+        // 第三方可卸载插件才允许离线兜底；核心/官方等受保护包即使残留也不强删
+        // （`uninstall_recovery` 对它们会拒绝）。
+        if is_actionable_plugin_ref(id) {
+            let outcome = match &command_result {
+                Ok(()) => "reported success".to_string(),
+                Err(e) => format!("failed: {e}"),
+            };
+            log::warn!(
+                "dsh plugin remove {outcome} but {id} is still referenced by profile manifest; forcing offline uninstall"
+            );
+            uninstall_recovery(app_handle, id)?;
+            // 离线兜底成功：插件已真正从 profile 移除，清除历史错误，避免前端
+            // 残留异常标记（best-effort）。
+            if let Err(e) = errors::clear(app_handle, id) {
+                log::warn!("failed to clear plugin error for {id}: {e}");
+            }
+        } else {
+            // 受保护包：命令失败则如实上报（不要把失败误报为成功），成功则仅告警。
+            command_result?;
+            log::warn!(
+                "dsh plugin remove reported success but protected package {id} is still referenced by profile manifest; skipping offline uninstall"
+            );
+        }
+    }
+    // 卸载级联清理单插件快照（best-effort）：插件已移除，快照随之失效
+    // （issue #303：卸载后删除快照，避免残留孤儿快照占用存储）。
+    super::super::snapshot::delete_best_effort(app_handle, id);
+    Ok(())
+}
+
+/// 计算需要自动卸载的弃用插件已安装包名（纯函数，便于单测）。
+///
+/// 命中条件：id 登记在弃用清单（`resources/deprecated-plugins.json`，见
+/// [`super::super::preset::load_deprecated_ids`]）且当前已安装。返回实际安装包名
+/// ——离线卸载（`uninstall_recovery`）以它为键从 profile 清单与 `node_modules`
+/// 精准移除（scoped 包名与预设 id 不一致时也能正确卸载）。
+///
+/// 两条来源缺一不可：
+/// 1. 预设仍声明该 id：以 `installed_name`（实际 npm 包名）为准；内部插件由启动
+///    自愈强制安装，不适用弃用语义，跳过。
+/// 2. 兜底——预设清单已不存在该 id（被整体删除，如 `dsh-tauri-panel` 并入核心后
+///    从 `internal-plugins.json` 移除）：此时按弃用清单登记的 id 本身核对。少了
+///    这一步，弃用名单对「连预设条目一起删掉」的插件永远无效，其 `link:` 目标还会
+///    因安装目录残留而躲过失效链接清理，残留 bundle 直接拖垮启动。
+fn deprecated_installed_names(
+    presets: &[PreinstallPluginInfo],
+    deprecated_ids: &HashSet<String>,
+    unsupported_ids: &HashSet<String>,
+    installed: impl Fn(&str) -> bool,
+    installed_version: impl Fn(&str) -> Option<String>,
+) -> Vec<String> {
+    let mut names: Vec<String> = presets
+        .iter()
+        .filter(|p| {
+            let name = installed_name(p);
+            if !installed(name) {
+                return false;
+            }
+            if !p.internal && deprecated_ids.contains(&p.id) {
+                return true;
+            }
+            if !unsupported_ids.contains(&p.id) {
+                return false;
+            }
+            let Some(limit) = p.version.as_deref() else {
+                return true;
+            };
+            let Some(actual) = installed_version(name) else {
+                return false;
+            };
+            match (
+                semver::Version::parse(&actual),
+                semver::Version::parse(limit),
+            ) {
+                (Ok(actual), Ok(limit)) => !actual.cmp_precedence(&limit).is_gt(),
+                _ => false,
+            }
+        })
+        .map(|p| installed_name(p).to_string())
+        .collect();
+    for id in deprecated_ids {
+        if presets.iter().any(|p| p.id == *id) {
+            continue;
+        }
+        if installed(id) {
+            names.push(id.clone());
+        }
+    }
+    names.sort();
+    names.dedup();
+    names
+}
+
+/// 弃用插件在 profile 中的残留判定：清单引用或 `node_modules` 入口。
+///
+/// 入口用 `symlink_metadata` 判定：junction / 符号链接的目标目录消失时 `exists()`
+/// 返回 false，但入口本身仍是 profile 解析路径上的残留，必须能被识别并清掉
+/// （`uninstall_recovery` 对已清空清单的 id 幂等，只清入口与 patch 层）。
+fn deprecated_residue_present(app_handle: &AppHandle, name: &str) -> bool {
+    is_installed(app_handle, name)
+        || std::fs::symlink_metadata(profile_dir(app_handle).join("node_modules").join(name))
+            .is_ok()
+}
+
+pub(crate) async fn uninstall_deprecated_plugins(app_handle: &AppHandle) -> Result<(), String> {
+    let presets = load_presets(app_handle);
+    let core_version = core::active_version(app_handle);
+    let deprecated_ids = load_deprecated_ids(app_handle);
+    let mut unsupported_ids: HashSet<String> = HashSet::new();
+    for preset in &presets {
+        if preset.unsupported_on(core_version.as_deref()) {
+            unsupported_ids.insert(preset.id.clone());
+        }
+    }
+    let profile = profile_dir(app_handle);
+    let names = deprecated_installed_names(
+        &presets,
+        &deprecated_ids,
+        &unsupported_ids,
+        |name| deprecated_residue_present(app_handle, name),
+        |name| installed_package_version(&profile, name),
+    );
+    if names.is_empty() {
+        return Ok(());
+    }
+    log::info!("uninstalling deprecated preset plugins: {names:?}");
+    let mut failures = Vec::new();
+    for name in &names {
+        log::info!("DEPRECATED_PLUGIN_UNINSTALL: removing deprecated plugin {name}");
+        if let Err(e) = uninstall_recovery(app_handle, name) {
+            log::warn!("DEPRECATED_PLUGIN_UNINSTALL_FAILED: {name}: {e}");
+            failures.push(format!("{name}: {e}"));
+        }
+    }
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "DEPRECATED_PLUGIN_UNINSTALL_FAILED: {}",
+            failures.join("; ")
+        ))
+    }
+}
+
+/// 执行单个插件的升级/卸载：准备环境 → 停止服务 → 运行 `dsh plugin` →
+/// 失败记录错误、成功清除错误。
+async fn run_single_plugin_command(
+    app_handle: &AppHandle,
+    id: &str,
+    action: &str,
+    sub_args: &[String],
+) -> Result<(), String> {
+    if id.is_empty() {
+        return Err("PLUGIN_EMPTY_ID: plugin id is empty".to_string());
+    }
+    let window = app_handle
+        .get_webview_window("main")
+        .ok_or("WINDOW_NOT_FOUND: main window missing")?;
+
+    cli::ensure_shims(app_handle)?;
+
+    let node = config::get_node_binary_path(app_handle);
+    let dsh_bin = core::active_dsh_binary(app_handle);
+    if !node.exists() {
+        return Err("NODE_NOT_FOUND: Node.js runtime missing".to_string());
+    }
+    if !dsh_bin.exists() {
+        return Err("HARNESS_NOT_FOUND: dsh CLI missing".to_string());
+    }
+
+    let owner = new_process_owner();
+    let prefer_bundled_pnpm = ensure_pnpm(app_handle, &window, owner).await?;
+    // `.npmrc` 可能在服务启动后被删除；升级/卸载同样可能触发 pnpm 非交互清理。
+    super::ensure_profile_npmrc(app_handle)?;
+    // 与批量安装保持一致：旧档案也必须具备精确的 release-age 例外，
+    // 否则升级/卸载触发 pnpm lockfile 校验时同样会被 issue #222 的问题阻断。
+    super::ensure_profile_pnpm_policy(app_handle)?;
+    // 插件操作会改写 profile，先停止运行中的服务（与安装一致）。
+    // 记录停服结果：停服失败意味着服务可能仍在运行、插件目录可能被写入，
+    // 此时创建快照会捕获不一致状态，因此停服失败时跳过快照（不终止升级）。
+    let mut stopped = true;
+    if workflow::has_owned_process() {
+        let _ = window.emit(
+            PREINSTALL_LOG_EVENT,
+            PreinstallLogPayload {
+                line: format!("[harness] 正在停止运行中的服务（{action}插件需要短暂重启）…"),
+            },
+        );
+        stopped = match workflow::stop(app_handle.clone()).await {
+            Ok(()) => true,
+            Err(e) => {
+                log::warn!("failed to stop harness before plugin {action}: {e}");
+                false
+            }
+        };
+    }
+    // 升级前自动快照当前版本（覆盖式），失败仅告警不阻断升级。
+    // 仅在服务已确认停止后执行：服务运行期间插件目录可能被写入，先停服保证快照一致
+    // （issue #303：自动快照失败不阻塞主流程；还原入口在插件面板）。
+    if action == "update" && stopped {
+        super::super::snapshot::create_best_effort(app_handle, id);
+    }
+
+    let envs = build_plugin_envs(app_handle, prefer_bundled_pnpm);
+
+    // 升级前的依赖解析指纹：升级命令以 0 退出后用它核验是否真的落地
+    // （见下方 `action == "update"` 分支的假成功核验）。非升级动作不需要。
+    let before_fingerprint = if action == "update" {
+        dependency_fingerprint(&profile_dir(app_handle), id)
+    } else {
+        None
+    };
+
+    let mut args = vec![
+        dsh_bin.as_os_str().to_os_string(),
+        OsString::from("plugin"),
+        OsString::from("--profile"),
+        OsString::from(active_profile(app_handle)),
+        OsString::from(action),
+    ];
+    args.extend(sub_args.iter().map(OsString::from));
+
+    let cwd = config::get_dsh_install_path(app_handle);
+    log::info!("Running dsh plugin {action} for {id}");
+    let (exit_code, output) = run_plugin_with_allow_build_retry(
+        app_handle, &node, &args, &cwd, &envs, &window, action, None, owner,
+    )
+    .await?;
+
+    if exit_code != 0 {
+        log::error!("dsh plugin {action} failed for {id} with exit code {exit_code}");
+        let network_error =
+            network_error_hint(&output).is_some() || (exit_code == 3 && output.trim().is_empty());
+        let store_hint = store_mismatch_hint(&output);
+        let message = if network_error {
+            "NETWORK_ERROR: plugin registry request failed; check network or proxy settings and retry."
+                .to_string()
+        } else if let Some(store_hint) = store_hint.as_deref() {
+            store_hint.to_string()
+        } else {
+            pick_error_message(&output, git_transport_hint(&output))
+        };
+        if let Err(e) = errors::record(app_handle, id, action, &message) {
+            log::warn!("failed to record plugin error for {id}: {e}");
+        }
+        if network_error {
+            return Err("NETWORK_ERROR: plugin registry request failed; check network or proxy settings and retry.".to_string());
+        }
+        // 与批量安装一致：把 pnpm 因 store 布局不匹配给出的两条路径补进错误里
+        if let Some(store_hint) = store_hint {
+            log::warn!("pnpm store incompatibility detected during plugin {action}: {store_hint}");
+            return Err(format!(
+                "PLUGIN_{}_FAILED: dsh plugin exited with code {exit_code} ({store_hint})",
+                action.to_uppercase()
+            ));
+        }
+        return Err(format!(
+            "PLUGIN_{}_FAILED: dsh plugin exited with code {exit_code}",
+            action.to_uppercase()
+        ));
+    }
+
+    // 成功：清除历史错误；卸载 win-terminal-inspector 时顺带清理 patch 挂载
+    if let Err(e) = errors::clear(app_handle, id) {
+        log::warn!("failed to clear plugin error for {id}: {e}");
+    }
+    // 升级路径与安装一致地核验构建产物：git 托管插件升级后同样可能停在
+    // 「prepare 未构建 → 声明入口缺失」坏态，若不拦截，下一次启动即崩溃
+    // （见 [`ensure_plugin_entry_built`]）。包名先解析（预设 package 覆盖 /
+    // 清单依赖 basename），解析不到时跳过核验（警告即可，不误杀成功更新）。
+    if action == "update" {
+        // 假成功核验：pnpm 以 0 退出、但该依赖的解析结果与升级前完全一致，说明这次
+        // 升级没有落地（典型：档案 spec 是 `catalog:`，范围被 catalog 条目钉死）。
+        // 必须如实报错——报成功会让用户以为已在新版本上、实际仍在旧版本，比报失败
+        // 更难发现（与 [`remove`] 的「卸载后核验」同理）。
+        if let Some(before) = before_fingerprint.as_deref() {
+            if dependency_fingerprint(&profile_dir(app_handle), id).as_deref() == Some(before) {
+                let detail = installed_package_version(&profile_dir(app_handle), id)
+                    .unwrap_or_else(|| before.to_string());
+                let message = format!(
+                    "PLUGIN_UPDATE_NO_CHANGE: pnpm exited successfully but {id} is still at {detail}; the profile pins this dependency (for example a `catalog:` entry in pnpm-workspace.yaml), so the upgrade did not take effect"
+                );
+                log::error!("dsh plugin update made no change for {id}: {detail}");
+                if let Err(e) = errors::record(app_handle, id, action, &message) {
+                    log::warn!("failed to record plugin error for {id}: {e}");
+                }
+                return Err(message);
+            }
+        }
+        let Some(name) = installed_package_name(app_handle, id) else {
+            log::warn!("plugin {id} not resolvable to a package name, skipping entry verify");
+            return Ok(());
+        };
+        let pkg_dir = profile_dir(app_handle).join("node_modules").join(name);
+        if let Err(e) = ensure_plugin_entry_built(app_handle, id, &pkg_dir, &envs, &window).await {
+            if let Err(err) = errors::record(app_handle, id, action, &e) {
+                log::warn!("failed to record plugin error for {id}: {err}");
+            }
+            return Err(e);
+        }
+    }
+    if action == "remove" && id == "dsh-win-terminal-inspector" {
+        if let Err(e) = workflow::win_inspector::apply(app_handle) {
+            log::warn!("win inspector patch prune failed after remove: {e}");
+        }
+    }
+    log::info!("dsh plugin {action} succeeded for {id}");
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    /// 测试入口：只关心弃用清单时补一个空的 unsupported 集合。
+    fn deprecated_names(
+        presets: &[PreinstallPluginInfo],
+        ids: &HashSet<String>,
+        installed: impl Fn(&str) -> bool,
+    ) -> Vec<String> {
+        deprecated_installed_names(presets, ids, &HashSet::new(), installed, |_| None)
+    }
+
+    /// 内置插件被核心吸收后同样退役：只靠 `dshSupportedVersion` 判定，弃用清单不参与。
+    #[test]
+    fn unsupported_internal_entry_is_uninstalled() {
+        let internal = preset("dsh-internal", "dsh-tauri@0.2.0", true);
+        let unsupported: HashSet<String> = ["dsh-internal"].into_iter().map(String::from).collect();
+        assert_eq!(
+            deprecated_installed_names(
+                &[internal],
+                &HashSet::new(),
+                &unsupported,
+                |name| name == "dsh-internal",
+                |_| None,
+            ),
+            vec!["dsh-internal".to_string()]
+        );
+    }
+
+    fn preset(id: &str, spec: &str, internal: bool) -> PreinstallPluginInfo {
+        PreinstallPluginInfo {
+            id: id.into(),
+            spec: spec.into(),
+            package: None,
+            name: String::new(),
+            description: String::new(),
+            repo_url: String::new(),
+            recommended: false,
+            fix: false,
+            default_checked: false,
+            default_unchecked: false,
+            dsh_supported_version: None,
+            version: None,
+            win_only: false,
+            internal,
+        }
+    }
+
+    #[test]
+    fn unsupported_cleanup_respects_installed_version_cap() {
+        for (cap, actual, remove) in [
+            (Some("1.2.0"), Some("1.1.9"), true),
+            (Some("1.2.0"), Some("1.2.0"), true),
+            (Some("1.2.0"), Some("1.2.1"), false),
+            (Some("1.2.0"), Some("1.10.0"), false),
+            (Some("1.2.0"), Some("1.2.0-rc.2"), true),
+            (Some("1.2.0-rc.2"), Some("1.2.0-rc.10"), false),
+            (Some("1.2.0-rc.2"), Some("1.2.0"), false),
+            (Some("1.2.0"), Some("1.2.0+reinstalled"), true),
+            (Some("1.2.0+original"), Some("1.2.0+rebuilt"), true),
+            (Some("1.2.0"), None, false),
+            (Some("1.2.0"), Some("invalid"), false),
+            (Some("invalid"), Some("1.2.0"), false),
+            (Some(""), Some("1.2.0"), false),
+            (None, Some("9.0.0"), true),
+            (None, None, true),
+        ] {
+            let mut entry = preset("probe", "@scope/probe", false);
+            entry.package = Some("@scope/probe".into());
+            entry.version = cap.map(String::from);
+            entry.dsh_supported_version = Some("0.1.7".into());
+            for core in [
+                None,
+                Some("invalid"),
+                Some("0.1.6"),
+                Some("0.1.7"),
+                Some("0.1.8"),
+            ] {
+                let unsupported = if entry.unsupported_on(core) {
+                    HashSet::from([entry.id.clone()])
+                } else {
+                    HashSet::new()
+                };
+                let names = deprecated_installed_names(
+                    &[entry.clone()],
+                    &HashSet::new(),
+                    &unsupported,
+                    |name| name == "@scope/probe",
+                    |name| {
+                        assert_eq!(name, "@scope/probe");
+                        actual.map(String::from)
+                    },
+                );
+                let expected = if remove && core == Some("0.1.8") {
+                    vec!["@scope/probe".to_string()]
+                } else {
+                    Vec::new()
+                };
+                assert_eq!(
+                    names, expected,
+                    "core={core:?}, cap={cap:?}, actual={actual:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn explicit_deprecation_still_removes_versions_above_cap() {
+        let mut entry = preset("probe", "probe", false);
+        entry.version = Some("1.2.0".into());
+        let ids = HashSet::from(["probe".to_string()]);
+        assert_eq!(
+            deprecated_installed_names(&[entry], &ids, &ids, |_| true, |_| Some("2.0.0".into()),),
+            vec!["probe".to_string()]
+        );
+    }
+
+    #[test]
+    fn unsupported_cleanup_reads_actual_scoped_package_version() {
+        let dir = probe_profile("cleanup-version", LOCK_CATALOG, Some("0.18.1"));
+        let package = dir.join("node_modules/@scope/probe");
+        std::fs::create_dir_all(&package).unwrap();
+        std::fs::write(
+            package.join("package.json"),
+            r#"{"name":"@scope/probe","version":"2.0.0"}"#,
+        )
+        .unwrap();
+        let mut entry = preset("probe", "@scope/probe", false);
+        entry.package = Some("@scope/probe".into());
+        entry.version = Some("1.2.0".into());
+        let unsupported = HashSet::from(["probe".to_string()]);
+        let names = deprecated_installed_names(
+            &[entry],
+            &HashSet::new(),
+            &unsupported,
+            |_| true,
+            |name| installed_package_version(&dir, name),
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert!(
+            names.is_empty(),
+            "newer installed scoped package must be preserved"
+        );
+    }
+
+    #[test]
+    fn deprecated_installed_only_picks_marked_and_installed() {
+        // 三个弃用条目都在预设清单里声明（预设驱动的常规路径），逐个区分命中。
+        let deprecated: HashSet<String> = ["dsh-ok", "dsh-scoped", "dsh-not-installed"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let mut scoped = preset("dsh-scoped", "github:x/y", false);
+        scoped.package = Some("@scope/deprecated".into());
+        let declared = vec![
+            preset("dsh-ok", "dshmarket", false),
+            scoped,
+            preset("dsh-not-installed", "dshmarket", false),
+        ];
+
+        // 命中：登记且已安装 → 返回实际安装包名（dsh-ok 未声明 package，回落 id）
+        let only_ok = |name: &str| name == "dsh-ok";
+        assert_eq!(
+            deprecated_names(&declared, &deprecated, only_ok),
+            vec!["dsh-ok".to_string()]
+        );
+
+        // scoped 包：返回真实安装包名（与预设 id 不一致）
+        let only_scoped = |name: &str| name == "@scope/deprecated";
+        assert_eq!(
+            deprecated_names(&declared, &deprecated, only_scoped),
+            vec!["@scope/deprecated".to_string()]
+        );
+
+        // 登记了但未安装：不命中
+        assert!(deprecated_names(&declared, &deprecated, |_| false).is_empty());
+
+        // 未登记弃用：即使已安装也不命中
+        let plain = preset("dsh-plain", "dsh-plain", false);
+        assert!(deprecated_names(&[plain], &deprecated, |name| name == "dsh-plain").is_empty());
+
+        // 内部插件即使登记弃用也不命中（内部插件由启动自愈强制安装）
+        let internal = preset("dsh-internal", "dsh-tauri@0.2.0", true);
+        assert!(deprecated_names(&[internal], &deprecated, |name| matches!(
+            name,
+            "dsh-internal"
+        ))
+        .is_empty());
+    }
+
+    #[test]
+    fn deprecated_installed_falls_back_when_preset_entry_removed() {
+        // 弃用条目已从预设清单整体删除（dsh-tauri-panel 并入核心后从
+        // internal-plugins.json 移除）：预设驱动的循环命中不到，兜底按 id 卸载。
+        let removed: HashSet<String> = ["dsh-tauri-panel"].into_iter().map(String::from).collect();
+
+        assert_eq!(
+            deprecated_names(&[], &removed, |name| name == "dsh-tauri-panel"),
+            vec!["dsh-tauri-panel".to_string()]
+        );
+
+        // 清单里根本没有弃用条目：即使同名包已安装也不命中
+        assert!(
+            deprecated_names(&[], &HashSet::new(), |name| name == "dsh-tauri-panel").is_empty()
+        );
+
+        // 仍被预设声明（内部插件由自愈强制安装）：不走兜底，避免与自愈互相拉扯
+        assert!(deprecated_names(
+            &[preset("dsh-tauri-panel", "dsh-tauri@0.2.0", true)],
+            &removed,
+            |name| name == "dsh-tauri-panel"
+        )
+        .is_empty());
+    }
+
+    // ---- 升级参数与「假成功」核验 ----
+
+    #[test]
+    fn update_args_request_latest() {
+        // 回归锚点：缺了 `--latest`，pnpm 只在声明范围内取值。档案把依赖钉在
+        // `catalog:` 条目上时（catalog `^0.18.1` 之于 0.19.0），升级会退化成
+        // 「退出码 0 但什么都没装」的假成功——正是 sidebar 0.18.1→0.19.0 不生效的根因。
+        assert_eq!(
+            update_pnpm_args("dsh-better-sidebar"),
+            vec!["update", "dsh-better-sidebar", "--latest"]
+        );
+    }
+
+    /// 造一个最小 profile：写入 `pnpm-lock.yaml` 与 `node_modules/dsh-probe/package.json`。
+    fn probe_profile(label: &str, lock: &str, installed: Option<&str>) -> std::path::PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("dsh-plugin-fp-{}-{label}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("node_modules").join("dsh-probe")).unwrap();
+        std::fs::write(dir.join("pnpm-lock.yaml"), lock).unwrap();
+        if let Some(version) = installed {
+            std::fs::write(
+                dir.join("node_modules")
+                    .join("dsh-probe")
+                    .join("package.json"),
+                format!(r#"{{"name":"dsh-probe","version":"{version}"}}"#),
+            )
+            .unwrap();
+        }
+        dir
+    }
+
+    /// catalog 依赖的 lock 形态（与真实档案一致：specifier 是 `catalog:`，version 是解析结果）
+    const LOCK_CATALOG: &str = "lockfileVersion: '9.0'\n\nimporters:\n\n  .:\n    dependencies:\n      dsh-probe:\n        specifier: 'catalog:'\n        version: 0.18.1\n";
+
+    #[test]
+    fn fingerprint_uses_current_importer_entry() {
+        let dir = probe_profile("entry", LOCK_CATALOG, Some("0.18.1"));
+        assert_eq!(
+            dependency_fingerprint(&dir, "dsh-probe").as_deref(),
+            Some("catalog: @ 0.18.1")
+        );
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn fingerprint_changes_when_resolved_version_moves() {
+        // 升级真的落地 → 指纹必须变化；否则会把成功误判成「假成功」而报错
+        let before = probe_profile("bump-before", LOCK_CATALOG, Some("0.18.1"));
+        let after = probe_profile(
+            "bump-after",
+            &LOCK_CATALOG.replace("version: 0.18.1", "version: 0.19.0"),
+            Some("0.19.0"),
+        );
+        assert_ne!(
+            dependency_fingerprint(&before, "dsh-probe"),
+            dependency_fingerprint(&after, "dsh-probe")
+        );
+        std::fs::remove_dir_all(&before).ok();
+        std::fs::remove_dir_all(&after).ok();
+    }
+
+    #[test]
+    fn fingerprint_detects_git_commit_change_with_stable_version() {
+        // git 依赖：插件不 bump version，只有 lock 里的 codeload 提交变化。
+        // 指纹必须仍能识别（否则 git 插件的正常升级会被误报为假成功）。
+        let lock = |sha: &str| {
+            format!("lockfileVersion: '9.0'\n\nimporters:\n\n  .:\n    dependencies:\n      dsh-probe:\n        specifier: 'catalog:'\n        version: https://codeload.github.com/o/r/tar.gz/{sha}\n")
+        };
+        let before = probe_profile("git-before", &lock("aaaaaaaaaaaaaaaa"), Some("0.2.21"));
+        let after = probe_profile("git-after", &lock("bbbbbbbbbbbbbbbb"), Some("0.2.21"));
+        assert_ne!(
+            dependency_fingerprint(&before, "dsh-probe"),
+            dependency_fingerprint(&after, "dsh-probe")
+        );
+        std::fs::remove_dir_all(&before).ok();
+        std::fs::remove_dir_all(&after).ok();
+    }
+
+    #[test]
+    fn fingerprint_falls_back_to_installed_version() {
+        // lock 里没有该依赖（或 lock 不可用）→ 回落到 node_modules 版本，
+        // 「版本没动」这一假成功形态仍然可识别
+        let dir = probe_profile(
+            "fallback",
+            "lockfileVersion: '9.0'\n\nimporters:\n\n  .:\n    dependencies: {}\n",
+            Some("0.18.1"),
+        );
+        assert_eq!(
+            dependency_fingerprint(&dir, "dsh-probe").as_deref(),
+            Some("dsh-probe@0.18.1")
+        );
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn fingerprint_is_none_when_nothing_is_readable() {
+        // 两侧都读不到 → None，调用方跳过核验：不确定时绝不误报升级失败
+        let dir = probe_profile("unreadable", "", None);
+        assert_eq!(dependency_fingerprint(&dir, "dsh-probe"), None);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+}
