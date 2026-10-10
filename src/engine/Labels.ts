@@ -64,6 +64,12 @@ export class LabelSystem {
   private visible = new Set<string>();
   /** Screen positions of interactive labels from the last frame (for canvas picking). */
   hits: { id: string; x: number; y: number }[] = [];
+  private hoverId: string | null = null;
+
+  /** Highlights the label of the object currently under the pointer. */
+  setHover(id: string | null): void {
+    this.hoverId = id;
+  }
 
   constructor(
     private root: HTMLElement,
@@ -115,6 +121,7 @@ export class LabelSystem {
       el.dataset.interactive = c.interactive ? '1' : '0';
       el.dataset.kind = c.kind;
       el.classList.toggle('sel', !!c.selected);
+      el.classList.toggle('hot', c.id === this.hoverId);
       if (c.color) el.style.setProperty('--c', c.color);
       el.style.transform = `translate3d(${sp.x.toFixed(1)}px, ${sp.y.toFixed(1)}px, 0)`;
       if (!this.visible.has(c.id)) el.style.display = '';

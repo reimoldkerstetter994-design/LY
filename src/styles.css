@@ -128,9 +128,14 @@ button {
   transition: background 0.15s;
 }
 
-.lbl:hover span {
+.lbl:hover span,
+.lbl.hot span {
   background: rgba(40, 60, 120, 0.55);
   color: #fff;
+}
+
+.lbl.hot i {
+  background: var(--c);
 }
 
 .lbl.sel span {
@@ -606,8 +611,13 @@ button {
 
 .info-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 4px 16px 16px;
+}
+
+.info-actions .btn {
+  flex: 1;
 }
 
 /* scale navigator */

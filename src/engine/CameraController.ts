@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { focusZoomedToward } from './interact';
 import type { Vec3 } from '../physics/coords';
 
 export interface FlyTarget {
@@ -49,6 +50,8 @@ export class CameraController {
   flight: Flight | null = null;
   autoRotate = false;
   fov = 50;
+  /** World point a scroll-wheel zoom should hold still (the object or empty space under the cursor). */
+  resolveAnchor: ((clientX: number, clientY: number) => Vec3 | null) | null = null;
 
   readonly camPos: Vec3 = [0, 0, 0];
   readonly camQuat = new THREE.Quaternion();
@@ -113,7 +116,11 @@ export class CameraController {
     this.moved += Math.abs(dx) + Math.abs(dy);
     if (this.pointers.size === 2) {
       const d = this.pinchDistance();
-      if (this.lastPinch > 0) this.zoomBy(Math.log10(this.lastPinch / d) * 2.2);
+      if (this.lastPinch > 0) {
+        const pts = [...this.pointers.values()];
+        const anchor = this.resolveAnchor?.((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2) ?? null;
+        this.zoomBy(Math.log10(this.lastPinch / d) * 2.2, anchor);
+      }
       this.lastPinch = d;
       return;
     }
@@ -145,15 +152,33 @@ export class CameraController {
   private onWheel = (e: WheelEvent) => {
     e.preventDefault();
     const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
-    this.zoomBy(dy * 0.0016);
+    const anchor = this.resolveAnchor?.(e.clientX, e.clientY) ?? null;
+    this.zoomBy(dy * 0.0016, anchor);
     this.onInteract?.();
   };
 
-  /** Zoom by Δlog10(distance). */
-  zoomBy(dLog: number): void {
+  /**
+   * Zoom by Δlog10(distance). When `anchor` is set, the focus slides so that world point
+   * stays under the cursor — scrolling enlarges whatever you are pointing at.
+   */
+  zoomBy(dLog: number, anchor?: Vec3 | null): void {
     if (this.flight) {
       this.flight.log1 = this.clampLog(this.flight.log1 + dLog);
       return;
+    }
+    if (anchor) {
+      const tracked = this.tracking?.();
+      if (tracked) {
+        const away = Math.hypot(anchor[0] - tracked[0], anchor[1] - tracked[1], anchor[2] - tracked[2]);
+        // A tracked body only keeps the camera while the pointer is still on it.
+        // Pointing anywhere else lets the focus slide so the scroll enlarges that spot.
+        if (away > this.distance * 0.05) this.tracking = null;
+      }
+      if (!this.tracking) {
+        const factor = Math.pow(10, dLog);
+        const maxShift = this.distance * (dLog < 0 ? 0.55 : 0.35);
+        this.focus = focusZoomedToward(this.focus, anchor, factor, maxShift);
+      }
     }
     this.targetLog = this.clampLog(this.targetLog + dLog);
   }

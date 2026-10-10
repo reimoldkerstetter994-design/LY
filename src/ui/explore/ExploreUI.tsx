@@ -171,6 +171,12 @@ function InfoPanel() {
         </dl>
       </div>
       <div className="info-actions">
+        <button className="btn" onClick={() => engine?.zoomInOn(o.id)}>
+          <Icon name="plus" size={15} /> {t('zoomIn')}
+        </button>
+        <button className="btn" onClick={() => engine?.zoomOutFrom(o.id)}>
+          <Icon name="minus" size={15} /> {t('zoomOut')}
+        </button>
         <button className="btn primary" onClick={() => engine?.flyTo(o.id)}>
           <Icon name="rocket" size={15} /> {t('flyTo')}
         </button>

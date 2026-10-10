@@ -46,7 +46,7 @@ void main() {
   col = mix(col, uPlasmaColor, uPlasma);
   float a = max(max(galA, sparkle), max(dmA, uPlasma * 0.08));
   float px = uPx * (kind > 0.5 ? 1.5 : 1.0) * uScale / dist;
-  gl_PointSize = clamp(px, 1.0, 7.0);
+  gl_PointSize = clamp(px, 1.0, 22.0);
   gl_Position = projectionMatrix * mv;
   vColor = col;
   vAlpha = a;
@@ -104,8 +104,10 @@ export class EvolutionScene {
     this.controls.enableDamping = true;
     this.controls.autoRotate = true;
     this.controls.autoRotateSpeed = 0.25;
-    this.controls.minDistance = 40;
+    this.controls.minDistance = 8;
     this.controls.maxDistance = 3000;
+    this.controls.zoomSpeed = 1.15;
+    this.controls.zoomToCursor = true;
     this.controls.enabled = false;
 
     const n = quality === 'low' ? 50000 : quality === 'medium' ? 90000 : 140000;

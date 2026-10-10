@@ -13,8 +13,10 @@ import type { EvoVisual } from '../sim/evolution';
 import { CameraController } from './CameraController';
 import { shared, type EngineSettings, type FrameContext, type Layer } from './core';
 import { EvolutionScene } from './EvolutionScene';
-import { LabelSystem, type LabelCandidate } from './Labels';
+import { approachLimit, pickRadiusPx } from './interact';
+import { LabelSystem, projectToScreen, type LabelCandidate } from './Labels';
 import { CosmicLayer } from './layers/CosmicLayer';
+import { FocusBodyLayer } from './layers/FocusBodyLayer';
 import { GalaxyLayer } from './layers/GalaxyLayer';
 import { LocalUniverseLayer } from './layers/LocalUniverseLayer';
 import { SolarSystemLayer } from './layers/SolarSystemLayer';
@@ -39,8 +41,6 @@ export interface EngineCallbacks {
   onFocus: (id: string | null) => void;
 }
 
-const SOLID_KINDS = new Set(['planet', 'dwarf-planet', 'moon', 'star']);
-
 class LayeredRenderPass extends Pass {
   constructor(private readonly draw: (renderer: THREE.WebGLRenderer) => void) {
     super();
@@ -61,6 +61,7 @@ export class Engine {
   private bloom: UnrealBloomPass;
   readonly cam = new CameraController();
   private layers: Layer[] = [];
+  private readonly focusBody = new FocusBodyLayer();
   private cosmic: CosmicLayer | null = null;
   private labels: LabelSystem;
   private evo: EvolutionScene | null = null;
@@ -86,6 +87,8 @@ export class Engine {
   private time = 0;
   private fps = 60;
   private hudTimer = 0;
+  private clickTimer = 0;
+  private armedId: string | null = null;
   private width = 1;
   private height = 1;
   private ready = false;
@@ -111,16 +114,17 @@ export class Engine {
     this.composer.addPass(new OutputPass());
 
     this.labels = new LabelSystem(labelRoot, {
-      onClick: (id) => this.cb.onSelect(id),
-      onDoubleClick: (id) => {
-        this.cb.onSelect(id);
-        this.flyTo(id);
-      },
+      onClick: (id) => this.armObjectClick(id),
+      onDoubleClick: (id) => this.frameObject(id),
     });
 
+    this.cam.resolveAnchor = (x, y) => this.zoomAnchor(x, y);
     this.cam.attach(canvas);
     canvas.addEventListener('pointerup', this.onCanvasClick);
     canvas.addEventListener('dblclick', this.onCanvasDouble);
+    canvas.addEventListener('pointermove', this.onPointerMove);
+    labelRoot.addEventListener('pointermove', this.onPointerMove);
+    labelRoot.addEventListener('wheel', this.onLabelWheel, { passive: false });
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas.parentElement ?? canvas);
     this.resize();
@@ -143,7 +147,9 @@ export class Engine {
       this.layers.push(steps[i][1]());
     }
     // Largest scales are drawn first (as background), finest last.
+    // The focus-body stand-in is appended afterwards so it stays on top even after its unit changes.
     this.layers.sort((a, b) => b.unit - a.unit);
+    this.layers.push(this.focusBody);
     this.setCosmology(cosmo);
     onProgress(1, 'done');
     this.ready = true;
@@ -229,15 +235,38 @@ export class Engine {
     const o = this.catalog?.byId.get(id);
     if (!o) return;
     const focus = o.dynamic ? () => bodyPosition(id, this.jd) : () => o.position;
-    const solid = SOLID_KINDS.has(o.kind) && o.radius > 1e5;
     this.focusId = id;
     this.cb.onFocus(id);
     this.cam.flyTo({
       focus,
       distance: logDistance !== undefined ? Math.pow(10, logDistance) : o.viewDistance,
       up: up ?? o.up,
-      minDistance: solid ? o.radius * 1.15 : 1e3,
+      minDistance: approachLimit(o.kind, o.radius),
     });
+  }
+
+  /** Select an object and move about 10× closer, or frame it when it is still far away. */
+  zoomInOn(id: string): void {
+    const o = this.catalog?.byId.get(id);
+    if (!o) return;
+    this.cb.onSelect(id);
+    const camD = this.focusId === id ? this.cam.distance : this.distanceTo(id);
+    if (camD > o.viewDistance * 1.4) {
+      this.flyTo(id);
+      return;
+    }
+    const next = Math.max(approachLimit(o.kind, o.radius) * 1.02, camD / 10);
+    this.flyTo(id, Math.log10(next));
+  }
+
+  /** Select an object and step back out, at least to a wide view of it. */
+  zoomOutFrom(id: string): void {
+    const o = this.catalog?.byId.get(id);
+    if (!o) return;
+    this.cb.onSelect(id);
+    const camD = this.focusId === id ? this.cam.distance : this.distanceTo(id);
+    const next = Math.min(Math.pow(10, this.cam.maxLog) * 0.98, Math.max(camD, o.viewDistance) * 8);
+    this.flyTo(id, Math.log10(next));
   }
 
   flyToPreset(id: string): void {
@@ -251,17 +280,156 @@ export class Engine {
 
   private onCanvasClick = (e: PointerEvent) => {
     if (this.mode !== 'explore' || !this.cam.wasClick || e.button !== 0) return;
-    const rect = this.canvas.getBoundingClientRect();
-    const id = this.labels.pick(e.clientX - rect.left, e.clientY - rect.top, 18);
-    this.cb.onSelect(id);
+    const id = this.pickObject(e.clientX, e.clientY);
+    if (id) this.armObjectClick(id);
+    else {
+      this.clearArmed();
+      this.cb.onSelect(null);
+    }
   };
 
   private onCanvasDouble = (e: MouseEvent) => {
     if (this.mode !== 'explore') return;
-    const rect = this.canvas.getBoundingClientRect();
-    const id = this.labels.pick(e.clientX - rect.left, e.clientY - rect.top, 24);
-    if (id) this.flyTo(id);
+    const id = this.pickObject(e.clientX, e.clientY);
+    if (id) this.frameObject(id);
   };
+
+  private onPointerMove = (e: PointerEvent) => {
+    if (this.mode !== 'explore') return;
+    this.labels.setHover(this.pickObject(e.clientX, e.clientY));
+  };
+
+  /** Labels sit above the canvas, so the wheel has to be forwarded or it never reaches the camera. */
+  private onLabelWheel = (e: WheelEvent) => {
+    if (this.mode !== 'explore') return;
+    e.preventDefault();
+    const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+    const anchor = this.cam.resolveAnchor?.(e.clientX, e.clientY) ?? null;
+    this.cam.zoomBy(dy * 0.0016, anchor);
+    this.cam.onInteract?.();
+  };
+
+  /** A single click zooms in; a second click, or a double-click, frames the best view. */
+  private armObjectClick(id: string): void {
+    if (this.clickTimer && this.armedId === id) {
+      this.frameObject(id);
+      return;
+    }
+    this.clearArmed();
+    this.armedId = id;
+    this.clickTimer = window.setTimeout(() => {
+      this.clickTimer = 0;
+      this.armedId = null;
+      this.zoomInOn(id);
+    }, 260);
+  }
+
+  private frameObject(id: string): void {
+    this.clearArmed();
+    this.cb.onSelect(id);
+    this.flyTo(id);
+  }
+
+  private clearArmed(): void {
+    if (this.clickTimer) {
+      clearTimeout(this.clickTimer);
+      this.clickTimer = 0;
+    }
+    this.armedId = null;
+  }
+
+  private distanceTo(id: string): number {
+    const p = this.positionOf(id);
+    const c = this.cam.camPos;
+    return Math.hypot(p[0] - c[0], p[1] - c[1], p[2] - c[2]);
+  }
+
+  private pointerLocal(clientX: number, clientY: number): { x: number; y: number; w: number; h: number } | null {
+    const rect = this.canvas.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return null;
+    return { x: clientX - rect.left, y: clientY - rect.top, w: rect.width, h: rect.height };
+  }
+
+  /**
+   * Object under the pointer: a label first, otherwise the nearest catalog body whose
+   * projected disc covers the cursor. Huge shells only respond near their centre.
+   */
+  private pickObject(clientX: number, clientY: number): string | null {
+    const local = this.pointerLocal(clientX, clientY);
+    if (!local) return null;
+    const labeled = this.labels.pick(local.x, local.y, 22);
+    if (labeled && this.catalog?.byId.has(labeled)) return labeled;
+    const objects = this.catalog?.objects;
+    if (!objects) return null;
+    const tan = Math.tan((this.cam.fov * Math.PI) / 360);
+    const viewport = Math.min(local.w, local.h);
+    let bestId: string | null = null;
+    let bestDist = Infinity;
+    let bestPx = Infinity;
+    for (const o of objects) {
+      const pos = o.dynamic ? bodyPosition(o.id, this.jd) : o.position;
+      const sp = projectToScreen(pos, this.cam.camPos, this.cam.camQuat, this.cam.fov, local.w, local.h);
+      if (!sp) continue;
+      const angular = (Math.max(o.radius, 1) / sp.depth) * (local.h / 2) / tan;
+      const rad = pickRadiusPx(o.kind, angular, viewport);
+      const sd = Math.hypot(sp.x - local.x, sp.y - local.y);
+      if (sd > rad) continue;
+      const closer = sp.depth < bestDist * 0.98;
+      const tighter = sp.depth <= bestDist * 1.02 && sd < bestPx;
+      if (bestId === null || closer || tighter) {
+        bestId = o.id;
+        bestDist = sp.depth;
+        bestPx = sd;
+      }
+    }
+    return bestId;
+  }
+
+  /** World point a scroll should hold still: the object under the cursor, or the focus plane. */
+  private zoomAnchor(clientX: number, clientY: number): Vec3 | null {
+    if (this.cam.flight) return null;
+    const id = this.pickObject(clientX, clientY);
+    const o = id ? this.catalog?.byId.get(id) : undefined;
+    if (o && id) {
+      const pos = this.positionOf(id);
+      const focus = this.cam.tracking ? this.cam.tracking() : this.cam.focus;
+      const sep = Math.hypot(pos[0] - focus[0], pos[1] - focus[1], pos[2] - focus[2]);
+      const limit = approachLimit(o.kind, o.radius);
+      if (sep < this.cam.distance * 0.22 && limit < this.cam.distance * 0.98) {
+        const already = this.focusId === id;
+        this.cam.minDistance = limit;
+        if (!already) {
+          this.focusId = id;
+          this.cb.onFocus(id);
+        }
+        if (already && sep < this.cam.distance * 0.04) {
+          this.cam.tracking = o.dynamic ? () => bodyPosition(id, this.jd) : () => o.position;
+        }
+      }
+      return pos;
+    }
+    return this.cursorOnFocusPlane(clientX, clientY);
+  }
+
+  /** Intersection of the cursor ray with the plane through the focus, facing the camera. */
+  private cursorOnFocusPlane(clientX: number, clientY: number): Vec3 | null {
+    const local = this.pointerLocal(clientX, clientY);
+    if (!local) return null;
+    const ndcX = (local.x / local.w) * 2 - 1;
+    const ndcY = 1 - (local.y / local.h) * 2;
+    const tan = Math.tan((this.cam.fov * Math.PI) / 360);
+    const dir = new THREE.Vector3(ndcX * (local.w / local.h) * tan, ndcY * tan, -1).applyQuaternion(this.cam.camQuat);
+    const focus = this.cam.tracking ? this.cam.tracking() : this.cam.focus;
+    const cam = this.cam.camPos;
+    const nx = focus[0] - cam[0];
+    const ny = focus[1] - cam[1];
+    const nz = focus[2] - cam[2];
+    const denom = dir.x * nx + dir.y * ny + dir.z * nz;
+    if (denom <= 1e-12) return null;
+    const s = (nx * nx + ny * ny + nz * nz) / denom;
+    if (s <= 0) return null;
+    return [cam[0] + dir.x * s, cam[1] + dir.y * s, cam[2] + dir.z * s];
+  }
 
   private resize(): void {
     const parent = this.canvas.parentElement ?? this.canvas;
@@ -331,6 +499,8 @@ export class Engine {
       shared.uScale.value = (this.height * this.renderer.getPixelRatio()) / (2 * Math.tan((this.evo.camera.fov * Math.PI) / 360));
     } else {
       this.cam.update(dt);
+      const focusObj = this.focusId ? (this.catalog?.byId.get(this.focusId) ?? null) : null;
+      this.focusBody.setTarget(focusObj, focusObj ? this.positionOf(focusObj.id) : [0, 0, 0]);
       const ctx = this.frameContext(dt);
       for (const layer of this.layers) {
         layer.opacity = layer.computeOpacity(ctx);
@@ -404,10 +574,14 @@ export class Engine {
   dispose(): void {
     this.disposed = true;
     cancelAnimationFrame(this.raf);
+    this.clearArmed();
     this.resizeObserver.disconnect();
     this.cam.detach();
     this.canvas.removeEventListener('pointerup', this.onCanvasClick);
     this.canvas.removeEventListener('dblclick', this.onCanvasDouble);
+    this.canvas.removeEventListener('pointermove', this.onPointerMove);
+    this.labelRoot.removeEventListener('pointermove', this.onPointerMove);
+    this.labelRoot.removeEventListener('wheel', this.onLabelWheel);
     this.evo?.dispose();
     this.labels.clear();
     this.labelRoot.replaceChildren();

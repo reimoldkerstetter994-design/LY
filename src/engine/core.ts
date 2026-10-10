@@ -129,8 +129,8 @@ export abstract class Layer {
 
   constructor(
     readonly id: string,
-    /** Metres per layer unit. */
-    readonly unit: number,
+    /** Metres per layer unit. The focus-body layer changes this to match the object being inspected. */
+    public unit: number,
     /** World position (metres) of the layer origin. */
     public origin: Vec3 = [0, 0, 0],
     /** Rotation from layer-local axes to world axes. */
