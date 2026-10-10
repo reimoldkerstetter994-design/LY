@@ -1,0 +1,7 @@
+node_modules
+dist
+*.local
+.vite
+artifacts
+.DS_Store
+npm-debug.log*
