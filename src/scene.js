@@ -197,6 +197,7 @@ export function createUniverseView(canvas, host) {
         attribute vec3 aColor;
         varying vec3 vColor;
         uniform float uScale;
+        #include <common>
         #include <logdepthbuf_pars_vertex>
         void main() {
           vColor = aColor;
@@ -208,6 +209,7 @@ export function createUniverseView(canvas, host) {
       `,
       fragmentShader: `
         varying vec3 vColor;
+        #include <common>
         #include <logdepthbuf_pars_fragment>
         void main() {
           vec2 p = gl_PointCoord - vec2(0.5);
@@ -224,7 +226,7 @@ export function createUniverseView(canvas, host) {
 
   const filamentGeo = new THREE.BufferGeometry();
   const filamentMat = new THREE.LineBasicMaterial({
-    color: 0x7ec8c4,
+    color: 0x5e9c9a,
     transparent: true,
     opacity: 0.55,
     depthWrite: false,
@@ -406,41 +408,45 @@ export function createUniverseView(canvas, host) {
 
     const ranked = [];
     const labelAnchors = [];
+    const frame = labelFrame(host);
     for (const marker of markers.values()) {
       const body = marker.body;
       const fade = structureOpacity(snap, body.kind);
-      const show = fade > 0.04 && mode === "map";
+      const inRange = body.d <= viewRadius * 1.35;
+      const show = fade > 0.04 && mode === "map" && inRange;
       marker.group.visible = show;
+      marker.label.visible = false;
       marker.core.material.opacity = Math.min(1, 0.35 + fade);
       marker.halo.material.opacity = 0.22 * fade;
       marker.fade = fade;
       const scale = viewRadius * (body.id === selectedId ? 0.02 : 0.012);
       marker.group.scale.setScalar(Math.max(scale, 1e-5));
-      if (!show) {
-        marker.label.element.style.display = "none";
-        continue;
-      }
+      if (!show) continue;
       const score = labelScore(body, viewRadius, selectedId);
       if (layers.labels && score > 0) ranked.push({ marker, score });
-      else marker.label.element.style.display = "none";
     }
     ranked.sort((a, b) => b.score - a.score);
-    const width = host.clientWidth || 1;
-    const height = host.clientHeight || 1;
     for (const { marker } of ranked) {
       const selected = marker.body.id === selectedId;
       scratch.copy(marker.group.position).project(camera);
-      const sx = (scratch.x * 0.5 + 0.5) * width;
-      const sy = (-scratch.y * 0.5 + 0.5) * height;
-      const onScreen = scratch.z > -1 && scratch.z < 1 && sx > 348 && sx < width - 348 && sy > 8 && sy < height - 8;
+      const sx = (scratch.x * 0.5 + 0.5) * frame.width;
+      const sy = (-scratch.y * 0.5 + 0.5) * frame.height;
+      const onScreen =
+        scratch.z > -1 &&
+        scratch.z < 1 &&
+        sx > frame.left &&
+        sx < frame.right &&
+        sy > frame.top &&
+        sy < frame.bottom;
+      const near = viewRadius < 0.2;
       const crowded = labelAnchors.some((p) => {
-        const dx = (p.x - sx) / 108;
-        const dy = (p.y - sy) / 30;
+        const dx = (p.x - sx) / (near ? 62 : 108);
+        const dy = (p.y - sy) / (near ? 20 : 30);
         return dx * dx + dy * dy < 1;
       });
-      const on = onScreen && (selected || (!crowded && labelAnchors.length < 11));
-      marker.label.element.style.display = layers.labels && on ? "" : "none";
-      marker.label.element.classList.toggle("is-selected", selected);
+      const on = onScreen && (selected || (!crowded && labelAnchors.length < 10));
+      marker.label.visible = on;
+      marker.label.element.classList.toggle("is-selected", selected && on);
       if (on) labelAnchors.push({ x: sx, y: sy });
     }
 
@@ -479,10 +485,13 @@ export function createUniverseView(canvas, host) {
       col[j] = rgb[0];
       col[j + 1] = rgb[1];
       col[j + 2] = rgb[2];
-      const peak = sim.delta[i] > 1.15 && growth > 0.2;
+      const peak = sim.delta[i] > 1.15 && growth > 0.25;
       let s = 0;
-      if (layers.dm && contrast > -0.15) s = 0.5 + Math.min(Math.max(contrast, 0), 1.6) * 0.4;
-      if (layers.galaxies && peak) s = Math.max(s, 1.7 + Math.min(contrast, 2));
+      if (layers.dm) {
+        if (growth < 0.08) s = 0.42;
+        else if (contrast > -0.2) s = 0.38 + Math.min(Math.max(contrast, 0), 1.8) * 0.36;
+      }
+      if (layers.galaxies && peak) s = Math.max(s, 1.55 + Math.min(contrast, 2));
       if (!layers.dm && !(layers.galaxies && peak)) s = 0;
       size[i] = s;
     }
@@ -498,17 +507,26 @@ export function createUniverseView(canvas, host) {
         const a = filamentIndex[k] * 3;
         const b = filamentIndex[k + 1] * 3;
         const o = k * 3;
+        const dx = pos[a] - pos[b];
+        const dy = pos[a + 1] - pos[b + 1];
+        const dz = pos[a + 2] - pos[b + 2];
+        const maxLen = (sim.cell / sim.h) * 4.2;
+        const wrapped = dx * dx + dy * dy + dz * dz > maxLen * maxLen;
+        const bx = wrapped ? pos[a] : pos[b];
+        const by = wrapped ? pos[a + 1] : pos[b + 1];
+        const bz = wrapped ? pos[a + 2] : pos[b + 2];
         line[o] = pos[a];
         line[o + 1] = pos[a + 1];
         line[o + 2] = pos[a + 2];
-        line[o + 3] = pos[b];
-        line[o + 4] = pos[b + 1];
-        line[o + 5] = pos[b + 2];
+        line[o + 3] = bx;
+        line[o + 4] = by;
+        line[o + 5] = bz;
       }
       filaments.geometry.attributes.position.needsUpdate = true;
       filaments.frustumCulled = false;
-      filamentMat.opacity = 0.12 + 0.38 * Math.min(growth, 1);
-      filaments.visible = true;
+      const filamentIn = smoothstep(0.18, 0.7, growth);
+      filamentMat.opacity = 0.46 * filamentIn;
+      filaments.visible = filamentIn > 0.05;
     } else {
       filaments.visible = false;
     }
@@ -653,6 +671,7 @@ function cmbMaterial() {
     },
     vertexShader: `
       varying vec3 vDir;
+      #include <common>
       #include <logdepthbuf_pars_vertex>
       void main() {
         vDir = normalize(position);
@@ -664,6 +683,7 @@ function cmbMaterial() {
       varying vec3 vDir;
       uniform float uTime;
       uniform float uOpacity;
+      #include <common>
       #include <logdepthbuf_pars_fragment>
       float hash(vec3 p) {
         p = fract(p * 0.1031);
@@ -716,26 +736,53 @@ function densityColor(contrast) {
 }
 
 function labelScore(body, viewRadius, selectedId) {
+  if (body.d > viewRadius * 1.08 && body.id !== selectedId) return -1;
+  if (viewRadius > 0.25 && body.d < viewRadius * 0.02 && body.id !== selectedId) return -1;
   if (body.id === selectedId) return 100;
-  if (body.d > viewRadius * 1.08) return -1;
   if (viewRadius > 0.4 && (body.kind === "star" || body.kind === "nucleus" || body.kind === "satellite")) return -1;
   if (viewRadius > 25 && body.kind === "galaxy" && body.d < 15) return body.id === "mw" ? 8 : -1;
   if (viewRadius > 80 && body.kind === "cluster" && body.d < 25) return 3;
-  if (viewRadius < 0.2 && body.d > viewRadius * 1.05) return -1;
   const weight = LABEL_WEIGHT[body.kind] ?? 1;
   return weight + (1 - Math.min(body.d / Math.max(viewRadius, 1e-4), 1)) * 2;
+}
+
+function labelFrame(host) {
+  const width = host.clientWidth || 1;
+  const height = host.clientHeight || 1;
+  const bounds = { left: 8, right: width - 8, top: 8, bottom: height - 8, width, height };
+  const hostRect = host.getBoundingClientRect();
+  for (const panel of document.querySelectorAll(".panel")) {
+    if (getComputedStyle(panel).display === "none") continue;
+    const rect = panel.getBoundingClientRect();
+    const localLeft = rect.left - hostRect.left;
+    const localRight = rect.right - hostRect.left;
+    const localTop = rect.top - hostRect.top;
+    if (rect.width < width * 0.62 && localLeft < width * 0.4) bounds.left = Math.max(bounds.left, localRight + 8);
+    if (rect.width < width * 0.62 && width - localRight < width * 0.4) bounds.right = Math.min(bounds.right, localLeft - 8);
+    if (rect.width > width * 0.7 && localTop > height * 0.28) bounds.bottom = Math.min(bounds.bottom, localTop - 8);
+  }
+  if (bounds.right < bounds.left + 40) {
+    bounds.left = 8;
+    bounds.right = width - 8;
+  }
+  return bounds;
 }
 
 function buildFilaments(sim) {
   const { n, delta } = sim;
   const pairs = [];
   const at = (x, y, z) => (x * n + y) * n + z;
-  const thresh = 1.05;
-  const dirs = [
-    [1, 0, 0],
-    [0, 1, 0],
-    [0, 0, 1],
-  ];
+  const thresh = 1.35;
+  const dirs = [];
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        if (dx === 0 && dy === 0 && dz === 0) continue;
+        if (dx < 0 || (dx === 0 && dy < 0) || (dx === 0 && dy === 0 && dz < 0)) continue;
+        dirs.push([dx, dy, dz]);
+      }
+    }
+  }
   for (let x = 0; x < n; x++) {
     for (let y = 0; y < n; y++) {
       for (let z = 0; z < n; z++) {
@@ -747,9 +794,10 @@ function buildFilaments(sim) {
           const nx = x + dx;
           const ny = y + dy;
           const nz = z + dz;
-          if (nx >= n || ny >= n || nz >= n) continue;
+          if (nx < 0 || ny < 0 || nz < 0 || nx >= n || ny >= n || nz >= n) continue;
           const j = at(nx, ny, nz);
-          const ridge = Math.min(delta[i], delta[j]);
+          if (delta[j] < thresh) continue;
+          const ridge = delta[i] + delta[j];
           if (ridge > bestD) {
             bestD = ridge;
             best = j;
