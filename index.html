@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>视界 · 可观测宇宙</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body data-mode="map">
+    <div id="app">
+      <header class="top">
+        <div class="brand">
+          <span class="mark" aria-hidden="true"></span>
+          <div>
+            <p class="eyebrow">ΛCDM · 泽尔多维奇 · 近邻宇宙</p>
+            <h1>视界</h1>
+          </div>
+        </div>
+        <p id="status-line" class="status-line">共动空间，原点在太阳。外壳是此刻正抵达这里的复合光子。</p>
+        <div class="chips" aria-live="polite">
+          <span id="chip-age">—</span>
+          <span id="chip-temp">—</span>
+          <span id="chip-z">—</span>
+          <span id="chip-h">—</span>
+        </div>
+        <div class="top-actions">
+          <button type="button" class="drawer-btn" data-open="left">天体</button>
+          <button type="button" class="drawer-btn" data-open="right">读数</button>
+          <button type="button" id="help-open" class="text-btn">说明</button>
+        </div>
+      </header>
+
+      <main id="stage">
+        <canvas id="view"></canvas>
+        <div class="vignette" aria-hidden="true"></div>
+
+        <aside id="left" class="panel">
+          <div class="mode" role="tablist">
+            <button type="button" id="mode-map" role="tab" aria-selected="true">观测图</button>
+            <button type="button" id="mode-web" role="tab">结构形成</button>
+          </div>
+          <section>
+            <h2>尺度</h2>
+            <div id="scales" class="scales"></div>
+          </section>
+          <section>
+            <h2>图层</h2>
+            <div id="layers" class="layers"></div>
+          </section>
+          <section class="catalog-section">
+            <div class="section-head">
+              <h2>天体</h2>
+              <input id="search" type="search" placeholder="搜索" aria-label="搜索天体" />
+            </div>
+            <div id="catalog" class="catalog"></div>
+          </section>
+        </aside>
+
+        <aside id="right" class="panel">
+          <article id="detail" class="card"></article>
+          <article class="card epoch-card">
+            <p class="kicker">此刻的时代</p>
+            <h3 id="epoch-name">—</h3>
+            <p id="epoch-text"></p>
+          </article>
+          <section>
+            <h2>状态量</h2>
+            <dl class="metrics" id="metrics"></dl>
+          </section>
+          <section>
+            <h2>这一刻的组分</h2>
+            <div id="mix" class="mix"></div>
+            <p id="mix-note" class="fine"></p>
+          </section>
+          <section>
+            <h2>热历史</h2>
+            <canvas id="chart" width="320" height="88"></canvas>
+            <div id="legend" class="legend"></div>
+            <p class="fine">横轴与底部时间轴使用同一段非线性刻度，好让最初一秒和最近一百亿年都能看见。</p>
+          </section>
+          <section>
+            <h2>宇宙学参数</h2>
+            <div id="presets" class="presets"></div>
+            <label class="slider">
+              <span>H₀ <b id="h0-val"></b></span>
+              <input id="h0" type="range" min="50" max="90" step="0.01" />
+            </label>
+            <label class="slider">
+              <span>Ωₘ <b id="om-val"></b></span>
+              <input id="om" type="range" min="0.05" max="1" step="0.001" />
+            </label>
+            <p id="flat-note" class="fine"></p>
+            <details>
+              <summary>初始条件与显示</summary>
+              <label class="slider">
+                <span>nₛ <b id="ns-val"></b></span>
+                <input id="ns" type="range" min="0.85" max="1.05" step="0.001" />
+              </label>
+              <label class="slider">
+                <span>σ₈ <b id="s8-val"></b></span>
+                <input id="s8" type="range" min="0.5" max="1.2" step="0.001" />
+              </label>
+              <label class="slider">
+                <span>结构对比 <b id="gain-val"></b></span>
+                <input id="gain" type="range" min="1" max="4" step="0.1" />
+              </label>
+              <label class="seed">
+                扰动种子
+                <input id="seed" type="number" min="1" max="999999" step="1" />
+              </label>
+              <p class="fine">对比为 1 时，位移就是 σ₈ 归一的泽尔多维奇近似。加大它，只是把同一张初始图演化得更深，方便看见纤维。</p>
+            </details>
+            <p class="eq">H²(a) = H₀² [Ωₘ a⁻³ + Ωᵣ a⁻⁴ + Ωₖ a⁻² + Ω_Λ]</p>
+          </section>
+        </aside>
+
+        <p id="scale-readout" class="scale-readout"></p>
+      </main>
+
+      <footer class="timeline">
+        <div class="transport">
+          <button type="button" id="play" class="play">播放</button>
+          <button type="button" id="tour">漫游</button>
+          <button type="button" id="follow">跟随视界</button>
+          <div class="speeds" role="group" aria-label="播放速度">
+            <button type="button" data-speed="0.25">0.25×</button>
+            <button type="button" data-speed="1" class="is-on">1×</button>
+            <button type="button" data-speed="4">4×</button>
+            <button type="button" data-speed="20">20×</button>
+          </div>
+        </div>
+        <div class="scrub">
+          <div class="scrub-top">
+            <strong id="clock">—</strong>
+            <span id="clock-sub"></span>
+          </div>
+          <input id="time" type="range" min="0" max="1000" step="1" value="1000" aria-label="宇宙时间" />
+          <div id="epochs" class="epochs"></div>
+        </div>
+      </footer>
+    </div>
+
+    <dialog id="help">
+      <form method="dialog">
+        <header>
+          <h2>这台仪器在算什么</h2>
+          <button value="close" class="text-btn">关闭</button>
+        </header>
+        <p>背景演化是平坦 ΛCDM 的弗里德曼方程，在对数尺度因子上做数值积分。年龄、温度、哈勃参数、粒子视界和增长因子都从这条积分来，而不是写死的常数。</p>
+        <p>观测图使用实测距离。大约 40 Mpc 以内用红移无关的距离；更远的哈勃流天体用红移，会随 H₀ 改变。拉尼亚凯亚、沙普利、英仙-双鱼等流域中心来自 Cosmicflows-4 的超银直角坐标。长城的折线只标出距离层，不是巡天骨架。</p>
+        <p>结构形成是 256 Mpc/h 周期盒里的高斯随机场，功率谱用 BBKS 传递函数，位移是泽尔多维奇近似。它不是对本超星系团的重构，也不是完整 N 体。</p>
+        <p>拖拽旋转，滚轮缩放，点击天体。空格播放，左右方向键移动时间，方括号跳到上一个或下一个时代。</p>
+      </form>
+    </dialog>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

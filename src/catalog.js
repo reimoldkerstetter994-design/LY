@@ -1,0 +1,635 @@
+import { equatorialToSupergalactic, galacticToSupergalactic } from "./coords.js";
+
+export const SCALES = [
+  { id: "mw", name: "银河系", hint: "40 kpc", radius: 0.04 },
+  { id: "lg", name: "本星系群", hint: "1.5 Mpc", radius: 1.5 },
+  { id: "near", name: "近邻星系", hint: "8 Mpc", radius: 8 },
+  { id: "virgo", name: "室女超团", hint: "30 Mpc", radius: 30 },
+  { id: "lani", name: "拉尼亚凯亚", hint: "140 Mpc", radius: 140 },
+  { id: "shapley", name: "沙普利", hint: "350 Mpc", radius: 350 },
+  { id: "walls", name: "长城", hint: "1 Gpc", radius: 1000 },
+  { id: "all", name: "可观测宇宙", hint: "粒子视界", radius: null },
+];
+
+export const GROUPS = ["边界", "银河系", "本星系群", "近邻星系", "星系团", "流域", "长城与空洞"];
+
+/** Distances inside ~40 Mpc are redshift-independent. Farther Hubble-flow objects use z or Mpc/h. */
+export const BODIES = [
+  {
+    id: "sun",
+    name: "太阳",
+    en: "Sun",
+    kind: "star",
+    group: "银河系",
+    frame: "origin",
+    mass: 1,
+    radiusMpc: 4.8e-15,
+    blurb: "观测者所在的位置。画面原点放在太阳，而不是银心。在比本星系群更大的尺度上，这点差别可以忽略。",
+  },
+  {
+    id: "mw",
+    name: "银河系",
+    en: "Milky Way",
+    kind: "galaxy",
+    group: "银河系",
+    frame: "galactic",
+    l: 0,
+    b: 0,
+    kpc: 8.178,
+    parent: "lg",
+    mass: 1.5e12,
+    radiusMpc: 0.016,
+    blurb: "棒旋星系，标记放在银心（人马座 A*），太阳在大约 8.2 kpc 之外。恒星盘直径约 30 kpc。1.5×10¹² 太阳质量含暗晕，不是单指恒星。",
+  },
+  {
+    id: "sgr",
+    name: "人马座矮星系",
+    en: "Sagittarius Dwarf",
+    kind: "satellite",
+    group: "银河系",
+    frame: "eq",
+    ra: 283.831,
+    dec: -30.545,
+    mpc: 0.024,
+    parent: "mw",
+    mass: 4e8,
+    radiusMpc: 0.003,
+    blurb: "正在被银河系撕开的矮椭球星系。距离取大约 24 kpc，它的潮汐星流缠着银盘。",
+  },
+  {
+    id: "lmc",
+    name: "大麦哲伦云",
+    en: "Large Magellanic Cloud",
+    kind: "satellite",
+    group: "银河系",
+    frame: "eq",
+    ra: 80.894,
+    dec: -69.756,
+    mpc: 0.0496,
+    parent: "mw",
+    mass: 1.4e11,
+    radiusMpc: 0.005,
+    blurb: "银河系最大的卫星星系，距离 49.6 kpc。质量取含暗晕的近年估计，大约 1.4×10¹¹ 太阳质量。",
+  },
+  {
+    id: "smc",
+    name: "小麦哲伦云",
+    en: "Small Magellanic Cloud",
+    kind: "satellite",
+    group: "银河系",
+    frame: "eq",
+    ra: 13.187,
+    dec: -72.829,
+    mpc: 0.062,
+    parent: "mw",
+    mass: 5e9,
+    radiusMpc: 0.003,
+    blurb: "大麦哲伦云的同伴，距离约 62 kpc。两者之间的气体桥是相互作用留下来的。",
+  },
+  {
+    id: "m31",
+    name: "仙女座星系",
+    en: "Andromeda · M31",
+    kind: "galaxy",
+    group: "本星系群",
+    frame: "eq",
+    ra: 10.685,
+    dec: 41.269,
+    mpc: 0.778,
+    parent: "lg",
+    mass: 1.5e12,
+    radiusMpc: 0.03,
+    blurb: "最近的大螺旋星系，距离 778 kpc，正朝银河系靠近。它和银河系将在大约四十亿年后开始相撞。",
+  },
+  {
+    id: "m32",
+    name: "M32",
+    en: "Messier 32",
+    kind: "satellite",
+    group: "本星系群",
+    frame: "eq",
+    ra: 10.674,
+    dec: 40.865,
+    mpc: 0.763,
+    parent: "m31",
+    mass: 3e9,
+    radiusMpc: 0.001,
+    blurb: "紧贴仙女座星系的致密椭圆矮星系。",
+  },
+  {
+    id: "m110",
+    name: "M110",
+    en: "Messier 110",
+    kind: "satellite",
+    group: "本星系群",
+    frame: "eq",
+    ra: 10.092,
+    dec: 41.685,
+    mpc: 0.82,
+    parent: "m31",
+    mass: 1e10,
+    radiusMpc: 0.004,
+    blurb: "仙女座星系的矮椭圆卫星。",
+  },
+  {
+    id: "m33",
+    name: "三角座星系",
+    en: "Triangulum · M33",
+    kind: "galaxy",
+    group: "本星系群",
+    frame: "eq",
+    ra: 23.462,
+    dec: 30.66,
+    mpc: 0.859,
+    parent: "lg",
+    mass: 5e10,
+    radiusMpc: 0.009,
+    blurb: "本星系群第三大星系，距离约 859 kpc，几乎正面朝向我们。",
+  },
+  {
+    id: "lg",
+    name: "本星系群",
+    en: "Local Group",
+    kind: "group",
+    group: "本星系群",
+    frame: "blend",
+    from: "sun",
+    to: "m31",
+    fraction: 0.5,
+    parent: "virgo",
+    mass: 2.5e12,
+    radiusMpc: 1.5,
+    blurb: "银河系、仙女座和几十个矮星系组成的引力束缚群。质心画在太阳与 M31 的中点，是示意而不是精确的质量加权位置。",
+  },
+  {
+    id: "ngc253",
+    name: "玉夫座星系",
+    en: "Sculptor · NGC 253",
+    kind: "galaxy",
+    group: "近邻星系",
+    frame: "eq",
+    ra: 11.888,
+    dec: -25.288,
+    mpc: 3.5,
+    mass: 8e11,
+    radiusMpc: 0.015,
+    blurb: "玉夫座星系群里最亮的星系，距离约 3.5 Mpc，是一块强烈的恒星形成盘。",
+  },
+  {
+    id: "ic342",
+    name: "IC 342",
+    en: "IC 342",
+    kind: "galaxy",
+    group: "近邻星系",
+    frame: "eq",
+    ra: 56.702,
+    dec: 68.096,
+    mpc: 3.3,
+    mass: 2e11,
+    radiusMpc: 0.012,
+    blurb: "藏在银河盘尘埃后面的近邻螺旋星系，距离约 3.3 Mpc。",
+  },
+  {
+    id: "m81",
+    name: "M81",
+    en: "Bode's Galaxy",
+    kind: "galaxy",
+    group: "近邻星系",
+    frame: "eq",
+    ra: 148.888,
+    dec: 69.065,
+    mpc: 3.6,
+    mass: 2e11,
+    radiusMpc: 0.015,
+    blurb: "波德星系，M81 群的中心，距离约 3.6 Mpc。它和 M82 正在相互作用。",
+  },
+  {
+    id: "m82",
+    name: "M82",
+    en: "Cigar Galaxy",
+    kind: "galaxy",
+    group: "近邻星系",
+    frame: "eq",
+    ra: 148.968,
+    dec: 69.68,
+    mpc: 3.66,
+    parent: "m81",
+    mass: 1e10,
+    radiusMpc: 0.006,
+    blurb: "雪茄星系，正经历剧烈的恒星形成，距离与 M81 几乎相同。",
+  },
+  {
+    id: "cena",
+    name: "半人马座 A",
+    en: "Centaurus A",
+    kind: "galaxy",
+    group: "近邻星系",
+    frame: "eq",
+    ra: 201.365,
+    dec: -43.019,
+    mpc: 3.8,
+    mass: 1e12,
+    radiusMpc: 0.02,
+    blurb: "最近的巨椭圆射电星系，距离约 3.8 Mpc。尘埃带是一次并合留下的。",
+  },
+  {
+    id: "m101",
+    name: "M101",
+    en: "Pinwheel Galaxy",
+    kind: "galaxy",
+    group: "近邻星系",
+    frame: "eq",
+    ra: 210.803,
+    dec: 54.349,
+    mpc: 6.4,
+    mass: 1e11,
+    radiusMpc: 0.03,
+    blurb: "风车星系，距离约 6.4 Mpc，盘很大，几乎正面朝向我们。",
+  },
+  {
+    id: "m51",
+    name: "M51",
+    en: "Whirlpool Galaxy",
+    kind: "galaxy",
+    group: "近邻星系",
+    frame: "eq",
+    ra: 202.47,
+    dec: 47.195,
+    mpc: 8.6,
+    mass: 1e11,
+    radiusMpc: 0.012,
+    blurb: "涡状星系，距离约 8.6 Mpc，有一条清晰的旋臂，正在和一个小伴星系相互作用。",
+  },
+  {
+    id: "m104",
+    name: "草帽星系",
+    en: "Sombrero · M104",
+    kind: "galaxy",
+    group: "近邻星系",
+    frame: "eq",
+    ra: 189.998,
+    dec: -11.623,
+    mpc: 9.55,
+    mass: 8e11,
+    radiusMpc: 0.012,
+    blurb: "侧向的螺旋星系，距离约 9.6 Mpc，核球突出，尘埃带像帽檐。",
+  },
+  {
+    id: "virgo",
+    name: "室女座星系团",
+    en: "Virgo Cluster",
+    kind: "cluster",
+    group: "星系团",
+    frame: "eq",
+    ra: 187.706,
+    dec: 12.391,
+    mpc: 16.5,
+    parent: "laniakea",
+    mass: 1.2e15,
+    radiusMpc: 2.2,
+    blurb: "最近的富星系团，中心在 M87，距离 16.5 Mpc。本星系群被它的引力拉向室女方向。维里半径大约 2 Mpc。",
+  },
+  {
+    id: "fornax",
+    name: "天炉座星系团",
+    en: "Fornax Cluster",
+    kind: "cluster",
+    group: "星系团",
+    frame: "eq",
+    ra: 54.621,
+    dec: -35.451,
+    mpc: 19,
+    parent: "laniakea",
+    mass: 7e13,
+    radiusMpc: 1,
+    blurb: "南天的近邻星系团，中心在 NGC 1399 一带，距离约 19 Mpc，比室女座星系团轻得多。",
+  },
+  {
+    id: "centaurus",
+    name: "半人马座星系团",
+    en: "Centaurus Cluster",
+    kind: "cluster",
+    group: "星系团",
+    frame: "z",
+    ra: 192.205,
+    dec: -41.311,
+    z: 0.0114,
+    parent: "laniakea",
+    mass: 2e14,
+    radiusMpc: 1.5,
+    blurb: "半人马座方向的星系团，红移约 0.011。距离随你设定的哈勃常数变化，因为这里开始用哈勃流估算。",
+  },
+  {
+    id: "hydra",
+    name: "长蛇座星系团",
+    en: "Hydra Cluster",
+    kind: "cluster",
+    group: "星系团",
+    frame: "z",
+    ra: 159.178,
+    dec: -27.528,
+    z: 0.0126,
+    parent: "laniakea",
+    mass: 2e14,
+    radiusMpc: 1.5,
+    blurb: "Abell 1060，长蛇-半人马超星系团的一部分，红移约 0.013。",
+  },
+  {
+    id: "norma",
+    name: "矩尺座星系团",
+    en: "Norma Cluster",
+    kind: "cluster",
+    group: "星系团",
+    frame: "eq",
+    ra: 243.592,
+    dec: -60.867,
+    mpc: 68,
+    parent: "laniakea",
+    mass: 1e15,
+    radiusMpc: 2,
+    blurb: "Abell 3627，藏在银河盘后面。它是传统所说巨引源方向上最重的星系团，距离取大约 68 Mpc，受本动速度影响，不宜直接当成 cz/H₀。",
+  },
+  {
+    id: "perseus",
+    name: "英仙座星系团",
+    en: "Perseus Cluster",
+    kind: "cluster",
+    group: "星系团",
+    frame: "z",
+    ra: 49.95,
+    dec: 41.512,
+    z: 0.0179,
+    parent: "perseus-pisces",
+    mass: 6e14,
+    radiusMpc: 2,
+    blurb: "Abell 426，英仙-双鱼超星系团里最富的星系团，以明亮的 X 射线气体出名。",
+  },
+  {
+    id: "coma",
+    name: "后发座星系团",
+    en: "Coma Cluster",
+    kind: "cluster",
+    group: "星系团",
+    frame: "z",
+    ra: 194.953,
+    dec: 27.981,
+    z: 0.0231,
+    parent: "shapley",
+    mass: 1.5e15,
+    radiusMpc: 2.5,
+    blurb: "Abell 1656，近邻宇宙里最典型的富星系团之一，红移 0.023。CfA2 长城从它附近穿过。",
+  },
+  {
+    id: "laniakea",
+    name: "拉尼亚凯亚",
+    en: "Laniakea attractor",
+    kind: "attractor",
+    group: "流域",
+    frame: "mpch",
+    sg: [-62, -8, 39],
+    radiusMpch: 77,
+    mass: 1e17,
+    blurb: "我们所属超星系团的引力流域。吸引子坐标取 Cosmicflows-4 的超银直角坐标 (−62, −8, 39) Mpc/h，方向与巨引源一致。流域体积大约 1.9×10⁶ (Mpc/h)³。",
+  },
+  {
+    id: "perseus-pisces",
+    name: "英仙-双鱼",
+    en: "Perseus–Pisces",
+    kind: "attractor",
+    group: "流域",
+    frame: "mpch",
+    sg: [47, -23, -31],
+    radiusMpch: 70,
+    mass: 1e16,
+    blurb: "拉尼亚凯亚另一侧的超星系团流域。吸引子取 CF4 的 (47, −23, −31) Mpc/h。它和英仙座星系团相关，但不是同一个点。",
+  },
+  {
+    id: "hercules",
+    name: "武仙超星系团",
+    en: "Hercules",
+    kind: "attractor",
+    group: "流域",
+    frame: "mpch",
+    sg: [-39, 70, 78],
+    radiusMpch: 60,
+    mass: 1e16,
+    blurb: "CF4 重建里的武仙流域，吸引子约 (−39, 70, 78) Mpc/h，靠近 Abell 2151 的方向。",
+  },
+  {
+    id: "shapley",
+    name: "沙普利超星系团",
+    en: "Shapley Concentration",
+    kind: "attractor",
+    group: "流域",
+    frame: "mpch",
+    sg: [-141, 62, -16],
+    radiusMpch: 90,
+    mass: 1e16,
+    blurb: "近邻宇宙质量最大的聚集之一。CF4 吸引子 (−141, 62, −16) Mpc/h。在成团样本里，后发座常常落在它的流域里。",
+  },
+  {
+    id: "apus",
+    name: "天燕超星系团",
+    en: "Apus",
+    kind: "attractor",
+    group: "流域",
+    frame: "mpch",
+    sg: [-125, -23, -31],
+    radiusMpch: 80,
+    blurb: "南天的流域，CF4 坐标 (−125, −23, −31) Mpc/h。只在未成团的重建里单独成盆。",
+  },
+  {
+    id: "lepus",
+    name: "天兔超星系团",
+    en: "Lepus",
+    kind: "attractor",
+    group: "流域",
+    frame: "mpch",
+    sg: [-62, -39, -109],
+    radiusMpch: 80,
+    blurb: "CF4 的天兔流域，吸引子约 (−62, −39, −109) Mpc/h。",
+  },
+  {
+    id: "sculptor-void",
+    name: "玉夫空洞",
+    en: "Sculptor void",
+    kind: "void",
+    group: "长城与空洞",
+    frame: "mpch",
+    sg: [23, -109, -16],
+    radiusMpch: 40,
+    blurb: "玉夫座方向的排斥子，CF4 坐标 (23, −109, −16) Mpc/h。空洞是物质流走之后留下的低密度区。",
+  },
+  {
+    id: "bootes-void",
+    name: "牧夫空洞",
+    en: "Boötes void",
+    kind: "void",
+    group: "长城与空洞",
+    frame: "mpch",
+    sg: [-31, 125, 8],
+    radiusMpch: 50,
+    blurb: "著名的近邻大空洞。这里标的是 CF4 在牧夫空洞一带找到的排斥子 (−31, 125, 8) Mpc/h。",
+  },
+  {
+    id: "dipole",
+    name: "偶极排斥子",
+    en: "Dipole repeller",
+    kind: "void",
+    group: "长城与空洞",
+    frame: "mpch",
+    sg: [133, -133, 62],
+    radiusMpch: 120,
+    blurb: "CF4 在偶极排斥子与冷斑排斥子之间看到的一大片外流区，中心约 (133, −133, 62) Mpc/h。它推动本星系群的方式，和吸引子的拉力相反。",
+  },
+  {
+    id: "cfa2",
+    name: "CfA2 长城",
+    en: "CfA2 Great Wall",
+    kind: "wall",
+    group: "长城与空洞",
+    frame: "path",
+    schematic: true,
+    radiusMpc: 150,
+    path: [
+      { ra: 155, dec: 12, z: 0.02 },
+      { ra: 175, dec: 20, z: 0.023 },
+      { ra: 194.95, dec: 27.98, z: 0.0231 },
+      { ra: 215, dec: 18, z: 0.024 },
+      { ra: 232, dec: 10, z: 0.02 },
+    ],
+    blurb: "盖勒和修克拉在 CfA 红移巡天里看到的长城，从后发座星系团附近延伸开。图上的折线只复现它所在的红移层和大致天区，不是巡天骨架的逐点重建。",
+  },
+  {
+    id: "sloan",
+    name: "史隆长城",
+    en: "Sloan Great Wall",
+    kind: "wall",
+    group: "长城与空洞",
+    frame: "path",
+    schematic: true,
+    radiusMpc: 200,
+    path: [
+      { ra: 145, dec: -2, z: 0.065 },
+      { ra: 165, dec: 4, z: 0.073 },
+      { ra: 185, dec: 8, z: 0.078 },
+      { ra: 205, dec: 3, z: 0.074 },
+      { ra: 222, dec: -1, z: 0.066 },
+    ],
+    blurb: "史隆数字巡天里的一条巨壁，红移大约 0.07，共动长度约 400 Mpc 量级。折线是教学示意，用来标出它所在的距离层。",
+  },
+  {
+    id: "herc-wall",
+    name: "武仙-北冕长城",
+    en: "Hercules–Corona Borealis",
+    kind: "wall",
+    group: "长城与空洞",
+    frame: "z",
+    ra: 250,
+    dec: 27,
+    z: 1.7,
+    radiusMpc: 1500,
+    blurb: "有研究用伽马暴的成团把它标成约百亿光年尺度的结构。它是不是单一实体仍有争议，这里只按 z ≈ 1.7 放一个标记。",
+  },
+  {
+    id: "hubble",
+    name: "哈勃球",
+    en: "Hubble sphere",
+    kind: "hubble",
+    group: "边界",
+    frame: "shell",
+    blurb: "共动哈勃半径 c / (aH)。球外星系的退行速度超过光速。它们仍然可以被看见，因为粒子视界比哈勃球更大。",
+  },
+  {
+    id: "cmb",
+    name: "宇宙微波背景",
+    en: "Last scattering",
+    kind: "cmb",
+    group: "边界",
+    frame: "shell",
+    blurb: "此刻正抵达太阳的复合光子所构成的球面。复合之前它还不存在；从复合到今天，这层壳从身边扩到大约 140 亿秒差距外。",
+  },
+  {
+    id: "horizon",
+    name: "粒子视界",
+    en: "Particle horizon",
+    kind: "horizon",
+    group: "边界",
+    frame: "shell",
+    blurb: "从热大爆炸到所选时刻，光走过的共动距离。今天它大约是 460 亿光年，这就是可观测宇宙的半径。视界之外的区域还没有任何信号抵达这里。",
+  },
+];
+
+export function placeAll(bodies, cosmos) {
+  const h = cosmos.params.H0 / 100;
+  const placed = bodies.map((body) => ({ ...body, ...locate(body, cosmos, h) }));
+  const byId = new Map(placed.map((b) => [b.id, b]));
+  for (const body of placed) {
+    if (body.frame !== "blend") continue;
+    const a = byId.get(body.from);
+    const c = byId.get(body.to);
+    if (!a?.p || !c?.p) continue;
+    const f = body.fraction ?? 0.5;
+    body.p = a.p.map((v, i) => v * (1 - f) + c.p[i] * f);
+    body.d = Math.hypot(...body.p);
+  }
+  for (const body of placed) {
+    if (body.radiusMpch) body.radiusMpc = body.radiusMpch / h;
+  }
+  return placed;
+}
+
+function locate(body, cosmos, h) {
+  if (body.frame === "origin") return { p: [0, 0, 0], d: 0 };
+  if (body.frame === "shell") return { p: [0, 0, 0], d: 0, shell: true };
+  if (body.frame === "blend") return { p: [0, 0, 0], d: 0 };
+  if (body.frame === "galactic") {
+    const d = body.kpc / 1000;
+    return { p: galacticToSupergalactic(body.l, body.b, d), d };
+  }
+  if (body.frame === "eq") {
+    return { p: equatorialToSupergalactic(body.ra, body.dec, body.mpc), d: body.mpc };
+  }
+  if (body.frame === "mpch") {
+    const p = body.sg.map((v) => v / h);
+    return { p, d: Math.hypot(...p) };
+  }
+  if (body.frame === "z") {
+    const d = cosmos.comovingDistance(body.z);
+    return { p: equatorialToSupergalactic(body.ra, body.dec, d), d, z: body.z };
+  }
+  if (body.frame === "path") {
+    const path = body.path.map((pt) => {
+      const d = cosmos.comovingDistance(pt.z);
+      return equatorialToSupergalactic(pt.ra, pt.dec, d);
+    });
+    const c = [0, 0, 0];
+    for (const p of path) {
+      c[0] += p[0];
+      c[1] += p[1];
+      c[2] += p[2];
+    }
+    c[0] /= path.length;
+    c[1] /= path.length;
+    c[2] /= path.length;
+    return { p: c, d: Math.hypot(...c), path };
+  }
+  return { p: [0, 0, 0], d: 0 };
+}
+
+export function focusRadius(body) {
+  if (!body) return 140;
+  if (body.shell) return null;
+  if (body.id === "sun") return 0.035;
+  const structural = (body.radiusMpc || 0) * 4;
+  const contextual = Math.max(body.d, 0) * 0.55;
+  const cap = Math.max(body.d * 1.35, body.kind === "wall" ? 400 : 40, 0.04);
+  return Math.min(Math.max(structural, contextual, 0.02), cap);
+}
+
+export function shellRadius(body, snap) {
+  if (!body?.shell) return 0;
+  if (body.kind === "cmb") return snap.cmbRadiusMpc;
+  if (body.kind === "hubble") return snap.hubbleComovingMpc;
+  return snap.horizonMpc;
+}
