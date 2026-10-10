@@ -196,7 +196,7 @@ export default function EvolutionUI() {
             <dd>{distance(horizon, lang)}</dd>
             <dt>{t('evo.box')}</dt>
             <dd>
-              {distance(boxComoving * (Number.isFinite(st.a) ? st.a : 0), lang, 2)} <span style={{ color: 'var(--faint)' }}>({t('evo.physical')})</span>
+              {Number.isFinite(st.a) ? distance(boxComoving * st.a, lang, 2) : '∞'} <span style={{ color: 'var(--faint)' }}>({t('evo.physical')})</span>
             </dd>
             <dt>{t('evo.dominant')}</dt>
             <dd style={{ fontFamily: 'var(--font)' }}>{dominant}</dd>
