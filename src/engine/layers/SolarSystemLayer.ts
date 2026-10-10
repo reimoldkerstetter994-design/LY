@@ -223,11 +223,14 @@ export class SolarSystemLayer extends Layer {
         uniforms: {
           uColor: { value: new THREE.Color('#5aa0ff') },
           uSunPos: { value: new THREE.Vector3(1e9, 0, 0) },
-          uStrength: { value: 0.5 },
+          uStrength: { value: 0.3 },
           uOpacity: { value: 1 },
         },
         vertexShader: ATMO_VERT,
-        fragmentShader: ATMO_FRAG.replace('float day = clamp(dot(N, L) * 0.7 + 0.45, 0.0, 1.0);', 'float day = 1.0;'),
+        fragmentShader: ATMO_FRAG.replace('float day = clamp(dot(N, L) * 0.7 + 0.45, 0.0, 1.0);', 'float day = 1.0;').replace(
+          'pow(1.0 - abs(dot(N, V)), 3.0)',
+          'pow(1.0 - abs(dot(N, V)), 7.0)',
+        ),
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,

@@ -58,7 +58,7 @@ function CatalogPanel() {
   const selected = useApp((s) => s.selectedId);
   const open = useApp((s) => s.panels.catalog);
   const togglePanel = useApp((s) => s.togglePanel);
-  const jd = useApp((s) => s.jd);
+  const jd = useApp((s) => Math.floor(s.jd));
   const { objects } = useCatalog();
   const [q, setQ] = useState('');
   const [closed, setClosed] = useState<Set<ScaleGroup>>(() => new Set(['local-group', 'local-universe']));
