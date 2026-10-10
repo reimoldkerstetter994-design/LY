@@ -50,6 +50,10 @@ export interface CatalogObject {
   labelMaxDist: number;
   /** Hide the label when the camera is closer than this (metres). */
   labelMinDist?: number;
+  /** Hide the label unless the camera is at least this far from its focus (metres). */
+  labelMinView?: number;
+  /** Where to draw the label relative to `position` (world metres), e.g. on a sphere's rim. */
+  labelOffset?: Vec3;
   /** Larger values win when labels overlap. */
   priority: number;
   /** Preferred "up" axis for orbiting this object (world frame). */

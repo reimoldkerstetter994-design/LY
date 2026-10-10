@@ -14,7 +14,7 @@ export const EV_J = 1.602176634e-19;
 
 export const AU_M = 1.495978707e11;
 export const LY_M = 9.4607304725808e15;
-export const PC_M = 3.0856775814913673e16;
+export const PC_M = 3.085677581491367e16;
 export const KPC_M = PC_M * 1e3;
 export const MPC_M = PC_M * 1e6;
 export const GPC_M = PC_M * 1e9;

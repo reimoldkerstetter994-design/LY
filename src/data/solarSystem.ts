@@ -140,7 +140,7 @@ export const SOLAR_BODIES: SolarBody[] = [
     orbitKey: 'mars',
     rotationHours: 24.6229,
     pole: { ra: 317.68, dec: 52.89 },
-    appearance: { kind: 1, colors: ['#b5532f', '#7a3320', '#d98b5f'], seed: 15, atmosphere: '#ff9e7a', atmosphereStrength: 0.35 },
+    appearance: { kind: 1, colors: ['#b5532f', '#7a3320', '#d98b5f'], seed: 15, spot: true, atmosphere: '#ff9e7a', atmosphereStrength: 0.35 },
     color: '#d2694a',
     desc: {
       zh: '“红色星球”的颜色来自富含氧化铁的尘土。这里有太阳系最高的火山奥林帕斯山（约 22 km）和绵延 4000 km 的水手号峡谷。远古时期曾有液态水流淌，是寻找地外生命的重点目标。',

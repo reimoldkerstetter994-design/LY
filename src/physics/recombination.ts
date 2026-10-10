@@ -169,7 +169,7 @@ export function computeIonizationHistory(cosmo: Cosmology, tauReion: number, zMa
   };
   let lo = 0.5;
   let hi = 40;
-  let zReion = 7.7;
+  let zReion: number;
   if (tauReion <= tauOf(lo)) zReion = lo;
   else if (tauReion >= tauOf(hi)) zReion = hi;
   else {
