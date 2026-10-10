@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useT, type Key } from '../../i18n';
 import { soundHorizon } from '../../physics/cmb';
-import { GYR_S, MPC_GLY, MPC_M } from '../../physics/constants';
+import { GYR_S, MPC_M } from '../../physics/constants';
 import { Cosmology, PLANCK18, type CosmoParams } from '../../physics/cosmology';
 import { sigma8 } from '../../physics/powerSpectrum';
 import { useApp } from '../../state/store';
-import { gyr, num, sci, type Lang } from '../../utils/format';
+import { distance, gyr, num, sci, type Lang } from '../../utils/format';
 import { LineChart } from '../charts/LineChart';
 import { Switch } from '../Panels';
 import {
@@ -164,7 +164,7 @@ export default function CosmologyLab() {
     const zDE = c.aMatterDE ? 1 / c.aMatterDE - 1 : NaN;
     const rhoCrit = c.rhoCrit(1);
     const L = (zh: string, en: string) => (lang === 'zh' ? zh : en);
-    const gly = (mpc: number) => (Number.isFinite(mpc) ? `${num(mpc * MPC_GLY, 4)} ${L('×10亿光年', 'Gly')}` : '∞');
+    const gly = (mpc: number) => (Number.isFinite(mpc) ? distance(mpc * MPC_M, lang, 4) : L('不存在', 'none'));
     return [
       { label: L('宇宙年龄', 'Age of the universe'), value: gyr(c.age0, lang, 4), sub: c.bounce ? L('自反弹起算', 'since the bounce') : undefined },
       { label: L('哈勃时间 1/H₀', 'Hubble time 1/H₀'), value: gyr(c.tH, lang, 4) },

@@ -93,7 +93,7 @@ export class GalaxyLayer extends Layer {
     this.mwDust = makePoints(mw.dust, { minPx: 1, maxPx: 40, fadeNear: 0.2, dust: true });
     this.mwDust.renderOrder = 1;
     this.mwStars.renderOrder = 0;
-    this.core = glow('#ffcf8a', 22, 0, 2000, 0.55);
+    this.core = glow('#ffcf8a', 14, 0, 2000, 0.35);
     this.globulars = makePoints(this.makeGlobulars(new Rng(5)), { minPx: 1.6, maxPx: 6 });
     this.scene.add(this.mwStars, this.mwDust, this.core, this.globulars);
 
@@ -131,6 +131,8 @@ export class GalaxyLayer extends Layer {
     group.position.copy(local);
     const r = g.diameterKly / 2;
     let cloud: ParticleCloud;
+    // Surface brightness ∝ overlap = N·s²·0.35 / (4·R_eff²); exposure keeps it near unity.
+    const exposureFor = (n: number, s: number, rEff: number) => Math.min(1, Math.max(0.06, 1 / ((n * s * s * 0.35) / (4 * rEff * rEff))));
     if (g.id === 'm31') {
       const s = generateSpiral({
         seed: 31, count: Math.floor(80000 * q), radius: r, scaleLength: 17, thickness: 0.9, arms: 2, pitchDeg: 7,
@@ -141,8 +143,12 @@ export class GalaxyLayer extends Layer {
       group.add(makePoints(s.stars, { minPx: 1, maxPx: 26 }));
       const dust = makePoints(s.dust, { minPx: 1, maxPx: 30, dust: true });
       dust.renderOrder = 1;
+      dust.userData.fixed = 0.5;
       group.add(dust);
-      group.add(glow('#ffd6a0', 26, 0, 1500, 0.5));
+      const core = glow('#ffd6a0', 20, 0, 1500, 0.3);
+      core.userData.fixed = 1;
+      group.add(core);
+      group.userData.exposure = exposureFor(s.stars.count, 1.3, r * 0.45);
     } else if (g.id === 'm33') {
       const s = generateSpiral({
         seed: 33, count: Math.floor(30000 * q), radius: r, scaleLength: 6, thickness: 0.4, arms: 2, pitchDeg: 26,
@@ -151,13 +157,18 @@ export class GalaxyLayer extends Layer {
         palette: { core: '#ffe2b5', disk: '#f1ecff', arm: '#b8d0ff', hii: '#ff74a6', halo: '#e9e4ff' },
       });
       group.add(makePoints(s.stars, { minPx: 1, maxPx: 22 }));
+      group.userData.exposure = exposureFor(s.stars.count, 0.65, r * 0.5);
     } else if (g.model === 'irregular') {
       const big = g.id === 'lmc' || g.id === 'smc';
-      cloud = generateIrregular(g.id.length * 97 + 3, Math.floor((big ? (g.id === 'lmc' ? 16000 : 8000) : 900) * q), r, big ? 0.35 : r * 0.12, big ? 0.9 : 0.55);
+      const size = big ? 0.35 : r * 0.12;
+      cloud = generateIrregular(g.id.length * 97 + 3, Math.floor((big ? (g.id === 'lmc' ? 16000 : 8000) : 900) * q), r, size, big ? 0.9 : 0.55);
       group.add(makePoints(cloud, { minPx: 1, maxPx: 20 }));
+      group.userData.exposure = exposureFor(cloud.count, size * 1.1, r * 0.5);
     } else {
-      cloud = generateElliptical(g.id.length * 131 + 7, Math.floor((g.model === 'elliptical' ? 2500 : 700) * q), r, r * 0.1, g.model === 'elliptical' ? 0.8 : 0.45, g.model === 'elliptical' ? 0.85 : 0.75);
+      const size = r * 0.1;
+      cloud = generateElliptical(g.id.length * 131 + 7, Math.floor((g.model === 'elliptical' ? 2500 : 700) * q), r, size, g.model === 'elliptical' ? 0.8 : 0.45, g.model === 'elliptical' ? 0.85 : 0.75);
       group.add(makePoints(cloud, { minPx: 1, maxPx: 16 }));
+      group.userData.exposure = exposureFor(cloud.count, size, r * 0.35);
     }
     const inv = this.basis.clone().invert();
     const toLocalDir = (v: Vec3) => new THREE.Vector3(...v).applyQuaternion(inv);
@@ -178,13 +189,26 @@ export class GalaxyLayer extends Layer {
 
   update(ctx: FrameContext): void {
     const lv = ctx.logView;
-    // Seen from inside (the night-sky band) the disc is dimmer than when viewed from outside.
-    const inside = 0.5 + 0.5 * ramp(lv, 19.2, 20.6);
-    setOpacity(this.mwStars, this.opacity * inside);
-    setOpacity(this.mwDust, this.opacity * (0.75 + 0.25 * ramp(lv, 19.2, 20.6)));
-    setOpacity(this.core, this.opacity * ramp(lv, 18.5, 20));
+    // From inside the disc (the night-sky band) particles must be small and faint; from outside
+    // they are large enough to merge into a smooth disc.
+    const outside = ramp(lv, 19.2, 20.6);
+    const su = this.mwStars.material.uniforms;
+    su.uSizeMul.value = 0.1 + 0.9 * outside;
+    su.uMaxPx.value = 4 + 18 * outside;
+    const du = this.mwDust.material.uniforms;
+    du.uSizeMul.value = 0.14 + 0.86 * outside;
+    du.uMaxPx.value = 7 + 33 * outside;
+    // Exposure: seen from outside ~10 particles overlap per pixel, so each must be faint.
+    setOpacity(this.mwStars, this.opacity * (0.75 - 0.6 * outside));
+    setOpacity(this.mwDust, this.opacity * (0.85 - 0.25 * outside));
+    setOpacity(this.core, this.opacity * ramp(lv, 18.5, 20) * 0.5);
     setOpacity(this.globulars, this.opacity * band(lv, 19.5, 20.4, 23, 23.8));
     setOpacity(this.sunMarker, this.opacity * band(lv, 19.4, 20.2, 22.6, 23.3));
-    setOpacity(this.neighbours, this.opacity * ramp(lv, 16, 18));
+    const nb = this.opacity * ramp(lv, 16, 18);
+    this.neighbours.visible = nb > 0.002;
+    for (const g of this.neighbours.children) {
+      const exposure = (g.userData.exposure as number | undefined) ?? 1;
+      for (const child of g.children) setOpacity(child, nb * ((child.userData.fixed as number | undefined) ?? exposure));
+    }
   }
 }

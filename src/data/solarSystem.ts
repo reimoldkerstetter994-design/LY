@@ -101,7 +101,7 @@ export const SOLAR_BODIES: SolarBody[] = [
     orbitKey: 'earth',
     rotationHours: 23.9345,
     pole: { ra: 0, dec: 90 },
-    appearance: { kind: 2, colors: ['#1d4f91', '#3f7a3a', '#c9b27c'], seed: 13, atmosphere: '#6fb6ff', atmosphereStrength: 1 },
+    appearance: { kind: 2, colors: ['#1d4f91', '#3f7a3a', '#c9b27c'], seed: 13, atmosphere: '#6fb6ff', atmosphereStrength: 0.55 },
     color: '#5aa9ff',
     desc: {
       zh: '我们的家园，也是目前已知唯一存在生命的天体。表面约 71% 被海洋覆盖，磁场和臭氧层为生命撑起保护伞。从远方回望，地球只是一颗“暗淡蓝点”。',
@@ -190,7 +190,7 @@ export const SOLAR_BODIES: SolarBody[] = [
     orbitKey: 'jupiter',
     rotationHours: 9.925,
     pole: { ra: 268.06, dec: 64.5 },
-    appearance: { kind: 3, colors: ['#d9c7a5', '#a8754a', '#f4ead6'], bands: 15, seed: 18, spot: true, atmosphere: '#f6deb4', atmosphereStrength: 0.4 },
+    appearance: { kind: 3, colors: ['#d6bf98', '#8f5f3a', '#f2e4c8'], bands: 15, seed: 18, spot: true, atmosphere: '#f6deb4', atmosphereStrength: 0.3 },
     color: '#d8b48a',
     desc: {
       zh: '太阳系最大的行星，质量是其他所有行星总和的 2.5 倍。大红斑是一个比地球还大、已持续数百年的风暴。木星的强大引力深刻影响着整个太阳系小天体的轨道。',

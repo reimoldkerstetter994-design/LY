@@ -185,7 +185,7 @@ export class StarsLayer extends Layer {
     const u = this.points.material.uniforms;
     u.uOpacity.value = this.opacity;
     // Reveal fainter stars as the camera pulls back so the 3-D neighbourhood stays populated.
-    u.uMagLimit.value = 6.8 + ramp(lv, 15.5, 18.8) * 8.5;
+    u.uMagLimit.value = 6.8 + ramp(lv, 15.5, 18.8) * 7;
     u.uPxScale.value = Math.min(window.devicePixelRatio || 1, 2);
     u.uBoost.value = 0;
     setOpacity(this.glows, ramp(lv, 15.5, 17.5) * this.opacity);

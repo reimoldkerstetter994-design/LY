@@ -26,6 +26,7 @@ export function Viewport() {
       return;
     }
     setEngine(engine);
+    if (import.meta.env.DEV) (window as unknown as { __engine: Engine }).__engine = engine;
     engine.setLanguage(store.lang);
     engine.setSettings(store.settings);
     engine.jd = store.jd;

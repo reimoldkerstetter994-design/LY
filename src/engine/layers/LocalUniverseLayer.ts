@@ -8,11 +8,12 @@ import { Layer, band, makePoints, setOpacity, shared, type FrameContext } from '
 import { ENV_FIELD, ENV_FILAMENT, ENV_NODE, ENV_WALL, generateCosmicWeb } from '../procedural/cosmicWeb';
 import { GLOW_FRAG, GLOW_VERT } from '../shaders';
 
+/** Colour and relative brightness by environment: the network of nodes and filaments dominates. */
 export const ENV_COLORS: Record<number, [string, number]> = {
-  [ENV_NODE]: ['#ffd3a1', 1.25],
+  [ENV_NODE]: ['#ffd3a1', 1.6],
   [ENV_FILAMENT]: ['#fff0de', 1.0],
-  [ENV_WALL]: ['#dbe5ff', 0.8],
-  [ENV_FIELD]: ['#9dbdff', 0.6],
+  [ENV_WALL]: ['#dbe5ff', 0.32],
+  [ENV_FIELD]: ['#9dbdff', 0.1],
 };
 
 const FILAMENTS: [string, string][] = [
@@ -54,7 +55,8 @@ export class LocalUniverseLayer extends Layer {
       count: Math.floor(120000 * q),
       radius: 1000,
       cellSize: 80,
-      accept: (r) => (r < 6 ? 0 : r > 650 ? Math.max(0, 1 - (r - 650) / 350) ** 1.5 : 1),
+      // Real galaxies are shown individually within ~12 Mly; the procedural field takes over beyond.
+      accept: (r) => (r < 12 ? 0 : r < 35 ? (r - 12) / 23 : r > 650 ? Math.max(0, 1 - (r - 650) / 350) ** 1.5 : 1),
     });
     const rng = new Rng(41);
     const extra: { p: Vec3; env: number }[] = [];
@@ -66,7 +68,7 @@ export class LocalUniverseLayer extends Layer {
     for (const s of STRUCTURES) {
       if (!s.richness || s.distMly === undefined) continue;
       const c = centers.get(s.id)!;
-      const n = Math.floor(s.richness * 45 * q);
+      const n = Math.floor(s.richness * 32 * q);
       const subs = s.kind === 'supercluster' ? 7 : 1;
       for (let k = 0; k < subs; k++) {
         const off: Vec3 = subs > 1 ? scale(rng.direction(), (s.sizeMly / 2.6) * Math.sqrt(rng.next())) : [0, 0, 0];
@@ -173,7 +175,8 @@ export class LocalUniverseLayer extends Layer {
   }
 
   update(ctx: FrameContext): void {
-    setOpacity(this.points, this.opacity);
+    // Individually faint points let the density contrast of filaments and clusters stand out.
+    setOpacity(this.points, this.opacity * 0.6);
     setOpacity(this.glows, this.opacity * band(ctx.logView, 21.9, 22.6, 24.6, 25.4));
   }
 }

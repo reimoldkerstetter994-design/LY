@@ -99,10 +99,12 @@ export class CosmicLayer extends Layer {
     this.galaxyR = new Float32Array(n);
     this.galaxyBase = new Float32Array(n);
     const rng = new Rng(5);
+    const envWeight = [0.1, 0.32, 1, 1.6];
     for (let i = 0; i < n; i++) {
       const r = Math.hypot(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
       this.galaxyR[i] = r;
-      this.galaxyBase[i] = 0.6 + rng.next() * 0.8;
+      const env = i < inner.count ? inner.env[i] : outer.env[i - inner.count];
+      this.galaxyBase[i] = (0.6 + rng.next() * 0.8) * envWeight[env];
       sizes[i] = i < inner.count ? 0.004 + rng.next() * 0.004 : 0.03 + r * 0.004;
     }
     this.galaxies = makePoints({ positions, colors: new Float32Array(n * 3), sizes, count: n }, { minPx: 1, maxPx: 6, fadeNear: 0.003 });
@@ -125,7 +127,7 @@ export class CosmicLayer extends Layer {
 
     for (const z of SHELL_Z) {
       const c = redshiftColor(z);
-      const line = ring(`#${c.getHexString()}`, 0.32);
+      const line = ring(`#${c.getHexString()}`, 0.45);
       this.shells.add(line);
       this.shellRings.push({ z, line, r: 1 });
     }
@@ -256,13 +258,13 @@ export class CosmicLayer extends Layer {
   }
 
   computeOpacity(ctx: FrameContext): number {
-    return ctx.settings.cmbSky ? 1 : ramp(ctx.logView, 24.6, 25.4);
+    return ctx.settings.cmbSky ? 1 : ramp(ctx.logView, 25.0, 25.7);
   }
 
   update(ctx: FrameContext): void {
     const lv = ctx.logView;
-    const base = ramp(lv, 24.6, 25.4);
-    setOpacity(this.galaxies, base);
+    const base = ramp(lv, 25.0, 25.7);
+    setOpacity(this.galaxies, base * 0.6);
     setOpacity(this.quasars, base * ramp(lv, 25.6, 26.3));
     const shellsOn = ctx.settings.shells ? 1 : 0;
     // Shells are camera-facing circles: the outline of each sphere seen from the camera.
@@ -281,8 +283,9 @@ export class CosmicLayer extends Layer {
     const inside = camR < this.rCmb ? 1 : 0;
     const cmbVis = ctx.settings.cmbSky ? Math.max(0.85, ramp(lv, 25.9, 26.5)) : ramp(lv, 25.9, 26.5);
     this.cmb.material.uniforms.uInside.value = inside;
-    setOpacity(this.cmb, cmbVis);
-    setOpacity(this.cmbRim, ramp(lv, 26.3, 26.8) * (1 - inside) * 0.6);
+    // From outside, the far hemisphere is seen through the galaxies as a translucent shell.
+    setOpacity(this.cmb, cmbVis * (inside ? 1 : 0.45));
+    setOpacity(this.cmbRim, ramp(lv, 26.3, 26.8) * (1 - inside) * 0.3);
   }
 
   /** Labels for shells and horizons (world metres), positioned on the top of each outline. */
@@ -290,18 +293,21 @@ export class CosmicLayer extends Layer {
     if (!ctx.settings.shells || !this.cosmo) return [];
     const lv = ctx.logView;
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion);
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
     const out: ShellLabel[] = [];
-    const add = (key: string, r: number, text: { zh: string; en: string }, color: string, side = 1) => {
+    // Labels are fanned around their circles so neighbouring shells don't collide.
+    const add = (key: string, r: number, text: { zh: string; en: string }, color: string, angleDeg: number) => {
       const logR = Math.log10(r * GLY_M);
       if (lv < logR - 0.15 || lv > 27.6) return;
-      const p = up.clone().multiplyScalar(r * side);
+      const a = (angleDeg * Math.PI) / 180;
+      const p = up.clone().multiplyScalar(Math.cos(a) * r).addScaledVector(right, Math.sin(a) * r);
       out.push({ key, text, position: [p.x * GLY_M, p.y * GLY_M, p.z * GLY_M], color });
     };
-    for (const s of this.shellRings) {
-      const lb = this.cosmo.lookbackTime(s.z);
-      add(`z${s.z}`, s.r, { zh: `z = ${s.z} · ${(lb * 10).toFixed(lb < 1 ? 1 : 0)} 亿年前`, en: `z = ${s.z} · ${lb.toFixed(1)} Gyr ago` }, `#${redshiftColor(s.z).getHexString()}`);
-    }
-    for (const h of this.horizons) add(h.id, h.r, h.name, h.color, -1);
+    this.shellRings.forEach((s, i) => {
+      const lb = this.cosmo!.lookbackTime(s.z);
+      add(`z${s.z}`, s.r, { zh: `z = ${s.z} · ${(lb * 10).toFixed(lb < 1 ? 1 : 0)} 亿年前`, en: `z = ${s.z} · ${lb.toFixed(1)} Gyr ago` }, `#${redshiftColor(s.z).getHexString()}`, -40 + i * 11);
+    });
+    this.horizons.forEach((h, i) => add(h.id, h.r, h.name, h.color, 150 + i * 14));
     return out;
   }
 }

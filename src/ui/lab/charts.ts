@@ -70,12 +70,28 @@ export function expansionChart(c: Cosmology, ref: Cosmology, lang: Lang): ChartS
     xLabel: L(lang, '宇宙时间 t（10 亿年）', 'cosmic time t (Gyr)'),
     yLabel: L(lang, '尺度因子 a(t)', 'scale factor a(t)'),
     markers,
-    note: L(
-      lang,
-      '尺度因子 a 描述宇宙“尺子”的伸缩：今天 a = 1。曲线早期向下弯曲（引力减速），约 60 亿年前开始向上弯曲（暗能量加速）。',
-      'The scale factor a measures the stretching of cosmic rulers (a = 1 today). The curve bends down early on (gravity decelerates) and up in the last ~6 Gyr (dark energy accelerates).',
-    ),
+    note: accelerationNote(c, lang),
   };
+}
+
+function accelerationNote(c: Cosmology, lang: Lang): string {
+  const aAcc = c.aAcceleration;
+  const base = L(lang, '尺度因子 a 描述宇宙“尺子”的伸缩，今天 a = 1。', 'The scale factor a measures the stretching of cosmic rulers (a = 1 today). ');
+  if (aAcc && aAcc < 1) {
+    const ago = c.lookbackTime(1 / aAcc - 1);
+    return (
+      base +
+      L(
+        lang,
+        `曲线早期向下弯曲（引力使膨胀减速），约 ${(ago * 10).toFixed(0)} 亿年前开始向上弯曲（暗能量使膨胀加速）。`,
+        `The curve bends down early on (gravity decelerates the expansion) and turns upward ${ago.toFixed(1)} Gyr ago (dark energy accelerates it).`,
+      )
+    );
+  }
+  if (aAcc && aAcc >= 1) {
+    return base + L(lang, `目前仍在减速，将在 a ≈ ${aAcc.toFixed(2)} 时开始加速。`, `Still decelerating today; acceleration starts at a ≈ ${aAcc.toFixed(2)}.`);
+  }
+  return base + L(lang, '在这个宇宙中，膨胀始终在减速。', 'In this universe the expansion always decelerates.');
 }
 
 export function hubbleChart(c: Cosmology, ref: Cosmology, lang: Lang): ChartSpec {

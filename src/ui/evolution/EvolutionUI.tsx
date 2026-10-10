@@ -185,7 +185,7 @@ export default function EvolutionUI() {
             <dt>{t('evo.redshift')}</dt>
             <dd>{zText}</dd>
             <dt>{t('evo.scale')}</dt>
-            <dd>{Number.isFinite(st.a) ? sci(st.a, 3) : '∞'}</dd>
+            <dd>{Number.isFinite(st.a) ? (st.a > 1e-3 && st.a < 1e4 ? num(st.a, 4) : sci(st.a, 3)) : '∞'}</dd>
             <dt>{t('evo.temp')}</dt>
             <dd>{temperature(st.T)}</dd>
             <dt>{t('evo.hubble')}</dt>

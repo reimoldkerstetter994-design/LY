@@ -633,6 +633,6 @@ export function buildTimeline(cosmo: Cosmology, hist?: IonizationHistory): Timel
 }
 
 export function epochAt(timeline: Timeline, logT: number): Epoch {
-  for (const e of timeline.epochs) if (logT >= e.start && logT < e.end) return e;
+  for (const e of timeline.epochs) if (logT >= e.start && logT <= e.end) return e;
   return logT < timeline.epochs[0].start ? timeline.epochs[0] : timeline.epochs[timeline.epochs.length - 1];
 }

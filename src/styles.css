@@ -1133,8 +1133,11 @@ input[type='range']::-moz-range-thumb {
 }
 
 .mollweide-wrap canvas {
-  width: 100%;
   display: block;
+  width: 100%;
+  max-width: calc(48vh * 2);
+  margin: 0 auto;
+  aspect-ratio: 2 / 1;
   image-rendering: auto;
 }
 

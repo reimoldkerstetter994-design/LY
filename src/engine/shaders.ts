@@ -71,9 +71,10 @@ void main() {
   float dLy = max(length(mv.xyz), 1e-6);
   // m = M + 5 log10(d / 10 pc); 10 pc = 32.6156 ly
   float m = absMag + 5.0 * log(dLy / 32.6156) / log(10.0) - uBoost;
-  float flux = pow(10.0, -0.4 * (m - uMagLimit));
-  float px = clamp(1.6 + 2.2 * pow(flux, 0.28), 1.6, 26.0) * uPxScale;
-  float alpha = clamp(flux, 0.0, 1.0);
+  // Brightness is referenced to the naked-eye limit; uMagLimit only decides which faint stars show.
+  float flux = pow(10.0, -0.4 * (m - 6.5));
+  float px = clamp(1.5 + 1.9 * pow(flux, 0.25), 1.5, 15.0) * uPxScale;
+  float alpha = clamp(0.18 + 0.82 * pow(flux, 0.5), 0.0, 1.0) * smoothstep(uMagLimit + 1.2, uMagLimit - 0.8, m);
   gl_PointSize = px;
   gl_Position = projectionMatrix * mv;
   vColor = color;
@@ -182,8 +183,11 @@ void main() {
     float cl = smoothstep(0.5, 0.75, fbm(s * 4.0 + vec3(uTime * 0.01, 0.0, uTime * 0.006)));
     col = mix(col, vec3(1.0), cl * 0.85);
     float night = smoothstep(0.05, -0.15, ndl);
-    float lights = land * (1.0 - cl) * smoothstep(0.62, 0.75, vnoise(s * 70.0)) * (1.0 - smoothstep(0.6, 0.8, abs(p.y)));
-    emissive = lights * night * 0.9;
+    // Cities cluster in populated regions (large-scale mask) and appear as sparse specks.
+    float populated = smoothstep(0.52, 0.62, fbm(s * 5.0 + 11.0));
+    float specks = smoothstep(0.82, 0.92, vnoise(s * 160.0)) + 0.35 * smoothstep(0.7, 0.9, vnoise(s * 45.0));
+    float lights = land * populated * (1.0 - cl) * specks * (1.0 - smoothstep(0.55, 0.75, abs(p.y)));
+    emissive = lights * night * 0.35;
   } else if (uKind == 3 || uKind == 4) {
     float turb = fbm(s * vec3(3.0, 14.0, 3.0)) - 0.5;
     float b = sin((p.y + turb * (uKind == 3 ? 0.08 : 0.03)) * uBands * 3.14159);
@@ -209,7 +213,7 @@ void main() {
   }
   float wrap = (uKind == 3 || uKind == 4 || uKind == 5) ? 0.12 : 0.04;
   float diff = clamp((ndl + wrap) / (1.0 + wrap), 0.0, 1.0);
-  vec3 lit = col * (diff * 1.15 + 0.012) + vec3(1.0, 0.8, 0.45) * emissive;
+  vec3 lit = col * (diff * 0.95 + 0.012) + vec3(1.0, 0.8, 0.45) * emissive;
   if (uKind == 2) {
     vec3 H = normalize(L + V);
     float spec = pow(max(dot(N, H), 0.0), 60.0) * (1.0 - smoothstep(0.5, 0.53, fbm(s * 2.4))) * diff;
@@ -296,7 +300,7 @@ uniform float uMaxPx;
 uniform float uScale;
 uniform float uWorldSize;
 void main() {
-  vec4 mv = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
   float px = uWorldSize * uScale / max(-mv.z, 1e-12);
   gl_PointSize = clamp(max(px, uPx), uMinPx, uMaxPx);
   gl_Position = projectionMatrix * mv;
@@ -339,8 +343,7 @@ void main() {
   vec3 col = texture2D(uMap, vUv).rgb;
   vec3 V = normalize(cameraPosition - vPosW);
   float rim = pow(1.0 - abs(dot(normalize(vNormalW), V)), 2.0);
-  float a = mix(0.85, 0.9, rim);
-  vec3 c = col * mix(0.55, 1.0, uInside) + vec3(1.0, 0.6, 0.3) * rim * 0.25 * (1.0 - uInside);
-  gl_FragColor = vec4(c, a * uOpacity);
+  vec3 c = col * mix(0.7, 0.85, uInside) + vec3(1.0, 0.6, 0.3) * rim * 0.12 * (1.0 - uInside);
+  gl_FragColor = vec4(c, uOpacity);
 }
 `;

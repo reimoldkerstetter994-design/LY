@@ -52,7 +52,7 @@ export const SCALE_PRESETS: ScalePreset[] = [
     caption: { zh: '银河系：直径约 10 万光年、包含数千亿颗恒星的棒旋星系。太阳只是猎户臂上的一个小点。', en: 'The Milky Way: a barred spiral ~100 000 light-years across with hundreds of billions of stars. The Sun is a speck on the Orion Arm.' },
   },
   {
-    id: 'local-group', name: { zh: '本星系群', en: 'Local Group' }, focusId: 'local-group', log: 23.15, up: GALACTIC_UP,
+    id: 'local-group', name: { zh: '本星系群', en: 'Local Group' }, focusId: 'local-group', log: 22.8, up: GALACTIC_UP,
     caption: { zh: '本星系群：银河系、仙女座星系、三角座星系和几十个矮星系，彼此由引力束缚。', en: 'The Local Group: the Milky Way, Andromeda, Triangulum and dozens of dwarfs, bound by gravity.' },
   },
   {

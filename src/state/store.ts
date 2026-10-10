@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { EngineSettings } from '../engine/core';
 import type { HudInfo } from '../engine/Engine';
+import { GYR_S } from '../physics/constants';
 import { Cosmology, PLANCK18, type CosmoParams } from '../physics/cosmology';
 import { julianDate } from '../physics/kepler';
 import { computeIonizationHistory, type IonizationHistory } from '../physics/recombination';
@@ -127,7 +128,7 @@ export const useApp = create<AppState>((set, get) => ({
   jd: julianDate(new Date()),
   rate: 1 / 86400,
   playing: true,
-  evo: { logT: Math.log10(13.8e9 * 3.15576e7), playing: false, speed: 2.2, showDM: false, physical: false },
+  evo: { logT: Math.log10(initialCosmo.age0 * GYR_S), playing: false, speed: 1.2, showDM: false, physical: false },
   cmbOpts: { seed: 2026, res: 512, lMin: 2, lMax: 2000, dipole: false, beam: 0, range: 300 },
   panels: { catalog: true, settings: false, help: false },
   tour: { active: false, step: 0 },

@@ -37,13 +37,14 @@ void main() {
   vec3 old = vec3(1.0, 0.74, 0.5);
   float isNode = step(2.5, env);
   vec3 gal = mix(young, old, clamp(uAge + isNode * 0.25, 0.0, 1.0));
-  float galA = kind * uLum * (0.45 + 0.22 * env);
-  float sparkle = kind * isNode * uDawn * (0.55 + 0.45 * sin(uTime * 2.5 + rnd * 60.0));
+  // ~140k additive particles overlap a few times per pixel, so each one is kept faint.
+  float galA = kind * uLum * (0.06 + 0.07 * env);
+  float sparkle = kind * isNode * uDawn * (0.35 + 0.3 * sin(uTime * 2.5 + rnd * 60.0));
   vec3 dmCol = vec3(0.5, 0.32, 1.0);
-  float dmA = (1.0 - kind * 0.5) * uDM * (0.25 + 0.12 * env);
+  float dmA = (1.0 - kind * 0.5) * uDM * (0.05 + 0.05 * env);
   vec3 col = gal * galA * 1.4 + vec3(1.0, 0.92, 0.75) * sparkle * 1.6 + dmCol * dmA;
-  col = mix(col, uPlasmaColor * 1.1, uPlasma);
-  float a = max(max(galA, sparkle), max(dmA, uPlasma * 0.7));
+  col = mix(col, uPlasmaColor, uPlasma);
+  float a = max(max(galA, sparkle), max(dmA, uPlasma * 0.08));
   float px = uPx * (kind > 0.5 ? 1.5 : 1.0) * uScale / dist;
   gl_PointSize = clamp(px, 1.0, 7.0);
   gl_Position = projectionMatrix * mv;

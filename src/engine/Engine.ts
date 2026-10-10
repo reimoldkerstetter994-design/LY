@@ -106,7 +106,7 @@ export class Engine {
 
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new LayeredRenderPass((r) => this.drawScene(r)));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.85, 0.55, 0.12);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.6, 0.45, 0.78);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
 
@@ -158,6 +158,11 @@ export class Engine {
     this.cb.onFocus('sun');
     this.last = performance.now();
     this.raf = requestAnimationFrame(this.loop);
+  }
+
+  /** Layers in draw order (for diagnostics). */
+  get layerList(): readonly Layer[] {
+    return this.layers;
   }
 
   get objects(): CatalogObject[] {
