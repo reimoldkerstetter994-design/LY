@@ -57,7 +57,7 @@ export function synthesizeCmbMap(Cl: ArrayLike<number>, opts: CmbMapOptions): Cm
   const fMax = opts.lFilterMax ?? lmax;
   // ℓ-major draw order keeps large scales identical when lmax changes.
   for (let l = 0; l <= lmax; l++) {
-    const c = l < 2 ? 0 : Math.max(Cl[l], 0);
+    const c = l < 2 || !Number.isFinite(Cl[l]) ? 0 : Math.max(Cl[l], 0);
     let power = 0;
     const re0 = rng.gauss() * Math.sqrt(c);
     power += re0 * re0;
@@ -214,7 +214,8 @@ export function colorizeMap(map: CmbMap, range: number): Uint8ClampedArray<Array
   const lut: [number, number, number][] = [];
   for (let i = 0; i < 256; i++) lut.push(planckColor(i / 255));
   for (let i = 0; i < map.data.length; i++) {
-    const t = Math.round((0.5 + map.data[i] / (2 * range)) * 255);
+    const v = map.data[i];
+    const t = Number.isFinite(v) ? Math.round((0.5 + v / (2 * range)) * 255) : 128;
     const c = lut[Math.min(255, Math.max(0, t))];
     out[i * 4] = c[0];
     out[i * 4 + 1] = c[1];

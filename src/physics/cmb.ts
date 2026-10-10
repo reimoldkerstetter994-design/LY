@@ -239,6 +239,8 @@ export function computeCmbSpectrum(
     const xe = (l / ellA - tuning.eiswPos) / 0.22;
     d += dSW * tuning.eisw * radToMatter * Math.exp(-0.5 * xe * xe);
     d *= reionSupp + (1 - reionSupp) / (1 + (l / ellRe) ** 2);
+    // Universes without a hot Big Bang (bounces) have no acoustic source at all.
+    if (!Number.isFinite(d)) d = 0;
     Dl[l] = d;
     Cl[l] = (2 * Math.PI * d) / (l * (l + 1));
   }

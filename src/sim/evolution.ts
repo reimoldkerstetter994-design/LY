@@ -71,13 +71,16 @@ export function evolutionVisual(cosmo: Cosmology, hist: IonizationHistory, logT:
   const { a, z, T } = state;
   const years = tSec / YEAR_S;
   const growth = a > 0 && Number.isFinite(a) ? Math.min(1, Math.max(0, cosmo.growth(Math.min(a, 1e3)))) : 0;
-  const xe = z > hist.z[0] ? 1 : xeAt(hist, z);
+  const xeRaw = z > hist.z[0] ? 1 : xeAt(hist, z);
+  const xe = Number.isFinite(xeRaw) ? xeRaw : 0;
   const fHe = hist.fHe;
   // Before reionization the residual ionization is tiny; plasma opacity tracks hydrogen recombination.
   const plasma = z > 300 ? smooth(0.08, 0.6, Math.min(1, xe)) : 0;
   const glow = z > 300 ? Math.min(1, plasma + smooth(150, 1100, z) * 0.35) : 0;
   const rhoNow = stellarMassDensity(cosmo, 0);
-  const lumRaw = z < 30 ? stellarMassDensity(cosmo, Math.max(z, 0)) / rhoNow : 0;
+  const lumFrac = z < 30 ? stellarMassDensity(cosmo, Math.max(z, 0)) / rhoNow : 0;
+  // Without a hot Big Bang (bounce models) the star-formation integral is undefined.
+  const lumRaw = Number.isFinite(lumFrac) ? lumFrac : 1;
   const starsAlive = 1 - smooth(Math.log10(1e12), Math.log10(1e14), Math.log10(Math.max(years, 1)));
   const lum = Math.min(1, Math.pow(Math.max(lumRaw, 0), 0.33)) * starsAlive;
   const dawn = smooth(32, 22, z) * (1 - smooth(9, 4, z));
