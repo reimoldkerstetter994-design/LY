@@ -635,14 +635,14 @@ export class Cosmology {
     return Math.sqrt(lo * hi);
   }
 
-  /** Scale factor when the matter and dark-energy densities are equal (null if never). */
+  /** Scale factor when the matter and dark-energy densities are equal (null if never after the bounce, if any). */
   get aMatterDE(): number | null {
-    return this.bisectA((a) => this.Om / (a * a * a) - this.Ode * this.fde(a), 1e-3, Math.min(1e3, this.aMax));
+    return this.bisectA((a) => this.Om / (a * a * a) - this.Ode * this.fde(a), Math.max(1e-3, this.aMin * 1.0001), Math.min(1e3, this.aMax));
   }
 
-  /** Scale factor when the expansion begins to accelerate (q = 0), null if never. */
+  /** Scale factor when the expansion begins to accelerate (q = 0), null if never after the bounce, if any. */
   get aAcceleration(): number | null {
-    return this.bisectA((a) => this.q(a), 1e-2, Math.min(1e2, this.aMax * 0.999));
+    return this.bisectA((a) => this.q(a), Math.max(1e-2, this.aMin * 1.0001), Math.min(1e2, this.aMax * 0.999));
   }
 
   get fate(): Fate {

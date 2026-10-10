@@ -91,6 +91,9 @@ function accelerationNote(c: Cosmology, lang: Lang): string {
   if (aAcc && aAcc >= 1) {
     return base + L(lang, `目前仍在减速，将在 a ≈ ${aAcc.toFixed(2)} 时开始加速。`, `Still decelerating today; acceleration starts at a ≈ ${aAcc.toFixed(2)}.`);
   }
+  if (c.bounce && c.q(1) < 0) {
+    return base + L(lang, `宇宙在 a ≈ ${c.aMin.toFixed(3)} 处反弹，此后膨胀一直在加速。`, `The universe bounced at a ≈ ${c.aMin.toFixed(3)} and has been accelerating ever since.`);
+  }
   return base + L(lang, '在这个宇宙中，膨胀始终在减速。', 'In this universe the expansion always decelerates.');
 }
 

@@ -165,26 +165,41 @@ export default function CosmologyLab() {
     const rhoCrit = c.rhoCrit(1);
     const L = (zh: string, en: string) => (lang === 'zh' ? zh : en);
     const gly = (mpc: number) => (Number.isFinite(mpc) ? distance(mpc * MPC_M, lang, 4) : L('不存在', 'none'));
-    return [
+    const rows: { label: string; value: string; sub?: string; hotBigBang?: boolean }[] = [
       { label: L('宇宙年龄', 'Age of the universe'), value: gyr(c.age0, lang, 4), sub: c.bounce ? L('自反弹起算', 'since the bounce') : undefined },
       { label: L('哈勃时间 1/H₀', 'Hubble time 1/H₀'), value: gyr(c.tH, lang, 4) },
       { label: 'Ωm / Ωb / Ωc', value: `${num(c.Om, 4)} / ${num(c.Ob, 3)} / ${num(c.Oc, 3)}` },
       { label: 'ΩΛ / Ωr / Ωk', value: `${num(c.Ode, 4)} / ${sci(c.Or, 3)} / ${num(c.Ok, 3)}` },
       { label: L('临界密度 ρ_c', 'Critical density ρ_c'), value: `${sci(rhoCrit, 3)} kg/m³`, sub: L(`约每立方米 ${num(rhoCrit / 1.6726e-27, 3)} 个质子`, `≈ ${num(rhoCrit / 1.6726e-27, 3)} protons per m³`) },
-      { label: L('物质—辐射相等', 'Matter–radiation equality'), value: `z = ${num(c.zEq, 4)}`, sub: L(`宇宙年龄 ${num(c.ageAtZ(c.zEq) * 1e9, 3)} 年`, `t = ${num(c.ageAtZ(c.zEq) * 1e9, 3)} yr`) },
-      { label: L('最后散射面（CMB）', 'Last scattering (CMB)'), value: `z* = ${zStar.toFixed(1)}`, sub: L(`宇宙年龄 ${num(c.ageAtZ(zStar) * 1e9, 3)} 年`, `t = ${num(c.ageAtZ(zStar) * 1e9, 3)} yr`) },
-      { label: L('声学视界 r_s(z*)', 'Sound horizon r_s(z*)'), value: `${rs.toFixed(2)} Mpc`, sub: `100θ* = ${((100 * rs) / dm).toFixed(4)} · ℓ_A = ${(Math.PI / (rs / dm)).toFixed(1)}` },
-      { label: L('重子拖曳（BAO 标尺）', 'Baryon drag (BAO ruler)'), value: `z_d = ${hist.zDrag.toFixed(1)}`, sub: `r_d = ${soundHorizon(c, hist.zDrag).toFixed(2)} Mpc` },
-      { label: L('再电离中点', 'Reionization midpoint'), value: `z_re = ${hist.zReion.toFixed(2)}`, sub: L(`宇宙年龄 ${gyr(c.ageAtZ(hist.zReion), lang)}`, `t = ${gyr(c.ageAtZ(hist.zReion), lang)}`) },
-      { label: L('减速参数 q₀', 'Deceleration q₀'), value: num(c.q(1), 4), sub: Number.isFinite(zAcc) ? L(`z = ${zAcc.toFixed(3)} 时开始加速`, `accelerating since z = ${zAcc.toFixed(3)}`) : L('从未加速', 'never accelerates') },
-      { label: L('暗能量开始主导', 'Dark energy takes over'), value: Number.isFinite(zDE) ? `z = ${zDE.toFixed(3)}` : '—', sub: Number.isFinite(zDE) && zDE > 0 ? gyr(c.lookbackTime(zDE), lang) + L('前', ' ago') : undefined },
+      { label: L('物质—辐射相等', 'Matter–radiation equality'), value: `z = ${num(c.zEq, 4)}`, sub: L(`宇宙年龄 ${num(c.ageAtZ(c.zEq) * 1e9, 3)} 年`, `t = ${num(c.ageAtZ(c.zEq) * 1e9, 3)} yr`), hotBigBang: true },
+      { label: L('最后散射面（CMB）', 'Last scattering (CMB)'), value: `z* = ${zStar.toFixed(1)}`, sub: L(`宇宙年龄 ${num(c.ageAtZ(zStar) * 1e9, 3)} 年`, `t = ${num(c.ageAtZ(zStar) * 1e9, 3)} yr`), hotBigBang: true },
+      { label: L('声学视界 r_s(z*)', 'Sound horizon r_s(z*)'), value: `${rs.toFixed(2)} Mpc`, sub: `100θ* = ${((100 * rs) / dm).toFixed(4)} · ℓ_A = ${(Math.PI / (rs / dm)).toFixed(1)}`, hotBigBang: true },
+      { label: L('重子拖曳（BAO 标尺）', 'Baryon drag (BAO ruler)'), value: `z_d = ${hist.zDrag.toFixed(1)}`, sub: `r_d = ${soundHorizon(c, hist.zDrag).toFixed(2)} Mpc`, hotBigBang: true },
+      { label: L('再电离中点', 'Reionization midpoint'), value: `z_re = ${hist.zReion.toFixed(2)}`, sub: L(`宇宙年龄 ${gyr(c.ageAtZ(hist.zReion), lang)}`, `t = ${gyr(c.ageAtZ(hist.zReion), lang)}`), hotBigBang: true },
+      {
+        label: L('减速参数 q₀', 'Deceleration q₀'),
+        value: num(c.q(1), 4),
+        sub: Number.isFinite(zAcc)
+          ? L(`z = ${zAcc.toFixed(3)} 时开始加速`, `accelerating since z = ${zAcc.toFixed(3)}`)
+          : c.bounce && c.q(1) < 0
+            ? L('反弹以来一直在加速', 'accelerating ever since the bounce')
+            : L('从未加速', 'never accelerates'),
+      },
+      {
+        label: L('暗能量开始主导', 'Dark energy takes over'),
+        value: Number.isFinite(zDE) ? `z = ${zDE.toFixed(3)}` : c.bounce && c.Ode > 0 ? L('反弹以来始终主导', 'dominant since the bounce') : '—',
+        sub: Number.isFinite(zDE) && zDE > 0 ? gyr(c.lookbackTime(zDE), lang) + L('前', ' ago') : undefined,
+      },
       { label: L('粒子视界（可观测宇宙半径）', 'Particle horizon (observable radius)'), value: gly(c.particleHorizon(1)) },
       { label: L('事件视界', 'Event horizon'), value: gly(c.eventHorizon(1)) },
       { label: L('哈勃半径 c/H₀', 'Hubble radius c/H₀'), value: gly(c.hubbleRadius(1)) },
-      { label: L('到最后散射面的共动距离', 'Comoving distance to the CMB'), value: gly(c.comovingDistance(zStar)) },
+      { label: L('到最后散射面的共动距离', 'Comoving distance to the CMB'), value: gly(c.comovingDistance(zStar)), hotBigBang: true },
       { label: 'σ₈', value: num(sigma8(c), 4), sub: L('8 h⁻¹Mpc 球内的物质涨落', 'matter fluctuation in 8 h⁻¹Mpc spheres') },
       { label: L('共形年龄 η₀', 'Conformal age η₀'), value: gyr(c.conformalAge0, lang, 4), sub: `${num((c.conformalAge0 * GYR_S * 299792458) / MPC_M, 4)} Mpc` },
     ];
+    // A bounce never reaches the redshifts of a hot early universe (z ≤ 1/a_min − 1).
+    const noBang = L(`反弹宇宙的最大红移只有 z = ${num(1 / c.aMin - 1, 3)}`, `a bounce only reaches z = ${num(1 / c.aMin - 1, 3)}`);
+    return rows.map(({ hotBigBang, ...r }) => (hotBigBang && c.bounce ? { ...r, value: L('不存在', 'none'), sub: noBang } : r));
   }, [cosmo, hist, lang]);
 
   const fate = fateText(cosmo, lang);

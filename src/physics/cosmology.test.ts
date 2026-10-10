@@ -119,5 +119,11 @@ describe('analytic limits', () => {
   it('detects a bounce when Λ is too large for a Big Bang', () => {
     const c = new Cosmology(noRadiation({ Om: 0.3, Ob: 0.05, Ode: 2.5, flat: false }));
     expect(c.fate.kind).toBe('bounce');
+    // E²(a) = 0 at the bounce: 2.5a³ − 1.8a + 0.3 = 0.
+    expect(c.aMin).toBeCloseTo(0.74805, 4);
+    // Λ has dominated, and the expansion accelerated, ever since the bounce.
+    expect(c.aMatterDE).toBeNull();
+    expect(c.aAcceleration).toBeNull();
+    expect(c.q(1)).toBeLessThan(0);
   });
 });
