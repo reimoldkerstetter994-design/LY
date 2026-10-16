@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Cormorant Garamond', 'Noto Serif SC', Georgia, serif;
+  --font-body: 'DM Sans', 'Noto Sans SC', system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  background: #0c0b0f;
+  color: #e8e4df;
+}
+
+#root {
+  min-height: 100vh;
+}
