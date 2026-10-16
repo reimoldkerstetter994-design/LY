@@ -186,12 +186,23 @@ function renderPlates(state) {
 }
 
 function render(state) {
+  const filtering = Boolean(state.layer || state.region || state.query);
+  const wasFiltering = document.body.dataset.filtering === "1";
+  document.body.dataset.filtering = filtering ? "1" : "0";
+  document.querySelector(".hero").hidden = filtering;
+  tocEl.hidden = filtering;
+
   renderLayers(state);
   regionEl.value = state.region || "全部地区";
   if (queryEl.value !== state.query) queryEl.value = state.query;
   renderToc(state);
   renderPlates(state);
   if (openId) fillViewer(openId, state);
+
+  if (filtering && !wasFiltering) {
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    layersEl.scrollIntoView({ behavior, block: "start" });
+  }
 }
 
 function fillViewer(id, state) {
