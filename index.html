@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>五十国肖像</title>
+  <meta name="description" content="五十个国家的虚构成人肖像相册，分素净、清丽、华美、冷峻、电影感五个并列的美感层次。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,450;1,6..72,450&family=Noto+Sans+SC:wght@400;500&family=Noto+Serif+SC:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/album.css">
+</head>
+<body>
+  <a class="skip" href="#plates">进入肖像</a>
+  <header class="mast">
+    <div class="wrap">
+      <div class="mast-row">
+        <a class="kicker" href="./">相册集</a>
+        <p class="kicker">五层 · 五十国</p>
+      </div>
+      <div class="hero">
+        <div class="hero-copy">
+          <h1>五十国肖像</h1>
+          <div class="lede">
+            <p>五十个国家，各一张虚构成人肖像。美感分五层：素净、清丽、华美、冷峻、电影感。五层并列，每一层都来自不同的大洲。画面之间的差别，来自光、衣服和场合。</p>
+            <p>点开一张，看它落在哪一层。层次、地区和检索可以把相册收到你要的那一组。</p>
+          </div>
+        </div>
+        <figure class="cover">
+          <button type="button" class="cover-open" data-open="50">
+            <img src="portraits/50-france.jpg" width="864" height="1152" alt="法国，巴黎。海军蓝大衣，湿街，一盏路灯。">
+          </button>
+          <figcaption><span class="num">50</span> 法国 · 巴黎 · 电影感</figcaption>
+        </figure>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="layers" id="layers" role="toolbar" aria-label="美感层次"></div>
+    <div class="tools">
+      <label class="field">
+        <span>地区</span>
+        <select id="region"></select>
+      </label>
+      <label class="field">
+        <span>检索</span>
+        <input id="query" type="search" placeholder="国家或城市" autocomplete="off" enterkeyhint="search">
+      </label>
+      <p class="count" id="count" aria-live="polite"></p>
+    </div>
+    <nav class="toc" id="toc" aria-label="目录"></nav>
+    <main id="plates"></main>
+    <footer class="colophon">
+      <p>相册集《五十国肖像》。肖像为虚构，供这本相册使用。五层描述光、衣着与场合，彼此并列。</p>
+    </footer>
+  </div>
+
+  <dialog id="viewer" aria-label="肖像">
+    <div class="viewer">
+      <img id="viewer-img" alt="">
+      <div class="viewer-copy">
+        <p class="viewer-kicker"><span id="viewer-num" class="num"></span> <span id="viewer-layer"></span></p>
+        <h2 id="viewer-country"></h2>
+        <p id="viewer-place" class="viewer-place"></p>
+        <p id="viewer-note" class="viewer-note"></p>
+        <div class="viewer-nav">
+          <button type="button" id="viewer-prev">上一张</button>
+          <button type="button" id="viewer-next">下一张</button>
+          <span id="viewer-pos"></span>
+        </div>
+      </div>
+      <button type="button" class="viewer-close" id="viewer-close">关闭</button>
+    </div>
+  </dialog>
+
+  <script src="js/album.js"></script>
+</body>
+</html>
