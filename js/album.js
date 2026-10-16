@@ -158,7 +158,9 @@ function renderPlates(state) {
   countEl.textContent = `${String(total).padStart(2, "0")} 张`;
 
   if (!total) {
-    platesEl.innerHTML = `<p class="empty">这一组里没有肖像。换一个层次，或清空检索。</p>`;
+    const parts = [state.layer, state.region, state.query].filter(Boolean);
+    const lead = parts.length ? `${parts.join(" · ")} 里没有肖像。` : "这一组里没有肖像。";
+    platesEl.innerHTML = `<p class="empty">${esc(lead)}改选层次、地区，或清空检索。</p>`;
     return;
   }
 
